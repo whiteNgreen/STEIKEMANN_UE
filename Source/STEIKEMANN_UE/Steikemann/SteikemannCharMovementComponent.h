@@ -24,6 +24,9 @@ public:
 
 	class ASteikemannCharacter* CharacterOwner_Steikemann{ nullptr };
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Jump")
+	bool bJumping{};
+
 	bool DoJump(bool bReplayingMoves) override;
 
 public: // Slipping

@@ -49,7 +49,8 @@ public:
 
 
 
-private:
+public:/*                      Basic Movement                           */
+
 	UPROPERTY(EditAnywhere, Category = "Movement|Walk/Run", meta = (AllowPrivateAcces = "true"))
 	float TurnRate{ 50.f };
 
@@ -58,11 +59,22 @@ private:
 	void TurnAtRate(float rate);
 	void LookUpAtRate(float rate);
 
+	UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
+		bool bJumping{};
+	UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
+		bool bAddJumpVelocity{};
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
+	float fJumpTimerMax{ 0.2f }; UMETA(DisplayName = "JumpHoldTimer");
+	UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
+	float fJumpTimer{};
+
 	void Jump() override;
 	void StopJumping() override;
 	void CheckJumpInput(float DeltaTime) override;
-public:
+
+
 	bool CanDoubleJump() const;
+
 
 public: /* ------------------------ Grapplehook --------------------- */
 		/*                     GrappleTargetInterface                 */
