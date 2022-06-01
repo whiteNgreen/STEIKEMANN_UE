@@ -369,6 +369,8 @@ bool ASteikemannCharacter::LineTraceToGrappleableObject()
 void ASteikemannCharacter::Initial_GrappleHook_Swing()
 {
 	//FVector radius = GrappleHit.GetActor()->GetActorLocation() - GetActorLocation();
+	if (!GrappledActor) { return; }
+
 	FVector radius = GrappledActor->GetActorLocation() - GetActorLocation();
 	GrappleRadiusLength = radius.Size();
 
@@ -384,6 +386,8 @@ void ASteikemannCharacter::Initial_GrappleHook_Swing()
 
 void ASteikemannCharacter::Update_GrappleHook_Swing()
 {
+	if (!GrappledActor) { return; }
+
 	FVector currentVelocity = GetCharacterMovement()->Velocity;
 	if (currentVelocity.Size() > 0) {
 		//FVector radius = GrappleHit.GetActor()->GetActorLocation() - GetActorLocation();
@@ -422,6 +426,8 @@ void ASteikemannCharacter::Update_GrappleHook_Swing()
 void ASteikemannCharacter::Initial_GrappleHook_Drag(float DeltaTime)
 {
 	//FVector radius = GrappleHit.GetActor()->GetActorLocation() - GetActorLocation();
+	if (!GrappledActor){ return; }
+
 	FVector radius = GrappledActor->GetActorLocation() - GetActorLocation();
 
 	if (GrappleDrag_PreLaunch_Timer >= 0) {
@@ -438,6 +444,8 @@ void ASteikemannCharacter::Initial_GrappleHook_Drag(float DeltaTime)
 void ASteikemannCharacter::Update_GrappleHook_Drag(float DeltaTime)
 {
 	//FVector radius = GrappleHit.GetActor()->GetActorLocation() - GetActorLocation();
+	if (!GrappledActor) { return; }
+
 	FVector radius = GrappledActor->GetActorLocation() - GetActorLocation();
 
 	// Sett velocity til å gå mot grappled object. 
