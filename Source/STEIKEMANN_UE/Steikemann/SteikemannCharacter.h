@@ -22,9 +22,9 @@ public:
 	// Sets default values for this character's properties
 	ASteikemannCharacter(const FObjectInitializer& ObjectInitializer);
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
 	class USpringArmComponent* CameraBoom{ nullptr };
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
 	class UCameraComponent* Camera{ nullptr };
 
 	//TUniquePtr<class USteikemannCharMovementComponent> MovementComponent;

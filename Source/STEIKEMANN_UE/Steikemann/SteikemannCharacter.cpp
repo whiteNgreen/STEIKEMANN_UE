@@ -399,11 +399,11 @@ void ASteikemannCharacter::Update_GrappleHook_Swing()
 			FVector adjustment = radius * L;
 			SetActorRelativeLocation(GetActorLocation() + adjustment, false, nullptr, ETeleportType::TeleportPhysics);
 
-			{	// Debug lines and text
-				DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + adjustment, FColor::Yellow, false, -1, 0, 8.f);
-				GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Black, FString::Printf(TEXT("Adjustment Length: %f"), L));
-				GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Black, FString::Printf(TEXT("Adjustment: %s"), *adjustment.ToString()));
-			}
+			//{	// Debug lines and text
+			//	DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + adjustment, FColor::Yellow, false, -1, 0, 8.f);
+			//	GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Black, FString::Printf(TEXT("Adjustment Length: %f"), L));
+			//	GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Black, FString::Printf(TEXT("Adjustment: %s"), *adjustment.ToString()));
+			//}
 		}
 
 		/* New Velocity */
