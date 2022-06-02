@@ -66,8 +66,24 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		GrappleDrag_PreLaunch_Timer = GrappleDrag_PreLaunch_Timer_Length;
 	}
 
-	//if (IsGrappling())
-	//if ((bGrapple_Swing && !bGrappleEnd)) 
+	/* Jump */
+	if (bJumping)
+	{
+		if (JumpKeyHoldTime < fJumpTimerMax)
+		{
+			JumpKeyHoldTime += DeltaTime;
+		}
+		else
+		{
+			bAddJumpVelocity = false;
+		}
+	}
+	//else
+	//{
+	//	JumpKeyHoldTime = 0;
+	//}
+
+	/* Grapplehook */
 	if ((bGrapple_Swing && !bGrappleEnd) || (bGrapple_PreLaunch && !bGrappleEnd)) 
 	{
 		if (!bGrapple_PreLaunch) {
@@ -101,8 +117,8 @@ void ASteikemannCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	PlayerInputComponent->BindAxis("Look Up / Down Mouse", this,		&APawn::AddControllerPitchInput);
 	PlayerInputComponent->BindAxis("Look Up/Down Gamepad", this,		&ASteikemannCharacter::LookUpAtRate);
 
-	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ASteikemannCharacter::Jump);
-	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ASteikemannCharacter::StopJumping);
+	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ASteikemannCharacter::Jump).bConsumeInput = false;
+	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ASteikemannCharacter::StopJumping).bConsumeInput = false;
 
 
 	/* GrappleHook */
@@ -246,24 +262,33 @@ void ASteikemannCharacter::LookUpAtRate(float rate)
 
 void ASteikemannCharacter::Jump()
 {
+	//GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Yellow, FString::Printf(TEXT("Jump")));
 	bPressedJump = true;
-	JumpKeyHoldTime = 0.0f;
+	bJumping = true;
+	bAddJumpVelocity = true;
+	//JumpKeyHoldTime = 0;
 }
 
 void ASteikemannCharacter::StopJumping()
 {
+	//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("NotJump")));
 	bPressedJump = false;
+	bJumping = false;
+	bAddJumpVelocity = true;
 	ResetJumpState();
 }
 
 void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 {
 	JumpCurrentCountPreJump = JumpCurrentCount;
+	//GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Black, FString::Printf(TEXT("Check")));
 
 	if (GetCharacterMovement())
 	{
 		if (bPressedJump)
 		{
+			//GetCharacterMovement()->DoJump(bClientUpdating);
+
 			// If this is the first jump and we're already falling,
 			// then increment the JumpCount to compensate.
 			const bool bFirstJump = JumpCurrentCount == 0;
@@ -292,6 +317,7 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 		}
 	}
 }
+
 
 bool ASteikemannCharacter::CanDoubleJump() const
 {
@@ -369,6 +395,8 @@ bool ASteikemannCharacter::LineTraceToGrappleableObject()
 void ASteikemannCharacter::Initial_GrappleHook_Swing()
 {
 	//FVector radius = GrappleHit.GetActor()->GetActorLocation() - GetActorLocation();
+	if (!GrappledActor) { return; }
+
 	FVector radius = GrappledActor->GetActorLocation() - GetActorLocation();
 	GrappleRadiusLength = radius.Size();
 
@@ -384,6 +412,8 @@ void ASteikemannCharacter::Initial_GrappleHook_Swing()
 
 void ASteikemannCharacter::Update_GrappleHook_Swing()
 {
+	if (!GrappledActor) { return; }
+
 	FVector currentVelocity = GetCharacterMovement()->Velocity;
 	if (currentVelocity.Size() > 0) {
 		//FVector radius = GrappleHit.GetActor()->GetActorLocation() - GetActorLocation();
@@ -422,6 +452,8 @@ void ASteikemannCharacter::Update_GrappleHook_Swing()
 void ASteikemannCharacter::Initial_GrappleHook_Drag(float DeltaTime)
 {
 	//FVector radius = GrappleHit.GetActor()->GetActorLocation() - GetActorLocation();
+	if (!GrappledActor){ return; }
+
 	FVector radius = GrappledActor->GetActorLocation() - GetActorLocation();
 
 	if (GrappleDrag_PreLaunch_Timer >= 0) {
@@ -438,6 +470,8 @@ void ASteikemannCharacter::Initial_GrappleHook_Drag(float DeltaTime)
 void ASteikemannCharacter::Update_GrappleHook_Drag(float DeltaTime)
 {
 	//FVector radius = GrappleHit.GetActor()->GetActorLocation() - GetActorLocation();
+	if (!GrappledActor) { return; }
+
 	FVector radius = GrappledActor->GetActorLocation() - GetActorLocation();
 
 	// Sett velocity til å gå mot grappled object. 
