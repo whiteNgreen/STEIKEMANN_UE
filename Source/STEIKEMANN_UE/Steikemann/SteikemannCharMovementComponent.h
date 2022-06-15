@@ -29,6 +29,7 @@ public:
 
 	class ASteikemannCharacter* CharacterOwner_Steikemann{ nullptr };
 
+#pragma region Jump
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Jump")
 		bool bJumping{};
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Jump")
@@ -36,10 +37,20 @@ public:
 
 	bool DoJump(bool bReplayingMoves) override;
 
+#pragma endregion //Jump
+
+	/* Gravity */
+		/* The Max gravity scale override */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|GravityOverride")
 		float GravityScaleOverride{ 2.f };
+		/* Interpolation speed of the gravity scale override */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|GravityOverride")
 		float GravityScaleOverride_InterpSpeed{ 2.f };
+
+#pragma region Bounce
+	void Bounce(FVector surfacenormal);
+
+#pragma endregion //Bounce
 
 public: // Slipping
 	UPROPERTY(BlueprintReadWrite)

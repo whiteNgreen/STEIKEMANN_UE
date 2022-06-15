@@ -118,6 +118,18 @@ public:/*                      Basic Movement                           */
 	bool IsJumping() const;
 #pragma endregion //Basic_Movement
 
+#pragma region Bounce
+	//UPROPERTY(BlueprintReadOnly, Category = "Movement|Bounce")
+	bool bBounceClick{};
+	bool bBounce{};
+
+	/* The max length player can activate bounce */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Bounce")
+		float BounceCheckLength{ 100.f };
+
+	void Bounce();
+	void Stop_Bounce();
+#pragma endregion //Bounce
 
 #pragma region GrappleHook
 public: /* ------------------------ Grapplehook --------------------- */

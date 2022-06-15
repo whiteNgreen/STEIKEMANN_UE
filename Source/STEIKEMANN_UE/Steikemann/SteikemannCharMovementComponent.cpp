@@ -46,6 +46,8 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 		SetMovementMode(MOVE_Falling);
 	}
 
+	PRINTPAR("Speed: %f", Velocity.Size());
+
 }
 
 
@@ -67,4 +69,29 @@ bool USteikemannCharMovementComponent::DoJump(bool bReplayingMoves)
 
 
 	return false;
+}
+
+void USteikemannCharMovementComponent::Bounce(FVector surfacenormal)
+{
+		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (surfacenormal * 200), FColor::Blue, false, 10.f, 0, 4.f);
+	FVector negVel = Velocity * -1.f;
+	FVector curVel = Velocity;
+		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (Velocity * 200), FColor::Black, false, 10.f, 0, 4.f);
+	float expo = FVector::DotProduct(curVel, surfacenormal);
+	float tran = curVel.Size() * surfacenormal.Size();
+	float angle = acosf(expo / tran) * (180 / PI);
+
+	//FVector orthoVel = FVector::CrossProduct(curVel, FVector::CrossProduct(surfacenormal, curVel));
+	FVector orthoVel = FVector::CrossProduct(Velocity, FVector::CrossProduct(surfacenormal, Velocity));
+	orthoVel.Normalize();
+		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (orthoVel * 200), FColor::Yellow, false, 10.f, 0, 4.f);
+	//orthoVel *= Velocity.Size();
+	//PRINTPARLONG("OrthoVel: %f", )
+
+	curVel.Normalize();
+	FVector newVel = (cosf(-angle) * curVel) + (sinf(-angle) * orthoVel);
+	newVel.Normalize();
+		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (newVel * 200), FColor::Purple, false, 10.f, 0, 4.f);
+	newVel *= Velocity.Size();
+	Velocity = newVel;
 }

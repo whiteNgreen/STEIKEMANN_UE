@@ -261,6 +261,10 @@ void ASteikemannCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	PlayerInputComponent->BindAction("Jump Dualshock", IE_Pressed, this, &ASteikemannCharacter::JumpDualshock).bConsumeInput = true;
 	PlayerInputComponent->BindAction("Jump Dualshock", IE_Released, this, &ASteikemannCharacter::StopJumping).bConsumeInput = true;
 
+	/* Bounce */
+	PlayerInputComponent->BindAction("Bounce", IE_Pressed, this, &ASteikemannCharacter::Bounce).bConsumeInput = true;
+	PlayerInputComponent->BindAction("Bounce", IE_Released, this, &ASteikemannCharacter::Stop_Bounce).bConsumeInput = true;
+
 
 	/* GrappleHook */
 		/* Grapplehook SWING */
@@ -588,6 +592,28 @@ bool ASteikemannCharacter::LineTraceToGrappleableObject()
 	GrappledActor = Grappled;
 
 	return bGrapple_Available;
+}
+
+void ASteikemannCharacter::Bounce()
+{
+	if (!bBounceClick && GetCharacterMovement()->GetMovementName() == "Falling")
+	{
+		FHitResult Hit;
+		FCollisionQueryParams Params = FCollisionQueryParams(FName(""), false, this);
+		bBounce = GetWorld()->LineTraceSingleByChannel(Hit, GetActorLocation(), GetActorLocation() - FVector{ 0, 0, BounceCheckLength }, ECC_Visibility, Params);
+		if (bBounce) {
+			PRINTLONG("Bounce");
+			MovementComponent->Bounce(Hit.ImpactNormal);
+		}
+	}
+
+	bBounceClick = true;
+}
+
+void ASteikemannCharacter::Stop_Bounce()
+{
+	bBounceClick = false;
+	bBounce = false;
 }
 
 void ASteikemannCharacter::Initial_GrappleHook_Swing()
