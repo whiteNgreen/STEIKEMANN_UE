@@ -9,6 +9,12 @@
 #include "PhysicalMaterials/PhysicalMaterial.h"
 #include "Kismet/GameplayStatics.h"
 
+/* Gamepad support */
+#include "RawInput.h"
+#include "RawInputFunctionLibrary.h"
+#include "IInputDeviceModule.h"
+#include "IInputDevice.h"
+#include "GenericPlatform/GenericApplicationMessageHandler.h"
 
 
 // Sets default values
@@ -41,6 +47,86 @@ ASteikemannCharacter::ASteikemannCharacter(const FObjectInitializer& ObjectIniti
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	Camera->bUsePawnControlRotation = false;
+
+	/* Gamepad support */
+	FCoreDelegates::OnControllerConnectionChange.AddUObject(this, &ASteikemannCharacter::ListenForControllerChange);
+}
+
+/* Gamepad support */
+void ASteikemannCharacter::ListenForControllerChange(bool isConnected, int32 useless, int32 uselessIndex)
+{
+	IRawInput* RawInput = static_cast<IRawInput*>(static_cast<FRawInputPlugin*>(&FRawInputPlugin::Get())->GetRawInputDevice().Get());
+	RawInput->QueryConnectedDevices();
+
+	OnControllerConnection();
+}
+
+void ASteikemannCharacter::AnyKey(FKey key)
+{
+	//PRINTPARLONG("%s", *key.GetDisplayName().ToString());
+
+	Gamepad_ChangeTimer = 0.0f;
+	FString s = key.GetDisplayName().ToString();
+	FString t;
+	for (int i = 0; i < s.Len(); i++)
+	{
+		if (i > 6) { break; }
+
+		t += s[i];
+	}
+	t = t.ToLower();
+
+	GamepadType incommingPad{};
+	FString c;
+	if (t == "gamepad"){
+		incommingPad = Xbox;
+		c = "Xbox";
+		//bDontChangefromXboxPad = true;
+	}
+	else if (t == "generic"){
+		incommingPad = Playstation;
+		c = "Playstation";
+	}
+	else  {
+		incommingPad = MouseandKeyboard;
+		c = "Mouse and Keyboard";
+	}
+	
+	if (incommingPad != CurrentGamepadType && bCanChangeGamepad)
+	{
+		CurrentGamepadType = incommingPad;	
+		//PRINTPARLONG("Change gamepad to : %s", *c);
+	}
+}
+
+void ASteikemannCharacter::AnyKeyRelease(FKey key)
+{
+	Gamepad_ChangeTimer = 0.0f;
+	FString s = key.GetDisplayName().ToString();
+	FString t;
+	for (int i = 0; i < s.Len(); i++)
+	{
+		if (i > 6) { break; }
+
+		t += s[i];
+	}
+	t = t.ToLower();
+
+	GamepadType incommingPad{};
+	FString c;
+	if (t == "gamepad") {
+		incommingPad = Xbox;
+		c = "Xbox";
+		//bDontChangefromXboxPad = false;
+	}
+	else if (t == "generic") {
+		incommingPad = Playstation;
+		c = "Playstation";
+	}
+	else {
+		incommingPad = MouseandKeyboard;
+		c = "Mouse and Keyboard";
+	}
 }
 
 // Called when the game starts or when spawned
@@ -48,15 +134,57 @@ void ASteikemannCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	FCoreDelegates::OnControllerConnectionChange.AddUObject(this, &ASteikemannCharacter::ListenForControllerChange);
+	/* Gamepad support */
+	IRawInput* RawInput = static_cast<IRawInput*>(static_cast<FRawInputPlugin*>(&FRawInputPlugin::Get())->GetRawInputDevice().Get());
+	if (RawInput != nullptr)
+	{
+		RawInput->QueryConnectedDevices();
+		OnControllerConnection();
+	}
+	
+	//APlayerController* player = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+	//player->EnableInput(player);
+
 	MovementComponent = Cast<USteikemannCharMovementComponent>(GetCharacterMovement());
 
 	GrappleDrag_PreLaunch_Timer = GrappleDrag_PreLaunch_Timer_Length;
+
+
 }
 
 // Called every frame
 void ASteikemannCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	/* Gamepad Ticks */
+	//bDontChangefromXboxPad ? PRINT("True") : PRINT("False");
+	switch (CurrentGamepadType)
+	{
+	case Xbox:
+		//PRINT("Xbox");
+		break;
+	case Playstation:
+		//PRINT("Dualshock");
+		break;
+	case MouseandKeyboard:
+		//PRINT("Mouse and Keyboard");
+		break;
+
+	default:
+		break;
+	}
+	//PRINTPAR("%f", Gamepad_ChangeTimer);
+	if (Gamepad_ChangeTimer < Gamepad_ChangeTimerLength) {
+		Gamepad_ChangeTimer += DeltaTime;
+		bCanChangeGamepad = false;
+	}
+	else {
+		bCanChangeGamepad = true;
+	}
+
+	PRINTPAR("Velocity: %f", GetCharacterMovement()->Velocity.Size());
 
 	DetectPhysMaterial();
 
@@ -66,22 +194,17 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		GrappleDrag_PreLaunch_Timer = GrappleDrag_PreLaunch_Timer_Length;
 	}
 
+	
 	/* Jump */
-	if (bJumping)
-	{
-		if (JumpKeyHoldTime < fJumpTimerMax)
-		{
+	if (bJumping){
+		if (JumpKeyHoldTime < fJumpTimerMax){
 			JumpKeyHoldTime += DeltaTime;
 		}
-		else
-		{
+		else{
 			bAddJumpVelocity = false;
 		}
 	}
-	//else
-	//{
-	//	JumpKeyHoldTime = 0;
-	//}
+
 
 	/* Grapplehook */
 	if ((bGrapple_Swing && !bGrappleEnd) || (bGrapple_PreLaunch && !bGrappleEnd)) 
@@ -107,24 +230,40 @@ void ASteikemannCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
 	check(PlayerInputComponent);
+	
+	//PlayerInputComponent->BindAction("AnyKey", IE_Pressed, this, &ASteikemannCharacter::AnyKey).bConsumeInput = true;
+	//PlayerInputComponent->BindAction("AnyKey", IE_Released, this, &ASteikemannCharacter::AnyKeyRelease).bConsumeInput = true;
+
 
 	/* Basic Movement */
+		/* Movement control */
+			/* Gamepad and Keyboard */
 	PlayerInputComponent->BindAxis("Move Forward / Backward", this, &ASteikemannCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("Move Right / Left", this, &ASteikemannCharacter::MoveRight);
-
+			/* Dualshock */
+	PlayerInputComponent->BindAxis("Move Forward Dualshock", this, &ASteikemannCharacter::MoveForwardDualshock);
+	PlayerInputComponent->BindAxis("Move Right / Left PS4", this, &ASteikemannCharacter::MoveRightDualshock);
+		/* Looking control */
 	PlayerInputComponent->BindAxis("Turn Right / Left Mouse", this,		&APawn::AddControllerYawInput);
-	PlayerInputComponent->BindAxis("Turn Right / Left Gamepad", this,	&ASteikemannCharacter::TurnAtRate);
 	PlayerInputComponent->BindAxis("Look Up / Down Mouse", this,		&APawn::AddControllerPitchInput);
+	PlayerInputComponent->BindAxis("Turn Right / Left Gamepad", this,	&ASteikemannCharacter::TurnAtRate);
 	PlayerInputComponent->BindAxis("Look Up/Down Gamepad", this,		&ASteikemannCharacter::LookUpAtRate);
+			/* Dualshock */
+	PlayerInputComponent->BindAxis("Look Up/Down PS4", this,		&ASteikemannCharacter::LookUpAtRateDualshock);
+	PlayerInputComponent->BindAxis("Turn Right/Left PS4", this,	&ASteikemannCharacter::TurnAtRateDualshock);
 
-	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ASteikemannCharacter::Jump).bConsumeInput = false;
-	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ASteikemannCharacter::StopJumping).bConsumeInput = false;
+		/* Jump */
+	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ASteikemannCharacter::Jump).bConsumeInput = true;
+	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ASteikemannCharacter::StopJumping).bConsumeInput = true;
+	PlayerInputComponent->BindAction("Jump Dualshock", IE_Pressed, this, &ASteikemannCharacter::JumpDualshock).bConsumeInput = true;
+	PlayerInputComponent->BindAction("Jump Dualshock", IE_Released, this, &ASteikemannCharacter::StopJumping).bConsumeInput = true;
 
 
 	/* GrappleHook */
+		/* Grapplehook SWING */
 	PlayerInputComponent->BindAction("GrappleHook_Swing", IE_Pressed, this,	  &ASteikemannCharacter::Start_Grapple_Swing);
 	PlayerInputComponent->BindAction("GrappleHook_Swing", IE_Released, this,  &ASteikemannCharacter::Stop_Grapple_Swing);
-
+		/* Grapplehook DRAG */
 	PlayerInputComponent->BindAction("GrappleHook_Drag", IE_Pressed, this,	  &ASteikemannCharacter::Start_Grapple_Drag);
 	PlayerInputComponent->BindAction("GrappleHook_Drag", IE_Released, this,	  &ASteikemannCharacter::Stop_Grapple_Drag);
 
@@ -133,7 +272,7 @@ void ASteikemannCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 
 void ASteikemannCharacter::Start_Grapple_Swing()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Yellow, FString::Printf(TEXT("Start grapple Swing")));
+	//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Yellow, FString::Printf(TEXT("Start grapple Swing")));
 	if (bGrapple_Available)
 	{
 		bGrapple_Swing = true;
@@ -142,12 +281,14 @@ void ASteikemannCharacter::Start_Grapple_Swing()
 		{
 			IGrappleTargetInterface::Execute_Hooked(GrappledActor);
 		}
+
+		if (JumpCurrentCount == 2) { JumpCurrentCount--; }
 	}
 }
 
 void ASteikemannCharacter::Stop_Grapple_Swing()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("End grapple Swing")));
+	//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("End grapple Swing")));
 	bGrapple_Swing = false;
 	if (GrappledActor && IsGrappling())
 	{
@@ -157,17 +298,18 @@ void ASteikemannCharacter::Stop_Grapple_Swing()
 
 void ASteikemannCharacter::Start_Grapple_Drag()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Silver, FString::Printf(TEXT("Start Grapple Drag")));
+	//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Silver, FString::Printf(TEXT("Start Grapple Drag")));
 	bGrapple_PreLaunch = true;
 	if (GrappledActor)
 	{
 		IGrappleTargetInterface::Execute_Hooked(GrappledActor);
 	}
+	if (JumpCurrentCount == 2) { JumpCurrentCount--; }
 }
 
 void ASteikemannCharacter::Stop_Grapple_Drag()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("End Grapple Drag")));
+	//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("End Grapple Drag")));
 	bGrapple_PreLaunch = false;
 	bGrapple_Launch = false;
 	bGrapple_Swing = false;
@@ -213,13 +355,17 @@ void ASteikemannCharacter::DetectPhysMaterial()
 	}
 }
 
-void ASteikemannCharacter::MoveForward(float Value)
+void ASteikemannCharacter::MoveForward(float value)
 {
-	float movement = Value;
+	//PRINTPAR("FORWARD: %f", value);
+	//PRINT("for");
+	
+
+	float movement = value;
 	if (bSlipping)
 		movement *= 0.1;
 
-	if ((Controller != nullptr) && (Value != 0.0f))
+	if ((Controller != nullptr) && (value != 0.0f))
 	{
 		// find out which way is forward
 		const FRotator Rotation = Controller->GetControlRotation();
@@ -231,13 +377,27 @@ void ASteikemannCharacter::MoveForward(float Value)
 	}
 }
 
-void ASteikemannCharacter::MoveRight(float Value)
+void ASteikemannCharacter::MoveForwardDualshock(float value)
 {
-	float movement = Value;
+	float V = (value - 0.5f) * 2;
+	if (CurrentGamepadType == Playstation && (V >= DS_LeftStickDrift || V <= -DS_LeftStickDrift))
+	{
+		//PRINT("Playstation Forward");
+		MoveForward(V);
+	}
+}
+
+void ASteikemannCharacter::MoveRight(float value)
+{
+	//PRINTPAR("RIGHT: %f", value);
+	//PRINT("rig");
+	//GEngine->AddOnScreenDebugMessage(-1, 0, FColor::White, FString::Printf(TEXT("%f"), Value));
+
+	float movement = value;
 	if (bSlipping)
 		movement *= 0.1;
 
-	if ((Controller != nullptr) && (Value != 0.0f))
+	if ((Controller != nullptr) && (value != 0.0f))
 	{
 		// find out which way is right
 		const FRotator Rotation = Controller->GetControlRotation();
@@ -248,11 +408,41 @@ void ASteikemannCharacter::MoveRight(float Value)
 		// add movement in that direction
 		AddMovementInput(Direction, movement);
 	}
+
+}
+
+void ASteikemannCharacter::MoveRightDualshock(float value)
+{
+	float V = (value - 0.5f) * 2;
+	if (CurrentGamepadType == Playstation && (V >= DS_LeftStickDrift || V <= -DS_LeftStickDrift))
+	{
+		//PRINT("Playstation Right");
+		MoveRight(V);
+	}
+}
+
+void ASteikemannCharacter::TurnAtRateDualshock(float rate)
+{
+	float V = (rate - 0.5f) * 2;
+	if (CurrentGamepadType == Playstation && (V >= 0.05f || V <= -0.05f)) {
+		TurnAtRate(V);
+		//PRINTPAR("Turnright: %f", rate);
+	}
+}
+
+void ASteikemannCharacter::LookUpAtRateDualshock(float rate)
+{
+	float V = (rate - 0.5f) * 2;
+	if (CurrentGamepadType == Playstation && (V >= DS_RightStickDrift || V <= -DS_RightStickDrift)) {
+		LookUpAtRate(V);
+		//PRINTPAR("Lookup: %f", rate);
+	}
 }
 
 void ASteikemannCharacter::TurnAtRate(float rate)
 {
 	AddControllerYawInput(rate * TurnRate * GetWorld()->GetDeltaSeconds());
+
 }
 
 void ASteikemannCharacter::LookUpAtRate(float rate)
@@ -262,32 +452,45 @@ void ASteikemannCharacter::LookUpAtRate(float rate)
 
 void ASteikemannCharacter::Jump()
 {
-	//GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Yellow, FString::Printf(TEXT("Jump")));
+	/* Don't Jump if player is Grappling */
+	if (IsGrappling()) { return; }
+
 	bPressedJump = true;
 	bJumping = true;
-	bAddJumpVelocity = true;
-	//JumpKeyHoldTime = 0;
+	bAddJumpVelocity = (CanJump() || CanDoubleJump());
+}
+
+void ASteikemannCharacter::JumpDualshock()
+{
+	if (CurrentGamepadType == Playstation) {
+		Jump();
+	}
 }
 
 void ASteikemannCharacter::StopJumping()
 {
-	//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("NotJump")));
 	bPressedJump = false;
 	bJumping = false;
 	bAddJumpVelocity = true;
+	bCanEdgeJump = false;
 	ResetJumpState();
 }
 
 void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 {
 	JumpCurrentCountPreJump = JumpCurrentCount;
-	//GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Black, FString::Printf(TEXT("Check")));
 
 	if (GetCharacterMovement())
 	{
 		if (bPressedJump)
 		{
-			//GetCharacterMovement()->DoJump(bClientUpdating);
+			/* If player walks off edge with no jumpcount */
+			if (GetCharacterMovement()->IsFalling() && JumpCurrentCount == 0)
+			{
+				bCanEdgeJump = true;
+				JumpCurrentCount += 2;
+				bAddJumpVelocity = GetCharacterMovement()->DoJump(bClientUpdating);
+			}
 
 			// If this is the first jump and we're already falling,
 			// then increment the JumpCount to compensate.
@@ -322,6 +525,11 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 bool ASteikemannCharacter::CanDoubleJump() const
 {
 	return JumpCurrentCount == 1;
+}
+
+bool ASteikemannCharacter::IsJumping() const
+{
+	return bAddJumpVelocity && bJumping;
 }
 
 bool ASteikemannCharacter::LineTraceToGrappleableObject()
@@ -400,12 +608,21 @@ void ASteikemannCharacter::Initial_GrappleHook_Swing()
 	FVector radius = GrappledActor->GetActorLocation() - GetActorLocation();
 	GrappleRadiusLength = radius.Size();
 
-	//FVector newVelocity = FVector::CrossProduct(radius, (FVector::CrossProduct(FVector::DownVector, radius)));
 	FVector newVelocity = FVector::CrossProduct(radius, (FVector::CrossProduct(GetCharacterMovement()->Velocity, radius)));
-	FVector Velocity = GetCharacterMovement()->Velocity;
-	float L = Velocity.Size();
-	//GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Yellow, FString::Printf(TEXT("L: %f"), L));
-	newVelocity = (GrapplingHook_InitialBoost / newVelocity.Size()) * newVelocity;
+	newVelocity.Normalize();
+	
+	{	/* Using Clamp as temporary solution to the max speed */
+		float V = (PI * GrappleRadiusLength) / GrappleHook_SwingTime;
+		V = FMath::Clamp(V, 0.f, GrappleHook_Swing_MaxSpeed);
+
+		newVelocity *= V;
+	}
+
+	//{	/* Old method of start velocity for swing */
+	//	FVector Velocity = GetCharacterMovement()->Velocity;
+	//	float L = Velocity.Size();
+	//	newVelocity = (GrapplingHook_InitialBoost / newVelocity.Size()) * newVelocity;
+	//}
 
 	GetCharacterMovement()->Velocity = newVelocity;
 }
@@ -419,7 +636,7 @@ void ASteikemannCharacter::Update_GrappleHook_Swing()
 		//FVector radius = GrappleHit.GetActor()->GetActorLocation() - GetActorLocation();
 		FVector radius = GrappledActor->GetActorLocation() - GetActorLocation();
 		float fRadius = radius.Size();
-		GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Black, FString::Printf(TEXT("Radius Length: %f"), GrappleRadiusLength - fRadius));
+		//GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Black, FString::Printf(TEXT("Radius Length: %f"), GrappleRadiusLength - fRadius));
 		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + radius, FColor::Green, false, -1, 0, 4.f);
 
 		/* Adjust actor location to match the initial length from the grappled object */
@@ -428,20 +645,14 @@ void ASteikemannCharacter::Update_GrappleHook_Swing()
 			float L = (fRadius / GrappleRadiusLength) - 1;
 			FVector adjustment = radius * L;
 			SetActorRelativeLocation(GetActorLocation() + adjustment, false, nullptr, ETeleportType::TeleportPhysics);
-
-			//{	// Debug lines and text
-			//	DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + adjustment, FColor::Yellow, false, -1, 0, 8.f);
-			//	GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Black, FString::Printf(TEXT("Adjustment Length: %f"), L));
-			//	GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Black, FString::Printf(TEXT("Adjustment: %s"), *adjustment.ToString()));
-			//}
 		}
 
 		/* New Velocity */
 		FVector newVelocity = FVector::CrossProduct(radius, (FVector::CrossProduct(currentVelocity, radius)));
-		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + newVelocity, FColor::Purple, false, -1, 0, 4.f);
+			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + newVelocity, FColor::Purple, false, -1, 0, 4.f);
 		/* New Velocity in relation to the downward axis */
 		FVector backWards = FVector::CrossProduct(radius, (FVector::CrossProduct(FVector::DownVector, radius)));
-		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + backWards, FColor::Blue, false, -1, 0, 4.f);
+			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + backWards, FColor::Blue, false, -1, 0, 4.f);
 
 		newVelocity = (currentVelocity.Size() / newVelocity.Size()) * newVelocity;
 
@@ -454,6 +665,7 @@ void ASteikemannCharacter::Initial_GrappleHook_Drag(float DeltaTime)
 	//FVector radius = GrappleHit.GetActor()->GetActorLocation() - GetActorLocation();
 	if (!GrappledActor){ return; }
 
+
 	FVector radius = GrappledActor->GetActorLocation() - GetActorLocation();
 
 	if (GrappleDrag_PreLaunch_Timer >= 0) {
@@ -463,28 +675,53 @@ void ASteikemannCharacter::Initial_GrappleHook_Drag(float DeltaTime)
 	else {
 		bGrapple_Launch = true;
 		GrappleDrag_PreLaunch_Timer = GrappleDrag_PreLaunch_Timer_Length;
-		GrappleDrag_CurrentSpeed = GrappleDrag_Initial_Speed;
+		GrappleDrag_CurrentSpeed = 0.f;
+
+		{	/* Old GrappleDrag method */
+			//GrappleDrag_CurrentSpeed = GrappleDrag_Initial_Speed;
+		}
 	}
 }
 
 void ASteikemannCharacter::Update_GrappleHook_Drag(float DeltaTime)
 {
-	//FVector radius = GrappleHit.GetActor()->GetActorLocation() - GetActorLocation();
 	if (!GrappledActor) { return; }
+	
+	if (GetCharacterMovement()->GetMovementName() == "Walking")
+	{
+		GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Falling);
+	}
 
 	FVector radius = GrappledActor->GetActorLocation() - GetActorLocation();
+	FVector newVelocity = radius;
+	newVelocity.Normalize();
 
-	// Sett velocity til å gå mot grappled object. 
-	FVector newVelocity = (GrappleDrag_CurrentSpeed / radius.Size()) * radius;
-	DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + newVelocity, FColor::Red, false, 0, 0, 4.f);
-	GrappleDrag_CurrentSpeed += GrappleDrag_Acceleration_Speed;
+	/* Base the time multiplier with the distance to the grappled actor */
+	float D = GrappleDrag_Update_TimeMultiplier / ((radius.Size() - GrappleDrag_MinRadiusDistance) / 1000.f);
+	D = FMath::Max(D, GrappleDrag_Update_Time_MIN_Multiplier);
+	PRINTPAR("D: %f", D);
 
-	if (radius.Size() > 50) {
+	GrappleDrag_CurrentSpeed = FMath::FInterpTo(GrappleDrag_CurrentSpeed, GrappleDrag_MaxSpeed, DeltaTime, D);
+	PRINTPAR("Speed: %f", GrappleDrag_CurrentSpeed);
+
+	newVelocity *= GrappleDrag_CurrentSpeed;
+
+		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + newVelocity, FColor::Red, false, 0, 0, 4.f);
+
+	//{	/* Old GrappleDrag method, Initial speed + Constant acceleration */
+	//	// Sett velocity til å gå mot grappled object. 
+	//	FVector newVelocity = (GrappleDrag_CurrentSpeed / radius.Size()) * radius;
+	//	GrappleDrag_CurrentSpeed += GrappleDrag_Acceleration_Speed;
+	//}
+
+	if (radius.Size() > GrappleDrag_MinRadiusDistance) {
+		
 		GetCharacterMovement()->Velocity = newVelocity;
 	}
 	else {
 		bGrapple_Launch = false;
 		bGrappleEnd = true;
+		PRINTPARLONG("Drag OutSpeed: %f", GrappleDrag_CurrentSpeed);
 	}
 }
 

@@ -5,12 +5,18 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "../Interfaces/GrappleTargetInterface.h"
+#include "../DebugMacros.h"
 
 #include "SteikemannCharacter.generated.h"
 
 #define GRAPPLE_HOOK ECC_GameTraceChannel1
 
-
+enum GamepadType
+{
+	Xbox,
+	Playstation,
+	MouseandKeyboard
+};
 
 UCLASS()
 class STEIKEMANN_UE_API ASteikemannCharacter : public ACharacter, 
@@ -27,9 +33,37 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
 	class UCameraComponent* Camera{ nullptr };
 
-	//TUniquePtr<class USteikemannCharMovementComponent> MovementComponent;
-	//TWeakObjectPtr<class USteikemannCharMovementComponent> MovementComponent;
-	class USteikemannCharMovementComponent* MovementComponent{ nullptr };
+	//class USteikemannCharMovementComponent* MovementComponent{ nullptr };
+	TWeakObjectPtr<class USteikemannCharMovementComponent> MovementComponent;
+
+#pragma region Gamepads
+
+	UPROPERTY(BlueprintReadWrite)
+		bool bCanChangeGamepad{};
+	UPROPERTY(BlueprintReadWrite)
+		bool bDontChangefromXboxPad{};
+	/* Timer to ensure that it doesn't accidentaly change gamepad type */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gamepads")
+		float Gamepad_ChangeTimerLength{ 1.f }; 
+	float Gamepad_ChangeTimer{};
+
+
+	UPROPERTY(EditAnywhere, Category = "Gamepads|Dualshock")
+		float DS_LeftStickDrift{ 0.06f };	
+	UPROPERTY(EditAnywhere, Category = "Gamepads|Dualshock")
+		float DS_RightStickDrift{ 0.08f };
+
+	GamepadType CurrentGamepadType{ MouseandKeyboard };
+
+	void ListenForControllerChange(bool isConnected, int32 useless, int32 uselessIndex);
+	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, Category = "Controller Events")
+		void OnControllerConnection();
+
+	UFUNCTION(BlueprintCallable)
+	void AnyKey(FKey key);
+	UFUNCTION(BlueprintCallable)
+	void AnyKeyRelease(FKey key);
+#pragma endregion //Gamepads
 
 protected:
 	// Called when the game starts or when spawned
@@ -47,8 +81,7 @@ public:
 
 	void DetectPhysMaterial();
 
-
-
+#pragma region Basic_Movement
 public:/*                      Basic Movement                           */
 
 	UPROPERTY(EditAnywhere, Category = "Movement|Walk/Run", meta = (AllowPrivateAcces = "true"))
@@ -59,23 +92,34 @@ public:/*                      Basic Movement                           */
 	void TurnAtRate(float rate);
 	void LookUpAtRate(float rate);
 
+	void MoveForwardDualshock(float value);
+	void MoveRightDualshock(float value);
+	void TurnAtRateDualshock(float rate);
+	void LookUpAtRateDualshock(float rate);
+
 	UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
 		bool bJumping{};
+	bool bCanEdgeJump{};
 	UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
 		bool bAddJumpVelocity{};
+	/* How long the jump key can be held to add upwards velocity */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
-	float fJumpTimerMax{ 0.2f }; UMETA(DisplayName = "JumpHoldTimer");
+		float fJumpTimerMax UMETA(DisplayName = "JumpHoldTimer") { 0.2f };
 	UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
-	float fJumpTimer{};
+		float fJumpTimer{};
 
 	void Jump() override;
+	void JumpDualshock();
 	void StopJumping() override;
 	void CheckJumpInput(float DeltaTime) override;
 
 
 	bool CanDoubleJump() const;
+	bool IsJumping() const;
+#pragma endregion //Basic_Movement
 
 
+#pragma region GrappleHook
 public: /* ------------------------ Grapplehook --------------------- */
 		/*                     GrappleTargetInterface                 */
 	void Targeted() {}
@@ -97,7 +141,7 @@ public: /* ------------------------ Grapplehook --------------------- */
 
 	UPROPERTY(BlueprintReadOnly)
 		bool bGrapple_Available;
-	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|GrappleHook")
+	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
 		float GrappleHookRange{ 2000.f };
 
 	bool LineTraceToGrappleableObject();
@@ -117,24 +161,41 @@ public: /* ------------------------ Grapplehook --------------------- */
 	UPROPERTY(BlueprintReadOnly)
 		bool bGrapple_Launch;
 	
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing", meta = (AllowPrivateAcces = "true"))
+		//float GrapplingHook_InitialBoost{ 1000.f };
+	/* Time it takes for half a rotation around the GrappledActor */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing", meta = (AllowPrivateAcces = "true"))
-		float GrapplingHook_InitialBoost{ 1000.f };
+		float GrappleHook_SwingTime{ 1.f };
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing", meta = (AllowPrivateAcces = "true"))
+		float GrappleHook_Swing_MaxSpeed{ 2000.f };
 	/* Initial length between actor and grappled object */
-	float GrappleRadiusLength;
+	float GrappleRadiusLength{};
 
 	/* Grapplehook swing */
 	UFUNCTION(BlueprintCallable)
 	void Initial_GrappleHook_Swing();
 	void Update_GrappleHook_Swing();
 
+	/* How long the player will be held in the air before being launched towards the grappled actor */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag", meta = (AllowPrivateAcces = "true"))
+		float GrappleDrag_PreLaunch_Timer_Length UMETA(DisplayName = "PreLaunch Timer")  { 0.25f };
+	float GrappleDrag_PreLaunch_Timer{};
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag", meta = (AllowPrivateAcces = "true"))
+		//float GrappleDrag_Initial_Speed{ 500.f };
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag", meta = (AllowPrivateAcces = "true"))
+		//float GrappleDrag_Acceleration_Speed{ 10.f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag", meta = (AllowPrivateAcces = "true"))
-		float GrappleDrag_PreLaunch_Timer_Length{ 0.5f };
-	float GrappleDrag_PreLaunch_Timer{};
+		float GrappleDrag_MaxSpeed UMETA(DisplayName = "Max Speed") { 2000.f };
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag", meta = (AllowPrivateAcces = "true"))
-		float GrappleDrag_Initial_Speed{ 500.f };
+		float GrappleDrag_MinRadiusDistance UMETA(DisplayName = "Min Radius Distance") { 50.f };
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag", meta = (AllowPrivateAcces = "true"))
-		float GrappleDrag_Acceleration_Speed{ 10.f };
+		float GrappleDrag_Update_TimeMultiplier UMETA(DisplayName = "Time Multiplier") { 2.f };
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag", meta = (AllowPrivateAcces = "true"))
+		float GrappleDrag_Update_Time_MIN_Multiplier UMETA(DisplayName = "Minimum Time Multiplier") { 2.f };
 
 	float GrappleDrag_CurrentSpeed{};
 
@@ -148,4 +209,5 @@ public: /* ------------------------ Grapplehook --------------------- */
 
 	UFUNCTION(BlueprintCallable)
 	bool IsGrappling();
+#pragma endregion //GrappleHook
 };

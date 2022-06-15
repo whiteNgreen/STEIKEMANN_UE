@@ -8,7 +8,9 @@ public class STEIKEMANN_UE : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore" ,
+            "RawInput", "InputDevice", "ApplicationCore"	// Lagt til angående gamepad support
+		});	
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 
