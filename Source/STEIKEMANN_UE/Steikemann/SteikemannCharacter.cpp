@@ -184,7 +184,8 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		bCanChangeGamepad = true;
 	}
 
-	PRINTPAR("Velocity: %f", GetCharacterMovement()->Velocity.Size());
+	//PRINTPAR("Velocity: %f", GetCharacterMovement()->Velocity.Size());
+	PRINTPAR("Gravity: %f", GetCharacterMovement()->GravityScale);
 
 	DetectPhysMaterial();
 
@@ -210,10 +211,12 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	if ((bGrapple_Swing && !bGrappleEnd) || (bGrapple_PreLaunch && !bGrappleEnd)) 
 	{
 		if (!bGrapple_PreLaunch) {
+			//GrappleHook_Swing_RotateCamera(DeltaTime);
 			Update_GrappleHook_Swing();
 			bGrapple_Launch = false;
 		}
 		else {
+			GrappleHook_Drag_RotateCamera(DeltaTime);
 			if (!bGrapple_Launch) {
 				Initial_GrappleHook_Drag(DeltaTime);
 			}
@@ -231,8 +234,8 @@ void ASteikemannCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 
 	check(PlayerInputComponent);
 	
-	//PlayerInputComponent->BindAction("AnyKey", IE_Pressed, this, &ASteikemannCharacter::AnyKey).bConsumeInput = true;
-	//PlayerInputComponent->BindAction("AnyKey", IE_Released, this, &ASteikemannCharacter::AnyKeyRelease).bConsumeInput = true;
+	PlayerInputComponent->BindAction("AnyKey", IE_Pressed, this, &ASteikemannCharacter::AnyKey).bConsumeInput = true;
+	PlayerInputComponent->BindAction("AnyKey", IE_Released, this, &ASteikemannCharacter::AnyKeyRelease).bConsumeInput = true;
 
 
 	/* Basic Movement */
@@ -272,7 +275,6 @@ void ASteikemannCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 
 void ASteikemannCharacter::Start_Grapple_Swing()
 {
-	//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Yellow, FString::Printf(TEXT("Start grapple Swing")));
 	if (bGrapple_Available)
 	{
 		bGrapple_Swing = true;
@@ -288,7 +290,6 @@ void ASteikemannCharacter::Start_Grapple_Swing()
 
 void ASteikemannCharacter::Stop_Grapple_Swing()
 {
-	//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("End grapple Swing")));
 	bGrapple_Swing = false;
 	if (GrappledActor && IsGrappling())
 	{
@@ -298,7 +299,6 @@ void ASteikemannCharacter::Stop_Grapple_Swing()
 
 void ASteikemannCharacter::Start_Grapple_Drag()
 {
-	//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Silver, FString::Printf(TEXT("Start Grapple Drag")));
 	bGrapple_PreLaunch = true;
 	if (GrappledActor)
 	{
@@ -309,7 +309,6 @@ void ASteikemannCharacter::Start_Grapple_Drag()
 
 void ASteikemannCharacter::Stop_Grapple_Drag()
 {
-	//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("End Grapple Drag")));
 	bGrapple_PreLaunch = false;
 	bGrapple_Launch = false;
 	bGrapple_Swing = false;
@@ -325,8 +324,6 @@ void ASteikemannCharacter::DetectPhysMaterial()
 	FVector Start = GetActorLocation();
 	FVector End = GetActorLocation() - FVector(0, 0, 100);
 	FHitResult Hit;
-
-	//DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 0, 0, 2.f);
 
 	FCollisionQueryParams Params = FCollisionQueryParams(FName(""), false, this);
 	Params.bReturnPhysicalMaterial = true;
@@ -357,10 +354,6 @@ void ASteikemannCharacter::DetectPhysMaterial()
 
 void ASteikemannCharacter::MoveForward(float value)
 {
-	//PRINTPAR("FORWARD: %f", value);
-	//PRINT("for");
-	
-
 	float movement = value;
 	if (bSlipping)
 		movement *= 0.1;
@@ -389,10 +382,6 @@ void ASteikemannCharacter::MoveForwardDualshock(float value)
 
 void ASteikemannCharacter::MoveRight(float value)
 {
-	//PRINTPAR("RIGHT: %f", value);
-	//PRINT("rig");
-	//GEngine->AddOnScreenDebugMessage(-1, 0, FColor::White, FString::Printf(TEXT("%f"), Value));
-
 	float movement = value;
 	if (bSlipping)
 		movement *= 0.1;
@@ -532,6 +521,7 @@ bool ASteikemannCharacter::IsJumping() const
 	return bAddJumpVelocity && bJumping;
 }
 
+/* Aiming system for grapplehook */
 bool ASteikemannCharacter::LineTraceToGrappleableObject()
 {
 	FVector Loc{};
@@ -602,29 +592,24 @@ bool ASteikemannCharacter::LineTraceToGrappleableObject()
 
 void ASteikemannCharacter::Initial_GrappleHook_Swing()
 {
-	//FVector radius = GrappleHit.GetActor()->GetActorLocation() - GetActorLocation();
 	if (!GrappledActor) { return; }
 
 	FVector radius = GrappledActor->GetActorLocation() - GetActorLocation();
 	GrappleRadiusLength = radius.Size();
 
-	FVector newVelocity = FVector::CrossProduct(radius, (FVector::CrossProduct(GetCharacterMovement()->Velocity, radius)));
-	newVelocity.Normalize();
-	
-	{	/* Using Clamp as temporary solution to the max speed */
+	FVector currentVelocity = GetCharacterMovement()->Velocity;
+	if (currentVelocity.Size() > 0)
+	{
+		FVector newVelocity = FVector::CrossProduct(radius, (FVector::CrossProduct(currentVelocity, radius)));
+		newVelocity.Normalize();
+
+		/* Using Clamp as temporary solution to the max speed */
 		float V = (PI * GrappleRadiusLength) / GrappleHook_SwingTime;
 		V = FMath::Clamp(V, 0.f, GrappleHook_Swing_MaxSpeed);
-
 		newVelocity *= V;
+
+		GetCharacterMovement()->Velocity = newVelocity;
 	}
-
-	//{	/* Old method of start velocity for swing */
-	//	FVector Velocity = GetCharacterMovement()->Velocity;
-	//	float L = Velocity.Size();
-	//	newVelocity = (GrapplingHook_InitialBoost / newVelocity.Size()) * newVelocity;
-	//}
-
-	GetCharacterMovement()->Velocity = newVelocity;
 }
 
 void ASteikemannCharacter::Update_GrappleHook_Swing()
@@ -633,15 +618,12 @@ void ASteikemannCharacter::Update_GrappleHook_Swing()
 
 	FVector currentVelocity = GetCharacterMovement()->Velocity;
 	if (currentVelocity.Size() > 0) {
-		//FVector radius = GrappleHit.GetActor()->GetActorLocation() - GetActorLocation();
 		FVector radius = GrappledActor->GetActorLocation() - GetActorLocation();
 		float fRadius = radius.Size();
-		//GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Black, FString::Printf(TEXT("Radius Length: %f"), GrappleRadiusLength - fRadius));
 		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + radius, FColor::Green, false, -1, 0, 4.f);
 
 		/* Adjust actor location to match the initial length from the grappled object */
 		if (fRadius > GrappleRadiusLength) {
-			//float L = GrappleRadiusLength / fRadius;
 			float L = (fRadius / GrappleRadiusLength) - 1;
 			FVector adjustment = radius * L;
 			SetActorRelativeLocation(GetActorLocation() + adjustment, false, nullptr, ETeleportType::TeleportPhysics);
@@ -662,7 +644,6 @@ void ASteikemannCharacter::Update_GrappleHook_Swing()
 
 void ASteikemannCharacter::Initial_GrappleHook_Drag(float DeltaTime)
 {
-	//FVector radius = GrappleHit.GetActor()->GetActorLocation() - GetActorLocation();
 	if (!GrappledActor){ return; }
 
 
@@ -671,15 +652,14 @@ void ASteikemannCharacter::Initial_GrappleHook_Drag(float DeltaTime)
 	if (GrappleDrag_PreLaunch_Timer >= 0) {
 		GrappleDrag_PreLaunch_Timer -= DeltaTime;
 		GetCharacterMovement()->Velocity *= 0;
+		GetCharacterMovement()->GravityScale = 0;
+
+		
 	}
 	else {
 		bGrapple_Launch = true;
 		GrappleDrag_PreLaunch_Timer = GrappleDrag_PreLaunch_Timer_Length;
 		GrappleDrag_CurrentSpeed = 0.f;
-
-		{	/* Old GrappleDrag method */
-			//GrappleDrag_CurrentSpeed = GrappleDrag_Initial_Speed;
-		}
 	}
 }
 
@@ -708,11 +688,6 @@ void ASteikemannCharacter::Update_GrappleHook_Drag(float DeltaTime)
 
 		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + newVelocity, FColor::Red, false, 0, 0, 4.f);
 
-	//{	/* Old GrappleDrag method, Initial speed + Constant acceleration */
-	//	// Sett velocity til å gå mot grappled object. 
-	//	FVector newVelocity = (GrappleDrag_CurrentSpeed / radius.Size()) * radius;
-	//	GrappleDrag_CurrentSpeed += GrappleDrag_Acceleration_Speed;
-	//}
 
 	if (radius.Size() > GrappleDrag_MinRadiusDistance) {
 		
@@ -728,4 +703,59 @@ void ASteikemannCharacter::Update_GrappleHook_Drag(float DeltaTime)
 bool ASteikemannCharacter::IsGrappling()
 {
 	return bGrapple_Swing || bGrapple_PreLaunch || bGrapple_Launch;
+}
+
+void ASteikemannCharacter::GrappleHook_Drag_RotateCamera(float DeltaTime)
+{
+	if (!GrappledActor) { return; }
+
+	FVector radius = GrappledActor->GetActorLocation() - GetActorLocation();
+
+	FRotator radiusRotation = radius.Rotation();
+	FRotator PitchPoint = radiusRotation - FRotator{ GrappleDrag_Camera_PitchPoint, 0, 0 };
+
+	FVector con = GetControlRotation().Vector();
+	FRotator controllerRotation = con.Rotation();
+
+	float YawTo = radiusRotation.Yaw - controllerRotation.Yaw;
+
+	float PitchTo = controllerRotation.Pitch - PitchPoint.Pitch;
+
+
+	float YawRotate = FMath::FInterpTo(0.f, YawTo, DeltaTime, GrappleDrag_Camera_InterpSpeed);
+	AddControllerYawInput(YawRotate);
+
+	float PitchRotate = FMath::FInterpTo(0.f, PitchTo, DeltaTime, GrappleDrag_Camera_InterpSpeed);
+	AddControllerPitchInput(PitchRotate);
+}
+
+void ASteikemannCharacter::GrappleHook_Swing_RotateCamera(float DeltaTime)
+{
+	if (!GrappledActor) { return; }
+
+	// Finn ut av quaterniums FQuat for rotering. Vinkler fungerer ikke ordentlig. 
+
+	FVector radius = GrappledActor->GetActorLocation() - GetActorLocation();
+
+	FVector currentVelocity = GetCharacterMovement()->Velocity;
+	FRotator Vel = currentVelocity.Rotation();
+	//FQuat V = Vel.Quaternion();
+
+	FVector con = GetControlRotation().Vector();
+	FRotator controllerRotation = con.Rotation();
+	//FQuat C = controllerRotation.Quaternion();
+
+	float e = FVector::DotProduct(currentVelocity, con);
+	float t = currentVelocity.Size() * con.Size();
+	float dotprod = acosf(e / t) * (180 / PI);
+	PRINTPAR("dotprod: %f", dotprod);
+	
+	float YawTo = Vel.Yaw - controllerRotation.Yaw;
+	PRINTPAR("YawTo: %f", YawTo);
+
+	//if (YawTo < 0) { dotprod *= -1; }
+
+	//float YawRotate = FMath::FInterpTo(0.f, YawTo, DeltaTime, 10.f);
+	float YawRotate = FMath::FInterpTo(0.f, dotprod, DeltaTime, 10.f);
+	AddControllerYawInput(YawRotate);
 }

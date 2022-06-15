@@ -175,15 +175,20 @@ public: /* ------------------------ Grapplehook --------------------- */
 	UFUNCTION(BlueprintCallable)
 	void Initial_GrappleHook_Swing();
 	void Update_GrappleHook_Swing();
+	void GrappleHook_Drag_RotateCamera(float DeltaTime);
 
 	/* How long the player will be held in the air before being launched towards the grappled actor */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag", meta = (AllowPrivateAcces = "true"))
 		float GrappleDrag_PreLaunch_Timer_Length UMETA(DisplayName = "PreLaunch Timer")  { 0.25f };
 	float GrappleDrag_PreLaunch_Timer{};
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag", meta = (AllowPrivateAcces = "true"))
-		//float GrappleDrag_Initial_Speed{ 500.f };
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag", meta = (AllowPrivateAcces = "true"))
-		//float GrappleDrag_Acceleration_Speed{ 10.f };
+
+	/* Interpolation speed of the camera rotation during grapplehook Drag */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag|Camera Rotation", meta = (AllowPrivateAcces = "true"))
+		float GrappleDrag_Camera_InterpSpeed UMETA(DisplayName = "Interpolation Speed") { 3.f };
+
+	/* Pitch adjustment for the camera rotation during the Pre_Launch of Grapple Drag  */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag|Camera Rotation", meta = (AllowPrivateAcces = "true"))
+		float GrappleDrag_Camera_PitchPoint UMETA(DisplayName = "Pitch Point") { 20.f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag", meta = (AllowPrivateAcces = "true"))
 		float GrappleDrag_MaxSpeed UMETA(DisplayName = "Max Speed") { 2000.f };
@@ -203,6 +208,7 @@ public: /* ------------------------ Grapplehook --------------------- */
 	UFUNCTION(BlueprintCallable)
 	void Initial_GrappleHook_Drag(float DeltaTime);
 	void Update_GrappleHook_Drag(float DeltaTime);
+	void GrappleHook_Swing_RotateCamera(float DeltaTime);
 
 	UPROPERTY(BlueprintReadWrite)
 	bool bGrappleEnd{};
