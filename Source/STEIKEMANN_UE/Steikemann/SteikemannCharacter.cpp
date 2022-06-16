@@ -211,7 +211,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	if ((bGrapple_Swing && !bGrappleEnd) || (bGrapple_PreLaunch && !bGrappleEnd)) 
 	{
 		if (!bGrapple_PreLaunch) {
-			//GrappleHook_Swing_RotateCamera(DeltaTime);
+			GrappleHook_Swing_RotateCamera(DeltaTime);
 			Update_GrappleHook_Swing();
 			bGrapple_Launch = false;
 		}
@@ -759,29 +759,30 @@ void ASteikemannCharacter::GrappleHook_Swing_RotateCamera(float DeltaTime)
 {
 	if (!GrappledActor) { return; }
 
-	// Finn ut av quaterniums FQuat for rotering. Vinkler fungerer ikke ordentlig. 
-
-	FVector radius = GrappledActor->GetActorLocation() - GetActorLocation();
-
-	FVector currentVelocity = GetCharacterMovement()->Velocity;
-	FRotator Vel = currentVelocity.Rotation();
-	//FQuat V = Vel.Quaternion();
 
 	FVector con = GetControlRotation().Vector();
-	FRotator controllerRotation = con.Rotation();
-	//FQuat C = controllerRotation.Quaternion();
+	PRINTPAR("Con: %s", *con.ToString());
+	con.Z = 0.f;
+	con.Normalize();
+		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (con * 20000), FColor::Yellow, false, 0, 0, 4.f);
 
-	float e = FVector::DotProduct(currentVelocity, con);
-	float t = currentVelocity.Size() * con.Size();
-	float dotprod = acosf(e / t) * (180 / PI);
-	PRINTPAR("dotprod: %f", dotprod);
+	FVector D = con.RotateAngleAxis(90.f, FVector(0, 0, 1));
+	D.Z = 0.f;
+	D.Normalize();
+		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (D * 20000), FColor::Red, false, 0, 0, 4.f);
+
+	FVector vel = GetCharacterMovement()->Velocity;
+	vel.Z = 0.f;
+	vel.Normalize();
+
+	float dotproduct = FVector::DotProduct(con, vel);
+	float angle = FMath::RadiansToDegrees(acosf(dotproduct));
+
+	float rightDotproduct = FVector::DotProduct(D, vel);
+
+	if (rightDotproduct <= 0.f) { angle *= -1.f; }
+	PRINTPAR("angle: %f", angle);
 	
-	float YawTo = Vel.Yaw - controllerRotation.Yaw;
-	PRINTPAR("YawTo: %f", YawTo);
-
-	//if (YawTo < 0) { dotprod *= -1; }
-
-	//float YawRotate = FMath::FInterpTo(0.f, YawTo, DeltaTime, 10.f);
-	float YawRotate = FMath::FInterpTo(0.f, dotprod, DeltaTime, 10.f);
+	float YawRotate = FMath::FInterpTo(0.f, angle, DeltaTime, 3.f);
 	AddControllerYawInput(YawRotate);
 }

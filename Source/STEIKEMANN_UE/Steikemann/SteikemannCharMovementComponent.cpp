@@ -73,25 +73,20 @@ bool USteikemannCharMovementComponent::DoJump(bool bReplayingMoves)
 
 void USteikemannCharMovementComponent::Bounce(FVector surfacenormal)
 {
-		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (surfacenormal * 200), FColor::Blue, false, 10.f, 0, 4.f);
-	FVector negVel = Velocity * -1.f;
-	FVector curVel = Velocity;
-		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (Velocity * 200), FColor::Black, false, 10.f, 0, 4.f);
-	float expo = FVector::DotProduct(curVel, surfacenormal);
-	float tran = curVel.Size() * surfacenormal.Size();
-	float angle = acosf(expo / tran) * (180 / PI);
+	FVector negativeVelocity = Velocity * -1.f;
+	negativeVelocity.Normalize();
+		//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (negativeVelocity * Velocity.Size()), FColor::Black, false, 10.f, 0, 4.f);
 
-	//FVector orthoVel = FVector::CrossProduct(curVel, FVector::CrossProduct(surfacenormal, curVel));
-	FVector orthoVel = FVector::CrossProduct(Velocity, FVector::CrossProduct(surfacenormal, Velocity));
-	orthoVel.Normalize();
-		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (orthoVel * 200), FColor::Yellow, false, 10.f, 0, 4.f);
-	//orthoVel *= Velocity.Size();
-	//PRINTPARLONG("OrthoVel: %f", )
+	FVector orthogonalVelocity = FVector::CrossProduct(negativeVelocity, FVector::CrossProduct(surfacenormal, negativeVelocity));
+	orthogonalVelocity.Normalize();
 
-	curVel.Normalize();
-	FVector newVel = (cosf(-angle) * curVel) + (sinf(-angle) * orthoVel);
-	newVel.Normalize();
-		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (newVel * 200), FColor::Purple, false, 10.f, 0, 4.f);
-	newVel *= Velocity.Size();
-	Velocity = newVel;
+	float dotproduct = FVector::DotProduct(negativeVelocity, surfacenormal);
+	float angle = acosf(dotproduct);
+
+	FVector newVelocity = (cos(angle * 2) * negativeVelocity) + (sin(angle * 2) * orthogonalVelocity);
+	newVelocity *= Velocity.Size();
+		//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (newVelocity), FColor::Purple, false, 10.f, 0, 4.f);
+		
+
+	Velocity = newVelocity;
 }
