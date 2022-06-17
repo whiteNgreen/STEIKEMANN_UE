@@ -33,9 +33,12 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 	{
 		GravityScale = FMath::FInterpTo(GravityScale, 1.f, GetWorld()->GetDeltaSeconds(), GravityScaleOverride_InterpSpeed);
 	}
-	else
-	{
+	else{
 		GravityScale = FMath::FInterpTo(GravityScale, GravityScaleOverride, GetWorld()->GetDeltaSeconds(), GravityScaleOverride_InterpSpeed);
+	}
+	if (CharacterOwner_Steikemann->IsDashing()) 
+	{
+		GravityScale = 0.f;
 	}
 
 
@@ -46,8 +49,20 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 		SetMovementMode(MOVE_Falling);
 	}
 
-	PRINTPAR("Speed: %f", Velocity.Size());
+	//PRINTPAR("Speed: %f", Velocity.Size());
 
+	/* Dash */
+	if (CharacterOwner_Steikemann->IsDashing())
+	{
+		Update_Dash(DeltaTime);
+	}
+
+	/* Wall Jump / Sticking to wall */
+	if ((CharacterOwner_Steikemann->bFoundStickableWall && CharacterOwner_Steikemann->bCanStickToWall) && GetMovementName() == "Falling")
+	{
+		PRINT("STICKTOWALL");
+		bStickingToWall = StickToWall();
+	}
 }
 
 
@@ -75,7 +90,6 @@ void USteikemannCharMovementComponent::Bounce(FVector surfacenormal)
 {
 	FVector negativeVelocity = Velocity * -1.f;
 	negativeVelocity.Normalize();
-		//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (negativeVelocity * Velocity.Size()), FColor::Black, false, 10.f, 0, 4.f);
 
 	FVector orthogonalVelocity = FVector::CrossProduct(negativeVelocity, FVector::CrossProduct(surfacenormal, negativeVelocity));
 	orthogonalVelocity.Normalize();
@@ -85,8 +99,45 @@ void USteikemannCharMovementComponent::Bounce(FVector surfacenormal)
 
 	FVector newVelocity = (cos(angle * 2) * negativeVelocity) + (sin(angle * 2) * orthogonalVelocity);
 	newVelocity *= Velocity.Size();
-		//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (newVelocity), FColor::Purple, false, 10.f, 0, 4.f);
-		
 
 	Velocity = newVelocity;
+}
+
+void USteikemannCharMovementComponent::Start_Dash(float dashTime, float dashLength, FVector dashdirection)
+{
+	PRINTLONG("Start Dash");
+	fDashTimerLength = dashTime;
+	fDashLength = dashLength;
+	DashDirection = dashdirection;
+	DashDirection.Normalize();
+}
+
+void USteikemannCharMovementComponent::Update_Dash(float deltaTime)
+{
+	float speed = fDashLength / fDashTimerLength;
+
+	if (fDashTimer < fDashTimerLength)
+	{
+		fDashTimer += deltaTime;
+		Velocity = DashDirection * speed;
+	}
+	else
+	{
+		fDashTimer = 0.f;
+		Velocity *= 0;
+		CharacterOwner_Steikemann->bDash = false;
+	}
+}
+
+bool USteikemannCharMovementComponent::StickToWall()
+{
+	if (Velocity.Z > 0.f) { return false; }
+
+	if (Velocity.Size() < WallJump_MaxStickingSpeed)
+	{
+		Velocity *= 0;
+		GravityScale = 0;
+		return true;
+	}
+	return false;
 }

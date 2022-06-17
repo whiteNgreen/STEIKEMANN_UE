@@ -225,6 +225,60 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 			}
 		}
 	}
+
+	/* Dash */
+		/* Determines the dash direction vector based on input and controller rotation */
+	if (InputVector.Size() <= 0.05)
+	{
+		FVector Dir = GetControlRotation().Vector();
+		Dir.Z = 0;
+
+		DashDirection = Dir;
+	}
+	else
+	{
+		DashDirection = InputVector;
+		FRotator Rot = GetControlRotation();
+		
+		DashDirection = DashDirection.RotateAngleAxis(Rot.Yaw, FVector(0, 0, 1));
+	}
+		/* Hjelper å se hvor dashen går hen */
+		//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (DashDirection * 3000), FColor::Red, false, 0, 0, 5.f);
+		//PRINTPAR("Rot: %s", *GetControlRotation().ToString());
+
+
+
+	/* Wall Jump */
+	bFoundStickableWall = WallJump_DetectNearbyWall();
+	bFoundStickableWall ? PRINT("StickToWall = True") : PRINT("StickToWall = False");
+	bCanStickToWall ? PRINT("CanStickToWall = True") : PRINT("CanStickToWall = False");
+	bStickingToWall ? PRINT("StickingToWall = True") : PRINT("StickingToWall = False");
+	PRINTPAR("StickTimer: %f", WallJump_StickTimer);
+	PRINTPAR("NON_StickTimer: %f", WallJump_NonStickTimer);
+	bStickingToWall = MovementComponent->bStickingToWall;
+	if (bStickingToWall) 
+	{
+		if (JumpCurrentCount == 2) { JumpCurrentCount = 1; }	// Resets DoubleJump
+		if (WallJump_StickTimer < WallJump_MaxStickTimer) {
+			WallJump_StickTimer += DeltaTime;
+		}
+		else {
+			bStickingToWall = false;
+			bCanStickToWall = false;
+		}
+	}
+	else { WallJump_StickTimer = 0.f; }
+
+	if (!bCanStickToWall)
+	{
+		if (WallJump_NonStickTimer < WallJump_MaxNonStickTimer) {
+			WallJump_NonStickTimer += DeltaTime;
+		}
+		else{
+			bCanStickToWall = true;
+		}
+	}
+	else { WallJump_NonStickTimer = 0.f; }
 }
 
 // Called to bind functionality to input
@@ -254,17 +308,19 @@ void ASteikemannCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 			/* Dualshock */
 	PlayerInputComponent->BindAxis("Look Up/Down PS4", this,		&ASteikemannCharacter::LookUpAtRateDualshock);
 	PlayerInputComponent->BindAxis("Turn Right/Left PS4", this,	&ASteikemannCharacter::TurnAtRateDualshock);
-
 		/* Jump */
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ASteikemannCharacter::Jump).bConsumeInput = true;
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ASteikemannCharacter::StopJumping).bConsumeInput = true;
 	PlayerInputComponent->BindAction("Jump Dualshock", IE_Pressed, this, &ASteikemannCharacter::JumpDualshock).bConsumeInput = true;
 	PlayerInputComponent->BindAction("Jump Dualshock", IE_Released, this, &ASteikemannCharacter::StopJumping).bConsumeInput = true;
 
+
 	/* Bounce */
 	PlayerInputComponent->BindAction("Bounce", IE_Pressed, this, &ASteikemannCharacter::Bounce).bConsumeInput = true;
 	PlayerInputComponent->BindAction("Bounce", IE_Released, this, &ASteikemannCharacter::Stop_Bounce).bConsumeInput = true;
 
+	PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &ASteikemannCharacter::Dash).bConsumeInput = true;
+	PlayerInputComponent->BindAction("Dash", IE_Released, this, &ASteikemannCharacter::Stop_Dash).bConsumeInput = true;
 
 	/* GrappleHook */
 		/* Grapplehook SWING */
@@ -358,6 +414,8 @@ void ASteikemannCharacter::DetectPhysMaterial()
 
 void ASteikemannCharacter::MoveForward(float value)
 {
+	InputVector.X = value;
+
 	float movement = value;
 	if (bSlipping)
 		movement *= 0.1;
@@ -386,6 +444,8 @@ void ASteikemannCharacter::MoveForwardDualshock(float value)
 
 void ASteikemannCharacter::MoveRight(float value)
 {
+	InputVector.Y = value;
+
 	float movement = value;
 	if (bSlipping)
 		movement *= 0.1;
@@ -614,6 +674,63 @@ void ASteikemannCharacter::Stop_Bounce()
 {
 	bBounceClick = false;
 	bBounce = false;
+}
+
+void ASteikemannCharacter::Dash()
+{
+	if (!bDashClick && !bDash)
+	{
+		bDash = true;
+		MovementComponent->Start_Dash(DashTime, DashLength, DashDirection);
+	}
+	bDashClick = true;
+}
+
+void ASteikemannCharacter::Stop_Dash()
+{
+	bDashClick = false;
+}
+
+bool ASteikemannCharacter::IsDashing()
+{
+	return bDash;
+}
+
+bool ASteikemannCharacter::WallJump_DetectNearbyWall()
+{
+	bool bHit{};
+	FHitResult Hit;
+	FCollisionQueryParams Params = FCollisionQueryParams(FName(""), false, this);
+
+	/* Raytrace in a total of 8 directions around the player */
+	
+	/* Raytrace first in the Forward/Backwards axis and Right/Left */
+	FVector Forward = GetControlRotation().Vector();
+		Forward.Z = 0.f;
+		Forward.Normalize();
+	for (int i = 0; i < 4; i++)
+	{
+			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (Forward * WallJump_DetectionLength), FColor::Yellow, false, 0.f, 0, 4.f);
+		bHit = GetWorld()->LineTraceSingleByChannel(Hit, GetActorLocation(), GetActorLocation() + (Forward * WallJump_DetectionLength), ECC_Visibility, Params);
+		//bHit ? PRINT("True") : PRINT("False");
+		Forward = Forward.RotateAngleAxis(90, FVector(0, 0, 1));
+		if (bHit) { StickingSpot = Hit.ImpactPoint; return bHit; }
+	}
+
+
+	/* Then do raytrace of the 45 degree angle between the 4 previous axis */
+	Forward = Forward.RotateAngleAxis(45.f, FVector(0, 0, 1));
+	for (int i = 0; i < 4; i++)
+	{
+			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (Forward * WallJump_DetectionLength), FColor::Red, false, 0.f, 0, 4.f);
+		bHit = GetWorld()->LineTraceSingleByChannel(Hit, GetActorLocation(), GetActorLocation() + (Forward * WallJump_DetectionLength), ECC_Visibility, Params);
+		//bHit ? PRINT("True") : PRINT("False");
+		Forward = Forward.RotateAngleAxis(90, FVector(0, 0, 1));
+		if (bHit) { StickingSpot = Hit.ImpactPoint; return bHit; }
+	}
+
+	//if (bHit) { StickingSpot = Hit.ImpactPoint; return bHit; }
+	return bHit;
 }
 
 void ASteikemannCharacter::Initial_GrappleHook_Swing()

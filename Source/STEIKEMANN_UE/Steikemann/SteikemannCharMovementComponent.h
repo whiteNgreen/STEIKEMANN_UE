@@ -29,6 +29,15 @@ public:
 
 	class ASteikemannCharacter* CharacterOwner_Steikemann{ nullptr };
 
+
+	/* Gravity over time while character is in the air */
+		/* The Max gravity scale override */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|GravityOverride")
+		float GravityScaleOverride{ 2.f };
+		/* Interpolation speed of the gravity scale override */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|GravityOverride")
+		float GravityScaleOverride_InterpSpeed{ 2.f };
+
 #pragma region Jump
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Jump")
 		bool bJumping{};
@@ -39,18 +48,34 @@ public:
 
 #pragma endregion //Jump
 
-	/* Gravity */
-		/* The Max gravity scale override */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|GravityOverride")
-		float GravityScaleOverride{ 2.f };
-		/* Interpolation speed of the gravity scale override */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|GravityOverride")
-		float GravityScaleOverride_InterpSpeed{ 2.f };
-
 #pragma region Bounce
 	void Bounce(FVector surfacenormal);
 
 #pragma endregion //Bounce
+
+#pragma region Dash
+	//bool* bDashing{ nullptr };
+	float fDashTimerLength{};
+	float fDashTimer{};
+	float fDashLength{};
+	FVector DashDirection;
+
+	void Start_Dash(float dashTime, float dashLength, FVector dashdirection);
+	void Update_Dash(float deltaTime);
+#pragma endregion //Dash
+
+#pragma region Wall Jump
+
+	/* If the characters velocity exceeds this value, they cannot stick to a wall */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Wall Jump")
+		float WallJump_MaxStickingSpeed UMETA(DisplayName = "Max Stickable Speed") { 100.f };
+	
+	bool bStickingToWall;
+	FVector StickingSpot{};
+
+	bool StickToWall();
+
+#pragma endregion //Wall Jump
 
 public: // Slipping
 	UPROPERTY(BlueprintReadWrite)

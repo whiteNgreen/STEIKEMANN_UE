@@ -81,6 +81,8 @@ public:
 
 	void DetectPhysMaterial();
 
+	FVector InputVector;
+
 #pragma region Basic_Movement
 public:/*                      Basic Movement                           */
 
@@ -130,6 +132,51 @@ public:/*                      Basic Movement                           */
 	void Bounce();
 	void Stop_Bounce();
 #pragma endregion //Bounce
+
+#pragma region Dash
+	bool bDashClick{};
+	bool bDash{};
+
+	FVector DashDirection{};
+
+	/* How long the dash action lasts */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Dash")
+		float DashTime{ 0.5f };
+	/* How far the character will dash */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Dash")
+		float DashLength{ 1000.f };
+
+
+	void Dash();
+	void Stop_Dash();
+
+	bool IsDashing();
+
+#pragma endregion //Dash
+
+#pragma region Wall Jump
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Wall Jump")
+		float WallJump_DetectionLength UMETA(DisplayName = "Detection Length") { 100.f };
+	/* The maximum time the character can hold on to the wall they stick to during wall jump */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Wall Jump")
+		float WallJump_MaxStickTimer UMETA(DisplayName = "Max Sticking Time") { 1.f };
+	float WallJump_StickTimer{};
+
+	/* Time until character can stick to wall again */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Wall Jump")
+		float WallJump_MaxNonStickTimer UMETA(DisplayName = "No Stick Timer") { 1.f };
+	float WallJump_NonStickTimer{};
+
+
+	bool bStickingToWall{};
+	bool bFoundStickableWall{};
+	bool bCanStickToWall{ true };
+	FVector StickingSpot{};
+
+	bool WallJump_DetectNearbyWall();
+
+
+#pragma endregion //Wall Jump
 
 #pragma region GrappleHook
 public: /* ------------------------ Grapplehook --------------------- */
