@@ -189,6 +189,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 
 	DetectPhysMaterial();
 
+	IsGrappling() ? PRINT("IsGrappling = True") : PRINT("IsGrappling = False");
 	if (!IsGrappling())
 	{
 		LineTraceToGrappleableObject();
@@ -250,9 +251,9 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 
 	/* Wall Jump */
 	bFoundStickableWall = WallJump_DetectNearbyWall();
-	bFoundStickableWall ? PRINT("StickToWall = True") : PRINT("StickToWall = False");
-	bCanStickToWall ? PRINT("CanStickToWall = True") : PRINT("CanStickToWall = False");
-	bStickingToWall ? PRINT("StickingToWall = True") : PRINT("StickingToWall = False");
+	//bFoundStickableWall ? PRINT("StickToWall = True") : PRINT("StickToWall = False");
+	//bCanStickToWall ? PRINT("CanStickToWall = True") : PRINT("CanStickToWall = False");
+	//bStickingToWall ? PRINT("StickingToWall = True") : PRINT("StickingToWall = False");
 	//PRINTPAR("StickTimer: %f", WallJump_StickTimer);
 	//PRINTPAR("NON_StickTimer: %f", WallJump_NonStickTimer);
 	bStickingToWall = MovementComponent->bStickingToWall;
@@ -359,9 +360,9 @@ void ASteikemannCharacter::Stop_Grapple_Swing()
 
 void ASteikemannCharacter::Start_Grapple_Drag()
 {
-	bGrapple_PreLaunch = true;
 	if (GrappledActor.IsValid())
 	{
+	bGrapple_PreLaunch = true;
 		IGrappleTargetInterface::Execute_Hooked(GrappledActor.Get());
 	}
 	if (JumpCurrentCount == 2) { JumpCurrentCount--; }
@@ -629,7 +630,11 @@ bool ASteikemannCharacter::LineTraceToGrappleableObject()
 
 	TWeakObjectPtr<AActor> Grappled{ nullptr };
 	
-	FVector2D AimingLocation;
+	/* Adjusting the GrappleAimYChange based on the playercontrollers pitch */
+	FVector Back = GetControlRotation().Vector() * -1.f;
+	Back *= FVector(0, 0, 1);
+	GrappleAimYChange = GrappleAimYChange_Base + (GrappleAimYChange_Base * (Back.Z));
+
 	if (GrappleAimYChange != 0.f) {
 		AimingLocation = ViewPortSize / 2 - FVector2D(0.f, ViewPortSize.Y / GrappleAimYChange);
 	}
@@ -643,7 +648,6 @@ bool ASteikemannCharacter::LineTraceToGrappleableObject()
 	}
 
 	/* If the linetrace hit grappletarget actors, find the one closest to the middle of the screen */
-	//PRINTPAR("OnScreenActors: %i", OnScreenActors.Num());
 	if (OnScreenActors.Num() > 0)
 	{
 		float range{ 10000.f };
@@ -692,6 +696,8 @@ bool ASteikemannCharacter::LineTraceToGrappleableObject()
 	}
 
 	GrappledActor = Grappled;
+
+	bGrapple_Available ? PRINT("true") : PRINT("false");
 
 	return bGrapple_Available;
 }
@@ -838,8 +844,6 @@ void ASteikemannCharacter::Initial_GrappleHook_Drag(float DeltaTime)
 		GrappleDrag_PreLaunch_Timer -= DeltaTime;
 		GetCharacterMovement()->Velocity *= 0;
 		GetCharacterMovement()->GravityScale = 0;
-
-		
 	}
 	else {
 		bGrapple_Launch = true;
@@ -852,8 +856,8 @@ void ASteikemannCharacter::Update_GrappleHook_Drag(float DeltaTime)
 {
 	if (!GrappledActor.IsValid()) { return; }
 	
-	if (GetCharacterMovement()->GetMovementName() == "Walking")
-	{
+	/* If character is on the ground, set the movement mode to Falling */
+	if (GetCharacterMovement()->GetMovementName() == "Walking"){
 		GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Falling);
 	}
 
@@ -864,24 +868,19 @@ void ASteikemannCharacter::Update_GrappleHook_Drag(float DeltaTime)
 	/* Base the time multiplier with the distance to the grappled actor */
 	float D = GrappleDrag_Update_TimeMultiplier / ((radius.Size() - GrappleDrag_MinRadiusDistance) / 1000.f);
 	D = FMath::Max(D, GrappleDrag_Update_Time_MIN_Multiplier);
-	//PRINTPAR("D: %f", D);
 
 	GrappleDrag_CurrentSpeed = FMath::FInterpTo(GrappleDrag_CurrentSpeed, GrappleDrag_MaxSpeed, DeltaTime, D);
-	//PRINTPAR("Speed: %f", GrappleDrag_CurrentSpeed);
 
 	newVelocity *= GrappleDrag_CurrentSpeed;
 
 		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + newVelocity, FColor::Red, false, 0, 0, 4.f);
 
-
 	if (radius.Size() > GrappleDrag_MinRadiusDistance) {
-		
 		GetCharacterMovement()->Velocity = newVelocity;
 	}
 	else {
 		bGrapple_Launch = false;
 		bGrappleEnd = true;
-		//PRINTPARLONG("Drag OutSpeed: %f", GrappleDrag_CurrentSpeed);
 	}
 }
 
