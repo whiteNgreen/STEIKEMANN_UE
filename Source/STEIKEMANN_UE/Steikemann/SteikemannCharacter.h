@@ -196,12 +196,21 @@ public: /* ------------------------ Grapplehook --------------------- */
 
 	/*                    Native Variables and functions             */
 	UPROPERTY(BlueprintReadOnly)
-	AActor* GrappledActor { nullptr };
+		TWeakObjectPtr<AActor> GrappledActor{ nullptr };
+
 
 	UPROPERTY(BlueprintReadOnly)
 		bool bGrapple_Available;
 	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
 		float GrappleHookRange{ 2000.f };
+	
+	/* Shows the debug aiming reticle */
+	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Targeting")
+		bool bShowAimingLocaiton_Debug{};
+	/* The added percentage of the screens height that is added to the aiming location. A higher number turns it closer to the
+		middle, with a lower number further up. 0 directly to the middle */
+	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Targeting")
+		float GrappleAimYChange{ 6.f };
 
 	bool LineTraceToGrappleableObject();
 	UFUNCTION()

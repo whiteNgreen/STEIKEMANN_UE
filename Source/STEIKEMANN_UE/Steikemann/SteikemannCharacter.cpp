@@ -185,7 +185,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	}
 
 	//PRINTPAR("Velocity: %f", GetCharacterMovement()->Velocity.Size());
-	PRINTPAR("Gravity: %f", GetCharacterMovement()->GravityScale);
+	//PRINTPAR("Gravity: %f", GetCharacterMovement()->GravityScale);
 
 	DetectPhysMaterial();
 
@@ -253,8 +253,8 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	bFoundStickableWall ? PRINT("StickToWall = True") : PRINT("StickToWall = False");
 	bCanStickToWall ? PRINT("CanStickToWall = True") : PRINT("CanStickToWall = False");
 	bStickingToWall ? PRINT("StickingToWall = True") : PRINT("StickingToWall = False");
-	PRINTPAR("StickTimer: %f", WallJump_StickTimer);
-	PRINTPAR("NON_StickTimer: %f", WallJump_NonStickTimer);
+	//PRINTPAR("StickTimer: %f", WallJump_StickTimer);
+	//PRINTPAR("NON_StickTimer: %f", WallJump_NonStickTimer);
 	bStickingToWall = MovementComponent->bStickingToWall;
 	if (bStickingToWall) 
 	{
@@ -339,9 +339,9 @@ void ASteikemannCharacter::Start_Grapple_Swing()
 	{
 		bGrapple_Swing = true;
 		Initial_GrappleHook_Swing();
-		if (GrappledActor)
+		if (GrappledActor.IsValid())
 		{
-			IGrappleTargetInterface::Execute_Hooked(GrappledActor);
+			IGrappleTargetInterface::Execute_Hooked(GrappledActor.Get());
 		}
 
 		if (JumpCurrentCount == 2) { JumpCurrentCount--; }
@@ -351,18 +351,18 @@ void ASteikemannCharacter::Start_Grapple_Swing()
 void ASteikemannCharacter::Stop_Grapple_Swing()
 {
 	bGrapple_Swing = false;
-	if (GrappledActor && IsGrappling())
+	if (GrappledActor.IsValid() && IsGrappling())
 	{
-		IGrappleTargetInterface::Execute_UnTargeted(GrappledActor);
+		IGrappleTargetInterface::Execute_UnTargeted(GrappledActor.Get());
 	}
 }
 
 void ASteikemannCharacter::Start_Grapple_Drag()
 {
 	bGrapple_PreLaunch = true;
-	if (GrappledActor)
+	if (GrappledActor.IsValid())
 	{
-		IGrappleTargetInterface::Execute_Hooked(GrappledActor);
+		IGrappleTargetInterface::Execute_Hooked(GrappledActor.Get());
 	}
 	if (JumpCurrentCount == 2) { JumpCurrentCount--; }
 }
@@ -373,9 +373,9 @@ void ASteikemannCharacter::Stop_Grapple_Drag()
 	bGrapple_Launch = false;
 	bGrapple_Swing = false;
 	bGrappleEnd = false;
-	if (GrappledActor && IsGrappling())
+	if (GrappledActor.IsValid() && IsGrappling())
 	{
-		IGrappleTargetInterface::Execute_UnTargeted(GrappledActor);
+		IGrappleTargetInterface::Execute_UnTargeted(GrappledActor.Get());
 	}
 }
 
@@ -588,64 +588,106 @@ bool ASteikemannCharacter::IsJumping() const
 /* Aiming system for grapplehook */
 bool ASteikemannCharacter::LineTraceToGrappleableObject()
 {
-	FVector Loc{};
-	FVector Direction{};
-	AActor* Grappled{ nullptr };
+	FVector DeprojectWorldLocation{};
+	FVector DeprojectDirection{};
+
+	TArray<TWeakObjectPtr<AActor>> OnScreenActors;
 
 	FVector2D ViewPortSize = GEngine->GameViewport->Viewport->GetSizeXY();
+	float Step = ViewPortSize.X / 16;	// Assuming the aspect ratio is 16:9 
 
-	FVector2D ViewPortLocation = FVector2D(ViewPortSize.X / 2, ViewPortSize.Y = 0);
-	float Step = ViewPortLocation.X / 10;
-	float BaseX = (ViewPortLocation.X / 2) + Step;
+	FHitResult Hit;
+	TArray<FHitResult> MultiHit;
+	FCollisionQueryParams Params = FCollisionQueryParams(FName(""), false, this);
 
-	FVector2D View = ViewPortLocation + FVector2D(Step*2, 0);
+	FVector2D DeprojectScreenLocation{};
 
-	for (int i = 0; i < 12; i++)
+	/* Linetrace through the entire screen to get all grappletargets on screen */
+	for (int i{ 0 }; i <= 16; i++)
 	{
-		FHitResult Hit;
-		View.X = ViewPortLocation.X + (Step * 2);
+		DeprojectScreenLocation.Y = 0;
 
-		for (int k = 0; k < 3; k++)
+		for (int j{ 0 }; j <= 9; j++)
 		{
-			UGameplayStatics::DeprojectScreenToWorld(UGameplayStatics::GetPlayerController(GetWorld(), 0), View, Loc, Direction);
-			View += FVector2D(-Step*2, 0);
+			UGameplayStatics::DeprojectScreenToWorld(UGameplayStatics::GetPlayerController(GetWorld(), 0), DeprojectScreenLocation, DeprojectWorldLocation, DeprojectDirection);
 
-			FCollisionQueryParams Params = FCollisionQueryParams(FName(""), false, this);
-			bGrapple_Available = GetWorld()->LineTraceSingleByChannel(Hit, Loc, Loc + (Direction * GrappleHookRange), GRAPPLE_HOOK, Params);
-			if (bGrapple_Available) { break; }
-		}
-		View += FVector2D(0, Step);
+			const bool b = GetWorld()->LineTraceMultiByChannel(MultiHit, DeprojectWorldLocation, DeprojectWorldLocation + (DeprojectDirection * GrappleHookRange), GRAPPLE_HOOK, Params);
 
-		
-		if (bGrapple_Available)
-		{
-			if (GrappledActor && GrappledActor != Hit.GetActor())
-			{
-				IGrappleTargetInterface::Execute_UnTargeted(GrappledActor);
-				break;
+			if (/*b*/ MultiHit.Num() > 0) 
+			{ 
+				for (auto& it : MultiHit) {
+					OnScreenActors.AddUnique(it.Actor);
+				}
 			}
 
-			Grappled = Hit.GetActor();
-			break;
-
+			DeprojectScreenLocation.Y += Step;
 		}
-		/* Hvordan skrive Interface casts til andre c++ klasser */
-		//IGrappleTargetInterface* Interface = Cast<IGrappleTargetInterface>(Hit.GetActor());
-		//if (Interface)
-		//{
-		//	Interface->TargetedPure();
-		//	Interface->Execute_Targeted(Hit.GetActor());
-		//}
+
+		DeprojectScreenLocation.X += Step;
 	}
-	if (Grappled && !IsGrappling())
-	{
-		IGrappleTargetInterface::Execute_Targeted(Grappled);
+
+
+	TWeakObjectPtr<AActor> Grappled{ nullptr };
+	
+	FVector2D AimingLocation;
+	if (GrappleAimYChange != 0.f) {
+		AimingLocation = ViewPortSize / 2 - FVector2D(0.f, ViewPortSize.Y / GrappleAimYChange);
 	}
-	else if (!bGrapple_Available && (!Grappled || Grappled != GrappledActor))
+	else {
+		AimingLocation = ViewPortSize / 2;
+	}
+
+	if (bShowAimingLocaiton_Debug) {
+			UGameplayStatics::DeprojectScreenToWorld(UGameplayStatics::GetPlayerController(GetWorld(), 0), AimingLocation, DeprojectWorldLocation, DeprojectDirection);
+			DrawDebugLine(GetWorld(), DeprojectWorldLocation, DeprojectWorldLocation + (DeprojectDirection * GrappleHookRange), FColor::Red, false, 0.1f, 0, 0.1f);
+	}
+
+	/* If the linetrace hit grappletarget actors, find the one closest to the middle of the screen */
+	//PRINTPAR("OnScreenActors: %i", OnScreenActors.Num());
+	if (OnScreenActors.Num() > 0)
 	{
-		if (GrappledActor)
+		float range{ 10000.f };
+		FVector2D OnScreenLocation;
+		
+		for (const auto& it : OnScreenActors)
 		{
-			IGrappleTargetInterface::Execute_UnTargeted(GrappledActor);
+			UGameplayStatics::ProjectWorldToScreen(UGameplayStatics::GetPlayerController(GetWorld(), 0), it->GetActorLocation(), OnScreenLocation);
+			
+			FVector2D LengthToTarget = AimingLocation - OnScreenLocation;
+			float L = LengthToTarget.Size();
+
+			//PRINTPAR("Name: %s -- Length: %f", *it->GetName(), L);
+
+			if (L < range)
+			{
+				Grappled = it;
+				range = L;
+			}
+		}
+	} 
+	else { 
+		bGrapple_Available = false;
+		Grappled = nullptr;
+	}
+
+
+	if (Grappled.IsValid()) { 
+		bGrapple_Available = true; 
+
+		/* Interface functions to the actor that is aimed at */
+		if (!IsGrappling()) {
+			IGrappleTargetInterface::Execute_Targeted(Grappled.Get());
+		}
+
+		/* Interface function to un_target the actor we aimed at */
+		if (Grappled != GrappledActor && GrappledActor.IsValid())
+		{
+			IGrappleTargetInterface::Execute_UnTargeted(GrappledActor.Get());
+		}
+	}
+	else {		/* Untarget if Grappled returned NULL */
+		if (GrappledActor.IsValid()){
+			IGrappleTargetInterface::Execute_UnTargeted(GrappledActor.Get());
 		}
 	}
 
@@ -662,7 +704,7 @@ void ASteikemannCharacter::Bounce()
 		FCollisionQueryParams Params = FCollisionQueryParams(FName(""), false, this);
 		bBounce = GetWorld()->LineTraceSingleByChannel(Hit, GetActorLocation(), GetActorLocation() - FVector{ 0, 0, BounceCheckLength }, ECC_Visibility, Params);
 		if (bBounce) {
-			PRINTLONG("Bounce");
+			//PRINTLONG("Bounce");
 			MovementComponent->Bounce(Hit.ImpactNormal);
 		}
 	}
@@ -735,7 +777,7 @@ bool ASteikemannCharacter::WallJump_DetectNearbyWall()
 
 void ASteikemannCharacter::Initial_GrappleHook_Swing()
 {
-	if (!GrappledActor) { return; }
+	if (!GrappledActor.IsValid()) { return; }
 
 	FVector radius = GrappledActor->GetActorLocation() - GetActorLocation();
 	GrappleRadiusLength = radius.Size();
@@ -757,7 +799,7 @@ void ASteikemannCharacter::Initial_GrappleHook_Swing()
 
 void ASteikemannCharacter::Update_GrappleHook_Swing()
 {
-	if (!GrappledActor) { return; }
+	if (!GrappledActor.IsValid()) { return; }
 
 	FVector currentVelocity = GetCharacterMovement()->Velocity;
 	if (currentVelocity.Size() > 0) {
@@ -787,7 +829,7 @@ void ASteikemannCharacter::Update_GrappleHook_Swing()
 
 void ASteikemannCharacter::Initial_GrappleHook_Drag(float DeltaTime)
 {
-	if (!GrappledActor){ return; }
+	if (!GrappledActor.IsValid()){ return; }
 
 
 	FVector radius = GrappledActor->GetActorLocation() - GetActorLocation();
@@ -808,7 +850,7 @@ void ASteikemannCharacter::Initial_GrappleHook_Drag(float DeltaTime)
 
 void ASteikemannCharacter::Update_GrappleHook_Drag(float DeltaTime)
 {
-	if (!GrappledActor) { return; }
+	if (!GrappledActor.IsValid()) { return; }
 	
 	if (GetCharacterMovement()->GetMovementName() == "Walking")
 	{
@@ -822,10 +864,10 @@ void ASteikemannCharacter::Update_GrappleHook_Drag(float DeltaTime)
 	/* Base the time multiplier with the distance to the grappled actor */
 	float D = GrappleDrag_Update_TimeMultiplier / ((radius.Size() - GrappleDrag_MinRadiusDistance) / 1000.f);
 	D = FMath::Max(D, GrappleDrag_Update_Time_MIN_Multiplier);
-	PRINTPAR("D: %f", D);
+	//PRINTPAR("D: %f", D);
 
 	GrappleDrag_CurrentSpeed = FMath::FInterpTo(GrappleDrag_CurrentSpeed, GrappleDrag_MaxSpeed, DeltaTime, D);
-	PRINTPAR("Speed: %f", GrappleDrag_CurrentSpeed);
+	//PRINTPAR("Speed: %f", GrappleDrag_CurrentSpeed);
 
 	newVelocity *= GrappleDrag_CurrentSpeed;
 
@@ -839,7 +881,7 @@ void ASteikemannCharacter::Update_GrappleHook_Drag(float DeltaTime)
 	else {
 		bGrapple_Launch = false;
 		bGrappleEnd = true;
-		PRINTPARLONG("Drag OutSpeed: %f", GrappleDrag_CurrentSpeed);
+		//PRINTPARLONG("Drag OutSpeed: %f", GrappleDrag_CurrentSpeed);
 	}
 }
 
@@ -850,7 +892,7 @@ bool ASteikemannCharacter::IsGrappling()
 
 void ASteikemannCharacter::GrappleHook_Drag_RotateCamera(float DeltaTime)
 {
-	if (!GrappledActor) { return; }
+	if (!GrappledActor.IsValid()) { return; }
 
 	FVector radius = GrappledActor->GetActorLocation() - GetActorLocation();
 
@@ -874,11 +916,11 @@ void ASteikemannCharacter::GrappleHook_Drag_RotateCamera(float DeltaTime)
 
 void ASteikemannCharacter::GrappleHook_Swing_RotateCamera(float DeltaTime)
 {
-	if (!GrappledActor) { return; }
+	if (!GrappledActor.IsValid()) { return; }
 
 
 	FVector con = GetControlRotation().Vector();
-	PRINTPAR("Con: %s", *con.ToString());
+	//PRINTPAR("Con: %s", *con.ToString());
 	con.Z = 0.f;
 	con.Normalize();
 		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (con * 20000), FColor::Yellow, false, 0, 0, 4.f);
@@ -898,7 +940,7 @@ void ASteikemannCharacter::GrappleHook_Swing_RotateCamera(float DeltaTime)
 	float rightDotproduct = FVector::DotProduct(D, vel);
 
 	if (rightDotproduct <= 0.f) { angle *= -1.f; }
-	PRINTPAR("angle: %f", angle);
+	//PRINTPAR("angle: %f", angle);
 	
 	float YawRotate = FMath::FInterpTo(0.f, angle, DeltaTime, 3.f);
 	AddControllerYawInput(YawRotate);
