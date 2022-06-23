@@ -84,7 +84,7 @@ public:
 	FVector InputVector;
 
 #pragma region Basic_Movement
-public:/*                      Basic Movement                           */
+public:/* ------------------- Basic Movement ------------------- */
 
 	UPROPERTY(EditAnywhere, Category = "Movement|Walk/Run", meta = (AllowPrivateAcces = "true"))
 	float TurnRate{ 50.f };
@@ -121,6 +121,8 @@ public:/*                      Basic Movement                           */
 #pragma endregion //Basic_Movement
 
 #pragma region Bounce
+	/* ------------------------ Bounce --------------------- */
+
 	//UPROPERTY(BlueprintReadOnly, Category = "Movement|Bounce")
 	bool bBounceClick{};
 	bool bBounce{};
@@ -134,6 +136,8 @@ public:/*                      Basic Movement                           */
 #pragma endregion //Bounce
 
 #pragma region Dash
+	/* ------------------------ Dash --------------------- */
+
 	bool bDashClick{};
 	bool bDash{};
 
@@ -155,6 +159,8 @@ public:/*                      Basic Movement                           */
 #pragma endregion //Dash
 
 #pragma region Wall Jump
+	/* ------------------------ Wall Jump --------------------- */
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Wall Jump")
 		float WallJump_DetectionLength UMETA(DisplayName = "Detection Length") { 100.f };
 	/* The maximum time the character can hold on to the wall they stick to during wall jump */
@@ -196,12 +202,24 @@ public: /* ------------------------ Grapplehook --------------------- */
 
 	/*                    Native Variables and functions             */
 	UPROPERTY(BlueprintReadOnly)
-	AActor* GrappledActor { nullptr };
+		TWeakObjectPtr<AActor> GrappledActor{ nullptr };
+
 
 	UPROPERTY(BlueprintReadOnly)
 		bool bGrapple_Available;
 	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
 		float GrappleHookRange{ 2000.f };
+	
+	/* The onscreen aiming location */
+	FVector2D AimingLocation;
+	/* Shows the debug aiming reticle */
+	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Targeting")
+		bool bShowAimingLocaiton_Debug{};
+	/* The added percentage of the screens height that is added to the aiming location. A higher number turns it closer to the
+		middle, with a lower number further up. 0 directly to the middle */
+	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Targeting")
+		float GrappleAimYChange_Base UMETA(DisplayName = "GrappleAimYDifference") { 4.f };
+	float GrappleAimYChange{};
 
 	bool LineTraceToGrappleableObject();
 	UFUNCTION()
@@ -220,8 +238,6 @@ public: /* ------------------------ Grapplehook --------------------- */
 	UPROPERTY(BlueprintReadOnly)
 		bool bGrapple_Launch;
 	
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing", meta = (AllowPrivateAcces = "true"))
-		//float GrapplingHook_InitialBoost{ 1000.f };
 	/* Time it takes for half a rotation around the GrappledActor */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing", meta = (AllowPrivateAcces = "true"))
 		float GrappleHook_SwingTime{ 1.f };
@@ -237,28 +253,29 @@ public: /* ------------------------ Grapplehook --------------------- */
 	void GrappleHook_Drag_RotateCamera(float DeltaTime);
 
 	/* How long the player will be held in the air before being launched towards the grappled actor */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag", meta = (AllowPrivateAcces = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag")
 		float GrappleDrag_PreLaunch_Timer_Length UMETA(DisplayName = "PreLaunch Timer")  { 0.25f };
+
 	float GrappleDrag_PreLaunch_Timer{};
 
 	/* Interpolation speed of the camera rotation during grapplehook Drag */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag|Camera Rotation", meta = (AllowPrivateAcces = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag|Camera Rotation")
 		float GrappleDrag_Camera_InterpSpeed UMETA(DisplayName = "Interpolation Speed") { 3.f };
 
 	/* Pitch adjustment for the camera rotation during the Pre_Launch of Grapple Drag  */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag|Camera Rotation", meta = (AllowPrivateAcces = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag|Camera Rotation")
 		float GrappleDrag_Camera_PitchPoint UMETA(DisplayName = "Pitch Point") { 20.f };
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag", meta = (AllowPrivateAcces = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag")
 		float GrappleDrag_MaxSpeed UMETA(DisplayName = "Max Speed") { 2000.f };
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag", meta = (AllowPrivateAcces = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag")
 		float GrappleDrag_MinRadiusDistance UMETA(DisplayName = "Min Radius Distance") { 50.f };
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag", meta = (AllowPrivateAcces = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag")
 		float GrappleDrag_Update_TimeMultiplier UMETA(DisplayName = "Time Multiplier") { 2.f };
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag", meta = (AllowPrivateAcces = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag")
 		float GrappleDrag_Update_Time_MIN_Multiplier UMETA(DisplayName = "Minimum Time Multiplier") { 2.f };
 
 	float GrappleDrag_CurrentSpeed{};

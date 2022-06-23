@@ -61,7 +61,7 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 	/* Wall Jump / Sticking to wall */
 	if ((CharacterOwner_Steikemann->bFoundStickableWall && CharacterOwner_Steikemann->bCanStickToWall) && GetMovementName() == "Falling")
 	{
-		PRINT("STICKTOWALL");
+		//PRINT("STICKTOWALL");
 		bStickingToWall = StickToWall();
 	}
 }
@@ -106,7 +106,7 @@ void USteikemannCharMovementComponent::Bounce(FVector surfacenormal)
 
 void USteikemannCharMovementComponent::Start_Dash(float dashTime, float dashLength, FVector dashdirection)
 {
-	PRINTLONG("Start Dash");
+	//PRINTLONG("Start Dash");
 	fDashTimerLength = dashTime;
 	fDashLength = dashLength;
 	DashDirection = dashdirection;
