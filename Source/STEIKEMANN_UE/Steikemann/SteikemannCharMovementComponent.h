@@ -68,8 +68,12 @@ public:
 
 	/* If the characters velocity exceeds this value, they cannot stick to a wall */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Wall Jump")
-		float WallJump_MaxStickingSpeed UMETA(DisplayName = "Max Stickable Speed") { 100.f };
+		float WallJump_MaxStickingSpeed UMETA(DisplayName = "Max Stickable Speed") { 50.f };
+	/* How much the velocity is lowered each tick when they touch a wall at high speeds */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Wall Jump")
+		float WallJump_WalltouchSlow UMETA(DisplayName = "Velocity Slowdown") { 100.f };
 	
+	//bool bTouchingWall{};
 	bool bStickingToWall;
 	FVector StickingSpot{};
 

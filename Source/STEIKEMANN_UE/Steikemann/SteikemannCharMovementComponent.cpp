@@ -45,7 +45,8 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 	/* Jump velocity */
 	if (CharacterOwner_Steikemann->IsJumping())
 	{
-		Velocity.Z = FMath::FInterpTo(Velocity.Z, JumpZVelocity, GetWorld()->GetDeltaSeconds(), JumpInterpSpeed);
+		//Velocity.Z = FMath::FInterpTo(Velocity.Z, JumpZVelocity, GetWorld()->GetDeltaSeconds(), JumpInterpSpeed);
+		Velocity.Z = FMath::Max(Velocity.Z, JumpZVelocity);
 		SetMovementMode(MOVE_Falling);
 	}
 
@@ -135,9 +136,17 @@ bool USteikemannCharMovementComponent::StickToWall()
 
 	if (Velocity.Size() < WallJump_MaxStickingSpeed)
 	{
+		//PRINTLONG("Stick to Wall");
 		Velocity *= 0;
 		GravityScale = 0;
 		return true;
+	}
+	else {
+		PRINT("Wall Slowdown");
+		FVector Vel = Velocity;
+		Vel.Normalize();
+		Velocity -= (Vel * WallJump_WalltouchSlow);
+		
 	}
 	return false;
 }
