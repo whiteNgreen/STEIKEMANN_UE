@@ -28,26 +28,38 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 		GroundFriction = CharacterFriction * Traced_GroundFriction;
 	}
 
+	PRINTPAR("Gravity: %f", GravityScale);
+	bWallSlowDown ? PRINT("WallSlowDown = true") : PRINT("WallSlowDown = false");
+	bStickingToWall ? PRINT("StickingToWall = true") : PRINT("StickingToWall = false");
 	/* Gravity */
 	if (CharacterOwner_Steikemann->IsJumping() || MovementMode == MOVE_Walking)
+	{
+		GravityScale = FMath::FInterpTo(GravityScale, GravityScaleOverride, GetWorld()->GetDeltaSeconds(), GravityScaleOverride_InterpSpeed);
+	}
+	else if (CharacterOwner_Steikemann->IsDashing()) 
+	{
+		GravityScale = 0.f;
+	}
+	else if (bStickingToWall || bWallSlowDown)
 	{
 		GravityScale = FMath::FInterpTo(GravityScale, 1.f, GetWorld()->GetDeltaSeconds(), GravityScaleOverride_InterpSpeed);
 	}
 	else{
-		GravityScale = FMath::FInterpTo(GravityScale, GravityScaleOverride, GetWorld()->GetDeltaSeconds(), GravityScaleOverride_InterpSpeed);
-	}
-	if (CharacterOwner_Steikemann->IsDashing()) 
-	{
-		GravityScale = 0.f;
+		GravityScale = FMath::FInterpTo(GravityScale, GravityScaleOverride_Freefall, GetWorld()->GetDeltaSeconds(), GravityScaleOverride_InterpSpeed);
 	}
 
 
 	/* Jump velocity */
 	if (CharacterOwner_Steikemann->IsJumping())
 	{
-		//Velocity.Z = FMath::FInterpTo(Velocity.Z, JumpZVelocity, GetWorld()->GetDeltaSeconds(), JumpInterpSpeed);
-		Velocity.Z = FMath::Max(Velocity.Z, JumpZVelocity);
-		SetMovementMode(MOVE_Falling);
+		if (bWallJump) {
+			Velocity = WallJump_VelocityDirection;
+			SetMovementMode(MOVE_Falling);
+		}
+		else {
+			Velocity.Z = FMath::Max(Velocity.Z, JumpZVelocity);
+			SetMovementMode(MOVE_Falling);
+		}
 	}
 
 	//PRINTPAR("Speed: %f", Velocity.Size());
@@ -59,10 +71,11 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 	}
 
 	/* Wall Jump / Sticking to wall */
-	if ((CharacterOwner_Steikemann->bFoundStickableWall && CharacterOwner_Steikemann->bCanStickToWall) && GetMovementName() == "Falling")
-	{
-		//PRINT("STICKTOWALL");
-		bStickingToWall = StickToWall();
+	if ((CharacterOwner_Steikemann->bFoundStickableWall && CharacterOwner_Steikemann->bCanStickToWall) && GetMovementName() == "Falling") {
+		bStickingToWall = StickToWall(DeltaTime);
+	}
+	else if ((!CharacterOwner_Steikemann->bFoundStickableWall && !CharacterOwner_Steikemann->IsStickingToWall()) || GetMovementName() == "Falling") {
+		bWallSlowDown = false;
 	}
 }
 
@@ -130,7 +143,24 @@ void USteikemannCharMovementComponent::Update_Dash(float deltaTime)
 	}
 }
 
-bool USteikemannCharMovementComponent::StickToWall()
+bool USteikemannCharMovementComponent::WallJump(const FVector& ImpactNormal)
+{
+	FVector OrthoVector = FVector::CrossProduct(ImpactNormal, FVector::CrossProduct(FVector::UpVector, ImpactNormal));
+	OrthoVector.Normalize();
+
+	float radians = WallJump_JumpAngle * (PI / 180);
+	WallJump_VelocityDirection = (cosf(radians) * ImpactNormal) + (sinf(radians) * OrthoVector);
+	WallJump_VelocityDirection.Normalize();
+	WallJump_VelocityDirection *= JumpZVelocity;
+
+	DrawDebugLine(GetWorld(), CharacterOwner_Steikemann->GetActorLocation(), CharacterOwner_Steikemann->GetActorLocation() + (ImpactNormal * 300.f), FColor::Blue, false, 2.f, 0, 4.f);
+	DrawDebugLine(GetWorld(), CharacterOwner_Steikemann->GetActorLocation(), CharacterOwner_Steikemann->GetActorLocation() + WallJump_VelocityDirection, FColor::Yellow, false, 2.f, 0, 4.f);
+
+	bWallJump = true;
+	return false;
+}
+
+bool USteikemannCharMovementComponent::StickToWall(float DeltaTime)
 {
 	if (Velocity.Z > 0.f) { return false; }
 
@@ -139,14 +169,16 @@ bool USteikemannCharMovementComponent::StickToWall()
 		//PRINTLONG("Stick to Wall");
 		Velocity *= 0;
 		GravityScale = 0;
+		//bWallSlowDown = false;
 		return true;
 	}
 	else {
 		PRINT("Wall Slowdown");
+		PRINTPARLONG("Velocity: %f", Velocity.Size());
 		FVector Vel = Velocity;
 		Vel.Normalize();
-		Velocity -= (Vel * WallJump_WalltouchSlow);
-		
+		(Velocity.Size()>1000.f) ? Velocity -= (Vel * (WallJump_WalltouchSlow * Velocity.Size()/1000.f)) : Velocity -= (Vel * WallJump_WalltouchSlow);
+		bWallSlowDown = true;
 	}
 	return false;
 }

@@ -158,6 +158,12 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	/* Rotate Inputvector to match the playercontroller */
+	{
+		FRotator Rot = GetControlRotation();
+		InputVector = InputVector.RotateAngleAxis(Rot.Yaw, FVector(0, 0, 1));
+	}
+
 	/* Gamepad Ticks */
 	//bDontChangefromXboxPad ? PRINT("True") : PRINT("False");
 	switch (CurrentGamepadType)
@@ -229,16 +235,17 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 
 	/* Dash */
 		/* Determines the dash direction vector based on input and controller rotation */
-	if (InputVector.Size() <= 0.05)
+	if (InputVectorRaw.Size() <= 0.05)
 	{
 		FVector Dir = GetControlRotation().Vector();
 		Dir.Z = 0;
+		Dir.Normalize();
 
 		DashDirection = Dir;
 	}
 	else
 	{
-		DashDirection = InputVector;
+		DashDirection = InputVectorRaw;
 		FRotator Rot = GetControlRotation();
 		
 		DashDirection = DashDirection.RotateAngleAxis(Rot.Yaw, FVector(0, 0, 1));
@@ -251,7 +258,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 
 	/* Wall Jump */
 	bFoundStickableWall = WallJump_DetectNearbyWall();
-	//bFoundStickableWall ? PRINT("StickToWall = True") : PRINT("StickToWall = False");
+	bFoundStickableWall ? PRINT("StickToWall = True") : PRINT("StickToWall = False");
 	//bCanStickToWall ? PRINT("CanStickToWall = True") : PRINT("CanStickToWall = False");
 	//bStickingToWall ? PRINT("StickingToWall = True") : PRINT("StickingToWall = False");
 	//PRINTPAR("StickTimer: %f", WallJump_StickTimer);
@@ -415,7 +422,7 @@ void ASteikemannCharacter::DetectPhysMaterial()
 
 void ASteikemannCharacter::MoveForward(float value)
 {
-	InputVector.X = value;
+	InputVectorRaw.X = value;
 
 	float movement = value;
 	if (bSlipping)
@@ -445,7 +452,7 @@ void ASteikemannCharacter::MoveForwardDualshock(float value)
 
 void ASteikemannCharacter::MoveRight(float value)
 {
-	InputVector.Y = value;
+	InputVectorRaw.Y = value;
 
 	float movement = value;
 	if (bSlipping)
@@ -512,6 +519,7 @@ void ASteikemannCharacter::Jump()
 	bPressedJump = true;
 	bJumping = true;
 	bAddJumpVelocity = (CanJump() || CanDoubleJump());
+
 }
 
 void ASteikemannCharacter::JumpDualshock()
@@ -527,6 +535,9 @@ void ASteikemannCharacter::StopJumping()
 	bJumping = false;
 	bAddJumpVelocity = true;
 	bCanEdgeJump = false;
+	if (MovementComponent.IsValid()){
+		MovementComponent->bWallJump = false;
+	}
 	ResetJumpState();
 }
 
@@ -538,6 +549,16 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 	{
 		if (bPressedJump)
 		{
+			/* If player is sticking to a wall */
+			if (MovementComponent->bStickingToWall || WallJump_DetectNearbyWall())
+			{
+				PRINTLONG("JUMP: WALLJUMP");
+				JumpCurrentCount = 1;
+				MovementComponent->WallJump(Wall_Normal);
+				bAddJumpVelocity = true;
+				return;
+			}
+
 			/* If player walks off edge with no jumpcount */
 			if (GetCharacterMovement()->IsFalling() && JumpCurrentCount == 0)
 			{
@@ -760,9 +781,12 @@ bool ASteikemannCharacter::WallJump_DetectNearbyWall()
 	{
 			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (Forward * WallJump_DetectionLength), FColor::Yellow, false, 0.f, 0, 4.f);
 		bHit = GetWorld()->LineTraceSingleByChannel(Hit, GetActorLocation(), GetActorLocation() + (Forward * WallJump_DetectionLength), ECC_Visibility, Params);
-		//bHit ? PRINT("True") : PRINT("False");
 		Forward = Forward.RotateAngleAxis(90, FVector(0, 0, 1));
-		if (bHit) { StickingSpot = Hit.ImpactPoint; return bHit; }
+		if (bHit) { 
+			StickingSpot = Hit.ImpactPoint; 
+			Wall_Normal = Hit.Normal; 
+			return bHit; 
+		}
 	}
 
 
@@ -772,13 +796,21 @@ bool ASteikemannCharacter::WallJump_DetectNearbyWall()
 	{
 			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (Forward * WallJump_DetectionLength), FColor::Red, false, 0.f, 0, 4.f);
 		bHit = GetWorld()->LineTraceSingleByChannel(Hit, GetActorLocation(), GetActorLocation() + (Forward * WallJump_DetectionLength), ECC_Visibility, Params);
-		//bHit ? PRINT("True") : PRINT("False");
 		Forward = Forward.RotateAngleAxis(90, FVector(0, 0, 1));
-		if (bHit) { StickingSpot = Hit.ImpactPoint; return bHit; }
+		if (bHit) {
+			StickingSpot = Hit.ImpactPoint;
+			Wall_Normal = Hit.Normal;
+			return bHit;
+		}
 	}
 
 	//if (bHit) { StickingSpot = Hit.ImpactPoint; return bHit; }
 	return bHit;
+}
+
+bool ASteikemannCharacter::IsStickingToWall()
+{
+	return bStickingToWall;
 }
 
 void ASteikemannCharacter::Initial_GrappleHook_Swing()

@@ -12,7 +12,14 @@
  * 
  */
 
-
+UENUM(BlueprintType)
+enum ECustomMovementMode
+{
+	MOVECustom_None				UMETA(DisplayName = "None"),
+	MOVECustom_Dash				UMETA(DisplayName = "Dash"),
+	MOVECustom_WallSticking		UMETA(DisplayName = "Wallsticking"),
+	MOVECustom_Grappling		UMETA(DisplayName = "Grappling"),
+};
 
 UCLASS()
 class STEIKEMANN_UE_API USteikemannCharMovementComponent : public UCharacterMovementComponent
@@ -24,6 +31,8 @@ public:
 
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
+	TEnumAsByte<enum ECustomMovementMode> CustomMovementMode;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Friction")
 	float CharacterFriction{ 15.f };
 
@@ -31,10 +40,13 @@ public:
 
 
 	/* Gravity over time while character is in the air */
-		/* The Max gravity scale override */
+		/* The Base gravity scale override */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|GravityOverride")
-		float GravityScaleOverride{ 2.f };
-		/* Interpolation speed of the gravity scale override */
+		float GravityScaleOverride UMETA(DisplayName = "Gravity Scale Override") { 2.f };
+		/* Gravity scale during freefall */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|GravityOverride")
+		float GravityScaleOverride_Freefall UMETA(DisplayName = "Freefall Gravity") { 2.f };
+		/* Interpolation speed between gravityscale override and freefall gravity */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|GravityOverride")
 		float GravityScaleOverride_InterpSpeed{ 2.f };
 
@@ -75,9 +87,16 @@ public:
 	
 	//bool bTouchingWall{};
 	bool bStickingToWall;
+	bool bWallSlowDown{};
 	FVector StickingSpot{};
 
-	bool StickToWall();
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Wall Jump")
+		float WallJump_JumpAngle UMETA(DisplayName = "Jump Angle") { 45.f };
+	
+	bool bWallJump{};
+	FVector WallJump_VelocityDirection{};
+	bool WallJump(const FVector& ImpactNormal);
+	bool StickToWall(float DeltaTime);
 
 #pragma endregion //Wall Jump
 

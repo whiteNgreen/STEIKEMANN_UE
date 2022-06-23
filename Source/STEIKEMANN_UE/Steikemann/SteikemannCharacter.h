@@ -81,6 +81,9 @@ public:
 
 	void DetectPhysMaterial();
 
+	/* The Raw InputVector */
+	FVector InputVectorRaw;
+	/* Input vector rotated to match the playercontrollers rotation */
 	FVector InputVector;
 
 #pragma region Basic_Movement
@@ -179,8 +182,10 @@ public:/* ------------------- Basic Movement ------------------- */
 	bool bCanStickToWall{ true };
 	FVector StickingSpot{};
 
+	FVector Wall_Normal{};
 	bool WallJump_DetectNearbyWall();
 
+	bool IsStickingToWall();
 
 #pragma endregion //Wall Jump
 
