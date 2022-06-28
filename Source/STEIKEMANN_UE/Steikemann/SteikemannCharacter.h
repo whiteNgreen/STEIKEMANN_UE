@@ -102,9 +102,11 @@ public:/* ------------------- Basic Movement ------------------- */
 	void TurnAtRateDualshock(float rate);
 	void LookUpAtRateDualshock(float rate);
 
+	bool bActivateJump{};
 	UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
 		bool bJumping{};
-	bool bCanEdgeJump{};
+	UPROPERTY(BlueprintReadOnly)
+		bool bCanEdgeJump{};
 	UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
 		bool bAddJumpVelocity{};
 	/* How long the jump key can be held to add upwards velocity */
@@ -121,6 +123,10 @@ public:/* ------------------- Basic Movement ------------------- */
 
 	bool CanDoubleJump() const;
 	bool IsJumping() const;
+
+	bool IsFalling() const;
+	bool IsOnGround() const;
+
 #pragma endregion //Basic_Movement
 
 #pragma region Bounce
@@ -157,7 +163,7 @@ public:/* ------------------- Basic Movement ------------------- */
 	void Dash();
 	void Stop_Dash();
 
-	bool IsDashing();
+	bool IsDashing() const;
 
 #pragma endregion //Dash
 
@@ -185,7 +191,8 @@ public:/* ------------------- Basic Movement ------------------- */
 	FVector Wall_Normal{};
 	bool WallJump_DetectNearbyWall();
 
-	bool IsStickingToWall();
+	bool IsStickingToWall() const;
+	bool IsOnWall() const;
 
 #pragma endregion //Wall Jump
 
@@ -295,6 +302,6 @@ public: /* ------------------------ Grapplehook --------------------- */
 	bool bGrappleEnd{};
 
 	UFUNCTION(BlueprintCallable)
-	bool IsGrappling();
+	bool IsGrappling() const;
 #pragma endregion //GrappleHook
 };

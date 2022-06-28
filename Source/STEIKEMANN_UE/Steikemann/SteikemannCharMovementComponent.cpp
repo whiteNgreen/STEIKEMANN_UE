@@ -29,8 +29,8 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 	}
 
 	PRINTPAR("Gravity: %f", GravityScale);
-	bWallSlowDown ? PRINT("WallSlowDown = true") : PRINT("WallSlowDown = false");
-	bStickingToWall ? PRINT("StickingToWall = true") : PRINT("StickingToWall = false");
+	//bWallSlowDown ? PRINT("WallSlowDown = true") : PRINT("WallSlowDown = false");
+	//bStickingToWall ? PRINT("StickingToWall = true") : PRINT("StickingToWall = false");
 	/* Gravity */
 	if (CharacterOwner_Steikemann->IsJumping() || MovementMode == MOVE_Walking)
 	{
@@ -40,7 +40,7 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 	{
 		GravityScale = 0.f;
 	}
-	else if (bStickingToWall || bWallSlowDown)
+	else if (bStickingToWall && bWallSlowDown)
 	{
 		GravityScale = FMath::FInterpTo(GravityScale, 1.f, GetWorld()->GetDeltaSeconds(), GravityScaleOverride_InterpSpeed);
 	}
@@ -173,8 +173,8 @@ bool USteikemannCharMovementComponent::StickToWall(float DeltaTime)
 		return true;
 	}
 	else {
-		PRINT("Wall Slowdown");
-		PRINTPARLONG("Velocity: %f", Velocity.Size());
+		//PRINT("Wall Slowdown");
+		//PRINTPARLONG("Velocity: %f", Velocity.Size());
 		FVector Vel = Velocity;
 		Vel.Normalize();
 		(Velocity.Size()>1000.f) ? Velocity -= (Vel * (WallJump_WalltouchSlow * Velocity.Size()/1000.f)) : Velocity -= (Vel * WallJump_WalltouchSlow);

@@ -164,7 +164,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		InputVector = InputVector.RotateAngleAxis(Rot.Yaw, FVector(0, 0, 1));
 	}
 
-	/* Gamepad Ticks */
+	/*		Gamepad Ticks		*/
 	//bDontChangefromXboxPad ? PRINT("True") : PRINT("False");
 	switch (CurrentGamepadType)
 	{
@@ -190,12 +190,10 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		bCanChangeGamepad = true;
 	}
 
-	//PRINTPAR("Velocity: %f", GetCharacterMovement()->Velocity.Size());
-	//PRINTPAR("Gravity: %f", GetCharacterMovement()->GravityScale);
 
 	DetectPhysMaterial();
 
-	IsGrappling() ? PRINT("IsGrappling = True") : PRINT("IsGrappling = False");
+	/*		Activate grapple targeting		*/
 	if (!IsGrappling())
 	{
 		LineTraceToGrappleableObject();
@@ -203,8 +201,12 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	}
 
 	
-	/* Jump */
-	if (bJumping){
+	/*		Jump		*/
+	bJumping ? PRINT("bJumping = true") : PRINT("bJumping = false");
+	bAddJumpVelocity ? PRINT("bAddJumpVelocity = true") : PRINT("bAddJumpVelocity = false");
+	bActivateJump ? PRINT("bActivateJump = true") : PRINT("bActivateJump = false");
+
+	if (bJumping /*bActivateJump*/){
 		if (JumpKeyHoldTime < fJumpTimerMax){
 			JumpKeyHoldTime += DeltaTime;
 		}
@@ -214,11 +216,11 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	}
 
 
-	/* Grapplehook */
+	/*		Grapplehook			*/
 	if ((bGrapple_Swing && !bGrappleEnd) || (bGrapple_PreLaunch && !bGrappleEnd)) 
 	{
 		if (!bGrapple_PreLaunch) {
-			GrappleHook_Swing_RotateCamera(DeltaTime);
+			//GrappleHook_Swing_RotateCamera(DeltaTime);
 			Update_GrappleHook_Swing();
 			bGrapple_Launch = false;
 		}
@@ -233,7 +235,8 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		}
 	}
 
-	/* Dash */
+
+	/*			Dash			*/
 		/* Determines the dash direction vector based on input and controller rotation */
 	if (InputVectorRaw.Size() <= 0.05)
 	{
@@ -256,13 +259,17 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 
 
 
-	/* Wall Jump */
-	bFoundStickableWall = WallJump_DetectNearbyWall();
-	bFoundStickableWall ? PRINT("StickToWall = True") : PRINT("StickToWall = False");
-	//bCanStickToWall ? PRINT("CanStickToWall = True") : PRINT("CanStickToWall = False");
-	//bStickingToWall ? PRINT("StickingToWall = True") : PRINT("StickingToWall = False");
-	//PRINTPAR("StickTimer: %f", WallJump_StickTimer);
-	//PRINTPAR("NON_StickTimer: %f", WallJump_NonStickTimer);
+
+	/*		Wall Jump		*/
+	if (MovementComponent->IsFalling()) {
+		bFoundStickableWall = WallJump_DetectNearbyWall();
+	}
+	if (!bFoundStickableWall) {
+		bCanStickToWall = false;
+		WallJump_StickTimer = 0.f;
+		MovementComponent->bStickingToWall = false;
+	};
+	
 	bStickingToWall = MovementComponent->bStickingToWall;
 	if (bStickingToWall) 
 	{
@@ -273,6 +280,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		else {
 			bStickingToWall = false;
 			bCanStickToWall = false;
+
 		}
 	}
 	else { WallJump_StickTimer = 0.f; }
@@ -287,6 +295,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		}
 	}
 	else { WallJump_NonStickTimer = 0.f; }
+
 }
 
 // Called to bind functionality to input
@@ -517,7 +526,8 @@ void ASteikemannCharacter::Jump()
 	if (IsGrappling()) { return; }
 
 	bPressedJump = true;
-	bJumping = true;
+	//PRINTLONG("Pressed Jump");
+	bJumping = true;	// This is activated in an anim notify on the Jump_Start animation
 	bAddJumpVelocity = (CanJump() || CanDoubleJump());
 
 }
@@ -532,8 +542,10 @@ void ASteikemannCharacter::JumpDualshock()
 void ASteikemannCharacter::StopJumping()
 {
 	bPressedJump = false;
+	bActivateJump = false;
 	bJumping = false;
-	bAddJumpVelocity = true;
+	//bAddJumpVelocity = true;
+	bAddJumpVelocity = false;
 	bCanEdgeJump = false;
 	if (MovementComponent.IsValid()){
 		MovementComponent->bWallJump = false;
@@ -550,7 +562,7 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 		if (bPressedJump)
 		{
 			/* If player is sticking to a wall */
-			if (MovementComponent->bStickingToWall || WallJump_DetectNearbyWall())
+			if (( MovementComponent->bStickingToWall || WallJump_DetectNearbyWall() ) && MovementComponent->IsFalling())
 			{
 				PRINTLONG("JUMP: WALLJUMP");
 				JumpCurrentCount = 1;
@@ -605,6 +617,19 @@ bool ASteikemannCharacter::CanDoubleJump() const
 bool ASteikemannCharacter::IsJumping() const
 {
 	return bAddJumpVelocity && bJumping;
+	//return bAddJumpVelocity && bJumping && bActivateJump;
+}
+
+bool ASteikemannCharacter::IsFalling() const
+{
+	if (!MovementComponent.IsValid()) { return false; }
+	return ( MovementComponent->MovementMode == MOVE_Falling ) && ( !IsGrappling() || !IsDashing() || !IsStickingToWall() || !IsOnWall() || !IsJumping() );
+}
+
+bool ASteikemannCharacter::IsOnGround() const
+{
+	if (!MovementComponent.IsValid()) { return false; }
+	return MovementComponent->MovementMode == MOVE_Walking;
 }
 
 /* Aiming system for grapplehook */
@@ -718,7 +743,7 @@ bool ASteikemannCharacter::LineTraceToGrappleableObject()
 
 	GrappledActor = Grappled;
 
-	bGrapple_Available ? PRINT("true") : PRINT("false");
+	//bGrapple_Available ? PRINT("true") : PRINT("false");
 
 	return bGrapple_Available;
 }
@@ -760,7 +785,7 @@ void ASteikemannCharacter::Stop_Dash()
 	bDashClick = false;
 }
 
-bool ASteikemannCharacter::IsDashing()
+bool ASteikemannCharacter::IsDashing() const
 {
 	return bDash;
 }
@@ -808,9 +833,14 @@ bool ASteikemannCharacter::WallJump_DetectNearbyWall()
 	return bHit;
 }
 
-bool ASteikemannCharacter::IsStickingToWall()
+bool ASteikemannCharacter::IsStickingToWall() const
 {
 	return bStickingToWall;
+}
+
+bool ASteikemannCharacter::IsOnWall() const
+{
+	return MovementComponent->bWallSlowDown;
 }
 
 void ASteikemannCharacter::Initial_GrappleHook_Swing()
@@ -916,7 +946,7 @@ void ASteikemannCharacter::Update_GrappleHook_Drag(float DeltaTime)
 	}
 }
 
-bool ASteikemannCharacter::IsGrappling()
+bool ASteikemannCharacter::IsGrappling() const
 {
 	return bGrapple_Swing || bGrapple_PreLaunch || bGrapple_Launch;
 }
