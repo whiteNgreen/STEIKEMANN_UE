@@ -32,6 +32,9 @@ public:
 	class USpringArmComponent* CameraBoom{ nullptr };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
 	class UCameraComponent* Camera{ nullptr };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
+	class UPoseableMeshComponent* GrappleHookMesh{ nullptr };
+
 
 	//class USteikemannCharMovementComponent* MovementComponent{ nullptr };
 	TWeakObjectPtr<class USteikemannCharMovementComponent> MovementComponent;

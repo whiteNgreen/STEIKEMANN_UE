@@ -8,6 +8,7 @@
 #include "DrawDebugHelpers.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
 #include "Kismet/GameplayStatics.h"
+#include "Components/PoseableMeshComponent.h"
 
 /* Gamepad support */
 #include "RawInput.h"
@@ -47,6 +48,9 @@ ASteikemannCharacter::ASteikemannCharacter(const FObjectInitializer& ObjectIniti
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	Camera->bUsePawnControlRotation = false;
+
+	GrappleHookMesh = CreateDefaultSubobject<UPoseableMeshComponent>(TEXT("GrappleHook Mesh"));
+	GrappleHookMesh->SetupAttachment(RootComponent);
 
 	/* Gamepad support */
 	FCoreDelegates::OnControllerConnectionChange.AddUObject(this, &ASteikemannCharacter::ListenForControllerChange);
@@ -194,16 +198,20 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	if (IsFalling() || MovementComponent->IsWalking()) {
 		ResetActorRotationPitchAndRoll(DeltaTime);
 	}
-	IsFalling() ? PRINT("Falling: True") : PRINT("Falling: False");
+	//IsFalling() ? PRINT("Falling: True") : PRINT("Falling: False");
 
 	DetectPhysMaterial();
+
 
 	/*		Activate grapple targeting		*/
 	if (!IsGrappling())
 	{
 		LineTraceToGrappleableObject();
 		GrappleDrag_PreLaunch_Timer = GrappleDrag_PreLaunch_Timer_Length;
+		GrappleHookMesh->SetVisibility(false);
 	}
+
+	
 
 
 	
@@ -240,6 +248,12 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 			else {
 				Update_GrappleHook_Drag(DeltaTime);
 			}
+		}
+	}
+	if (IsGrappling()) {
+		GrappleHookMesh->SetVisibility(true);
+		if (GrappledActor.IsValid()) {
+			GrappleHookMesh->SetBoneLocationByName(FName("GrappleHook_Top"), GrappledActor->GetActorLocation(), EBoneSpaces::WorldSpace);
 		}
 	}
 
