@@ -190,6 +190,11 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		bCanChangeGamepad = true;
 	}
 
+	/*		Resets Rotation Pitch and Roll		*/
+	if (IsFalling() || MovementComponent->IsWalking()) {
+		ResetActorRotationPitchAndRoll(DeltaTime);
+	}
+	IsFalling() ? PRINT("Falling: True") : PRINT("Falling: False");
 
 	DetectPhysMaterial();
 
@@ -199,6 +204,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		LineTraceToGrappleableObject();
 		GrappleDrag_PreLaunch_Timer = GrappleDrag_PreLaunch_Timer_Length;
 	}
+
 
 	
 	/*		Jump		*/
@@ -222,10 +228,12 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		if (!bGrapple_PreLaunch) {
 			//GrappleHook_Swing_RotateCamera(DeltaTime);
 			Update_GrappleHook_Swing();
+			RotateActor_GrappleHook_Swing(DeltaTime);
 			bGrapple_Launch = false;
 		}
 		else {
 			GrappleHook_Drag_RotateCamera(DeltaTime);
+			RotateActor_GrappleHook_Drag(DeltaTime);
 			if (!bGrapple_Launch) {
 				Initial_GrappleHook_Drag(DeltaTime);
 			}
@@ -372,6 +380,7 @@ void ASteikemannCharacter::Stop_Grapple_Swing()
 	{
 		IGrappleTargetInterface::Execute_UnTargeted(GrappledActor.Get());
 	}
+
 }
 
 void ASteikemannCharacter::Start_Grapple_Drag()
@@ -623,13 +632,79 @@ bool ASteikemannCharacter::IsJumping() const
 bool ASteikemannCharacter::IsFalling() const
 {
 	if (!MovementComponent.IsValid()) { return false; }
-	return ( MovementComponent->MovementMode == MOVE_Falling ) && ( !IsGrappling() || !IsDashing() || !IsStickingToWall() || !IsOnWall() || !IsJumping() );
+	return  MovementComponent->MovementMode == MOVE_Falling  && ( !IsGrappling() && !IsDashing() && !IsStickingToWall() && !IsOnWall() && !IsJumping() );
 }
 
 bool ASteikemannCharacter::IsOnGround() const
 {
 	if (!MovementComponent.IsValid()) { return false; }
 	return MovementComponent->MovementMode == MOVE_Walking;
+}
+
+void ASteikemannCharacter::ResetActorRotationPitchAndRoll(float DeltaTime)
+{
+	FRotator Rot = GetActorRotation();
+	PRINTPAR("ROT: %s", *Rot.ToString());
+	AddActorLocalRotation(FRotator(Rot.Pitch * -1.f, 0.f, Rot.Roll * -1.f));
+}
+
+void ASteikemannCharacter::RotateYawPitchToVector(float DeltaTime, FVector AimVector)
+{
+	FVector Velocity = GetVelocity();	Velocity.Normalize();
+	FVector Forward = FVector::ForwardVector;
+	FVector Right = FVector::RightVector;
+	FVector Up = FVector::UpVector;
+
+
+	/*		Yaw Rotation		*/
+	FVector VelocityXY = Velocity;
+	VelocityXY.Z = 0.f;
+	VelocityXY.Normalize();
+
+	float YawDotProduct = FVector::DotProduct(VelocityXY, Forward);
+	float Yaw = FMath::RadiansToDegrees(acosf(YawDotProduct));
+
+	/*		Check if yaw is to the right or left		*/
+	float RightDotProduct = FVector::DotProduct(VelocityXY, Right);
+	if (RightDotProduct < 0.f) { Yaw *= -1.f; }
+
+
+
+	/*		Pitch Rotation		*/
+	FVector VelocityPitch = FVector(1.f, 0.f, Velocity.Z);
+	VelocityPitch.Normalize();
+	FVector ForwardPitch = FVector(1.f, 0.f, Forward.Z);
+	ForwardPitch.Normalize();
+
+	float PitchDotProduct = FVector::DotProduct(VelocityPitch, ForwardPitch);
+	float Pitch = FMath::RadiansToDegrees(acosf(PitchDotProduct));
+
+	/*		Check if pitch is up or down		*/
+	float PitchDirection = Forward.Z - Velocity.Z;
+	if (PitchDirection > 0.f) { Pitch *= -1.f; }
+
+
+	/*		Adding Yaw and Pitch rotation to actor		*/
+	FRotator Rot{ Pitch, Yaw, 0.f };
+	SetActorRotation(Rot);
+}
+
+void ASteikemannCharacter::RollAroundPoint(float DeltaTime, FVector Point)
+{
+	/*		Roll Rotation		*/
+	FVector TowardsPoint = Point - GetActorLocation();
+	TowardsPoint.Normalize();
+	//Point.Normalize();
+
+	FVector right = GetActorRightVector();
+	float RollDotProduct = FVector::DotProduct(TowardsPoint, right);
+	//float Roll = acosf(RollDotProduct) - 90.f;
+	float Roll = FMath::RadiansToDegrees(acosf(RollDotProduct)) - 90.f;
+	Roll *= -1.f;
+
+
+	/*		Add Roll rotation to actor		*/
+	AddActorLocalRotation(FRotator(0, 0, Roll));
 }
 
 /* Aiming system for grapplehook */
@@ -895,6 +970,14 @@ void ASteikemannCharacter::Update_GrappleHook_Swing()
 	}
 }
 
+void ASteikemannCharacter::RotateActor_GrappleHook_Swing(float DeltaTime)
+{
+	if (!GrappledActor.IsValid()) { return; }
+
+	RotateYawPitchToVector(DeltaTime, GetVelocity());
+	RollAroundPoint(DeltaTime, GrappledActor->GetActorLocation());
+}
+
 void ASteikemannCharacter::Initial_GrappleHook_Drag(float DeltaTime)
 {
 	if (!GrappledActor.IsValid()){ return; }
@@ -973,6 +1056,13 @@ void ASteikemannCharacter::GrappleHook_Drag_RotateCamera(float DeltaTime)
 
 	float PitchRotate = FMath::FInterpTo(0.f, PitchTo, DeltaTime, GrappleDrag_Camera_InterpSpeed);
 	AddControllerPitchInput(PitchRotate);
+}
+
+void ASteikemannCharacter::RotateActor_GrappleHook_Drag(float DeltaTime)
+{
+	if (!GrappledActor.IsValid()) { return; }
+
+	RotateYawPitchToVector(DeltaTime, GrappledActor->GetActorLocation());
 }
 
 void ASteikemannCharacter::GrappleHook_Swing_RotateCamera(float DeltaTime)

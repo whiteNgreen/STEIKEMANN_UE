@@ -127,7 +127,12 @@ public:/* ------------------- Basic Movement ------------------- */
 	bool IsFalling() const;
 	bool IsOnGround() const;
 
+
 #pragma endregion //Basic_Movement
+	
+	void ResetActorRotationPitchAndRoll(float DeltaTime);
+	void RotateYawPitchToVector(float DeltaTime, FVector AimVector);
+	void RollAroundPoint(float DeltaTime, FVector Point);
 
 #pragma region Bounce
 	/* ------------------------ Bounce --------------------- */
@@ -262,7 +267,8 @@ public: /* ------------------------ Grapplehook --------------------- */
 	UFUNCTION(BlueprintCallable)
 	void Initial_GrappleHook_Swing();
 	void Update_GrappleHook_Swing();
-	void GrappleHook_Drag_RotateCamera(float DeltaTime);
+	void RotateActor_GrappleHook_Swing(float DeltaTime);
+	void GrappleHook_Swing_RotateCamera(float DeltaTime);	// Slightly dissorienting
 
 	/* How long the player will be held in the air before being launched towards the grappled actor */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag")
@@ -296,7 +302,8 @@ public: /* ------------------------ Grapplehook --------------------- */
 	UFUNCTION(BlueprintCallable)
 	void Initial_GrappleHook_Drag(float DeltaTime);
 	void Update_GrappleHook_Drag(float DeltaTime);
-	void GrappleHook_Swing_RotateCamera(float DeltaTime);
+	void GrappleHook_Drag_RotateCamera(float DeltaTime);
+	void RotateActor_GrappleHook_Drag(float DeltaTime);
 
 	UPROPERTY(BlueprintReadWrite)
 	bool bGrappleEnd{};
