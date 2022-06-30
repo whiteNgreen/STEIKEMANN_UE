@@ -82,12 +82,12 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 
 bool USteikemannCharMovementComponent::DoJump(bool bReplayingMoves)
 {
-	if (CharacterOwner_Steikemann && CharacterOwner_Steikemann->bCanEdgeJump)
-	{
-		return true;
-	}
+	if (!CharacterOwner_Steikemann) { return false; }
 
-	if (CharacterOwner_Steikemann && (CharacterOwner_Steikemann->CanJump() || CharacterOwner_Steikemann->CanDoubleJump()))
+	if (CharacterOwner_Steikemann->bCanPostEdgeJump)	{ return true; }
+	if (CharacterOwner_Steikemann->bCanEdgeJump)		{ return true; }
+
+	if (CharacterOwner_Steikemann->CanJump() || CharacterOwner_Steikemann->CanDoubleJump())
 	{
 		// Don't jump if we can't move up/down.
 		if (!bConstrainToPlane || FMath::Abs(PlaneConstraintNormal.Z) != 1.f)

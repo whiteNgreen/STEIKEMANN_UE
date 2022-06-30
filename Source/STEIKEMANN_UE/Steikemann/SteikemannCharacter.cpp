@@ -228,6 +228,10 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 			bAddJumpVelocity = false;
 		}
 	}
+	PostEdge_JumpTimer += DeltaTime;
+	if (GetCharacterMovement()->IsWalking()) { PostEdge_JumpTimer = 0.f; }
+	PRINTPAR("PostEdge JumpTimer: %f", PostEdge_JumpTimer);
+
 
 
 	/*		Grapplehook			*/
@@ -276,10 +280,11 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		
 		DashDirection = DashDirection.RotateAngleAxis(Rot.Yaw, FVector(0, 0, 1));
 	}
-	if (GetCharacterMovement()->IsWalking()) {
+	if (GetCharacterMovement()->IsWalking() || IsGrappling()) {
 		DashCounter = 1;
 	}
 	if (IsDashing()) { RotateActorYawToVector(DeltaTime, DashDirection); }
+
 
 	PRINTPAR("Velocity: %f", GetVelocity().Size());
 		/* Hjelper å se hvor dashen går hen */
@@ -577,6 +582,7 @@ void ASteikemannCharacter::StopJumping()
 	//bAddJumpVelocity = true;
 	bAddJumpVelocity = false;
 	bCanEdgeJump = false;
+	bCanPostEdgeJump = false;
 	if (MovementComponent.IsValid()){
 		MovementComponent->bWallJump = false;
 	}
@@ -601,12 +607,23 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 				return;
 			}
 
-			/* If player walks off edge with no jumpcount */
+			/* If player walks off edge with no jumpcount and the post edge timer is valid */
+			if (GetCharacterMovement()->IsFalling() && JumpCurrentCount == 0 && PostEdge_JumpTimer < PostEdge_JumpTimer_Length) 
+			{
+				PRINTLONG("POST EDGE JUMP");
+				bCanPostEdgeJump = true;
+				JumpCurrentCount++;
+				bAddJumpVelocity = GetCharacterMovement()->DoJump(bClientUpdating);
+				return;
+			}
+			/* If player walks off edge with no jumpcount after post edge timer is valid */
 			if (GetCharacterMovement()->IsFalling() && JumpCurrentCount == 0)
 			{
 				bCanEdgeJump = true;
 				JumpCurrentCount += 2;
+				//JumpCurrentCount++;
 				bAddJumpVelocity = GetCharacterMovement()->DoJump(bClientUpdating);
+				return;
 			}
 
 			// If this is the first jump and we're already falling,

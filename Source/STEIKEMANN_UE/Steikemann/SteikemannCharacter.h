@@ -117,6 +117,13 @@ public:/* ------------------- Basic Movement ------------------- */
 		float fJumpTimerMax UMETA(DisplayName = "JumpHoldTimer") { 0.2f };
 	UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
 		float fJumpTimer{};
+	/* How long after walking off an edge the player is still allowed to jump */
+	UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump")
+		float PostEdge_JumpTimer_Length{ 0.3f };
+	float PostEdge_JumpTimer{};
+	bool bCanPostEdgeJump{};
+
+
 
 	void Jump() override;
 	void JumpDualshock();
