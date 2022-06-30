@@ -134,7 +134,8 @@ public:/* ------------------- Basic Movement ------------------- */
 #pragma endregion //Basic_Movement
 	
 	void ResetActorRotationPitchAndRoll(float DeltaTime);
-	void RotateYawPitchToVector(float DeltaTime, FVector AimVector);
+	void RotateActorYawToVector(float DeltaTime, FVector AimVector);
+	void RotateActorYawPitchToVector(float DeltaTime, FVector AimVector);
 	void RollAroundPoint(float DeltaTime, FVector Point);
 
 #pragma region Bounce
@@ -157,9 +158,13 @@ public:/* ------------------- Basic Movement ------------------- */
 
 	bool bDashClick{};
 	bool bDash{};
+	uint8 DashCounter{ 1 };
 
 	FVector DashDirection{};
 
+	/* How long the pre dash action lasts */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Dash")
+		float Pre_DashTime{ 0.1f };
 	/* How long the dash action lasts */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Dash")
 		float DashTime{ 0.5f };

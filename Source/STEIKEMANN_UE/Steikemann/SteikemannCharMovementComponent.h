@@ -66,13 +66,15 @@ public:
 #pragma endregion //Bounce
 
 #pragma region Dash
-	//bool* bDashing{ nullptr };
+	
+	float fPreDashTimerLength{};
+	float fPreDashTimer{};
 	float fDashTimerLength{};
 	float fDashTimer{};
 	float fDashLength{};
 	FVector DashDirection;
 
-	void Start_Dash(float dashTime, float dashLength, FVector dashdirection);
+	void Start_Dash(float preDashTime, float dashTime, float dashLength, FVector dashdirection);
 	void Update_Dash(float deltaTime);
 #pragma endregion //Dash
 

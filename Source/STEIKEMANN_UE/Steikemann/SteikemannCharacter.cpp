@@ -260,6 +260,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 
 	/*			Dash			*/
 		/* Determines the dash direction vector based on input and controller rotation */
+	
 	if (InputVectorRaw.Size() <= 0.05)
 	{
 		FVector Dir = GetControlRotation().Vector();
@@ -275,6 +276,12 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		
 		DashDirection = DashDirection.RotateAngleAxis(Rot.Yaw, FVector(0, 0, 1));
 	}
+	if (GetCharacterMovement()->IsWalking()) {
+		DashCounter = 1;
+	}
+	if (IsDashing()) { RotateActorYawToVector(DeltaTime, DashDirection); }
+
+	PRINTPAR("Velocity: %f", GetVelocity().Size());
 		/* Hjelper å se hvor dashen går hen */
 		//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (DashDirection * 3000), FColor::Red, false, 0, 0, 5.f);
 		//PRINTPAR("Rot: %s", *GetControlRotation().ToString());
@@ -662,7 +669,36 @@ void ASteikemannCharacter::ResetActorRotationPitchAndRoll(float DeltaTime)
 	AddActorLocalRotation(FRotator(Rot.Pitch * -1.f, 0.f, Rot.Roll * -1.f));
 }
 
-void ASteikemannCharacter::RotateYawPitchToVector(float DeltaTime, FVector AimVector)
+void ASteikemannCharacter::RotateActorYawToVector(float DeltaTime, FVector AimVector)
+{
+	//FVector Velocity = GetVelocity();	Velocity.Normalize();
+	FVector Aim = AimVector;
+	Aim.Normalize();
+	FVector Forward = GetActorForwardVector();
+	//FVector Forward = FVector::ForwardVector;
+	FVector Right = GetActorRightVector();
+	//FVector Right = FVector::RightVector;
+	FVector Up = FVector::UpVector;
+
+
+	/*		Yaw Rotation		*/
+	FVector AimXY = Aim;
+	AimXY.Z = 0.f;
+	AimXY.Normalize();
+
+	float YawDotProduct = FVector::DotProduct(AimXY, Forward);
+	float Yaw = FMath::RadiansToDegrees(acosf(YawDotProduct));
+
+	/*		Check if yaw is to the right or left		*/
+	float RightDotProduct = FVector::DotProduct(AimXY, Right);
+	if (RightDotProduct < 0.f) { Yaw *= -1.f; }
+
+	FRotator Rot{ 0.f, Yaw, 0.f };
+	//SetActorRotation(Rot);
+	AddActorLocalRotation(Rot);
+}
+
+void ASteikemannCharacter::RotateActorYawPitchToVector(float DeltaTime, FVector AimVector)
 {
 	FVector Velocity = GetVelocity();	Velocity.Normalize();
 	FVector Forward = FVector::ForwardVector;
@@ -861,10 +897,11 @@ void ASteikemannCharacter::Stop_Bounce()
 
 void ASteikemannCharacter::Dash()
 {
-	if (!bDashClick && !bDash)
+	if (!bDashClick && !bDash && DashCounter == 1)
 	{
 		bDash = true;
-		MovementComponent->Start_Dash(DashTime, DashLength, DashDirection);
+		DashCounter--;
+		MovementComponent->Start_Dash(Pre_DashTime, DashTime, DashLength, DashDirection);
 	}
 	bDashClick = true;
 }
@@ -988,7 +1025,7 @@ void ASteikemannCharacter::RotateActor_GrappleHook_Swing(float DeltaTime)
 {
 	if (!GrappledActor.IsValid()) { return; }
 
-	RotateYawPitchToVector(DeltaTime, GetVelocity());
+	RotateActorYawPitchToVector(DeltaTime, GetVelocity());
 	RollAroundPoint(DeltaTime, GrappledActor->GetActorLocation());
 }
 
@@ -1076,7 +1113,7 @@ void ASteikemannCharacter::RotateActor_GrappleHook_Drag(float DeltaTime)
 {
 	if (!GrappledActor.IsValid()) { return; }
 
-	RotateYawPitchToVector(DeltaTime, GrappledActor->GetActorLocation());
+	RotateActorYawPitchToVector(DeltaTime, GrappledActor->GetActorLocation());
 }
 
 void ASteikemannCharacter::GrappleHook_Swing_RotateCamera(float DeltaTime)

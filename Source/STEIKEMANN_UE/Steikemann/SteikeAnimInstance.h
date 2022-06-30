@@ -31,6 +31,9 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		float VerticalSpeed{};
 
+	UPROPERTY(BlueprintReadOnly)
+		float HorizontalSpeed{};
+
 	/* Check if player is freefalling */
 	UPROPERTY(BlueprintReadOnly)
 		bool bFalling{};
@@ -47,5 +50,11 @@ public:
 	UPROPERTY(BlueprintReadWrite)
 		bool bActivateJump{};
 
+	UPROPERTY(BlueprintReadWrite)
+		bool bGrappling{};
+
+	/* Checks if character is dashing */
+	UPROPERTY(BlueprintReadOnly)
+		bool bDashing{};
 
 };

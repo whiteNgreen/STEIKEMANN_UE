@@ -117,9 +117,10 @@ void USteikemannCharMovementComponent::Bounce(FVector surfacenormal)
 	Velocity = newVelocity;
 }
 
-void USteikemannCharMovementComponent::Start_Dash(float dashTime, float dashLength, FVector dashdirection)
+void USteikemannCharMovementComponent::Start_Dash(float preDashTime, float dashTime, float dashLength, FVector dashdirection)
 {
 	//PRINTLONG("Start Dash");
+	fPreDashTimerLength = preDashTime;
 	fDashTimerLength = dashTime;
 	fDashLength = dashLength;
 	DashDirection = dashdirection;
@@ -128,18 +129,24 @@ void USteikemannCharMovementComponent::Start_Dash(float dashTime, float dashLeng
 
 void USteikemannCharMovementComponent::Update_Dash(float deltaTime)
 {
-	float speed = fDashLength / fDashTimerLength;
+	const bool activateDash = fPreDashTimer > fPreDashTimerLength;
+	fPreDashTimer += deltaTime;
 
-	if (fDashTimer < fDashTimerLength)
-	{
-		fDashTimer += deltaTime;
-		Velocity = DashDirection * speed;
-	}
-	else
-	{
-		fDashTimer = 0.f;
-		Velocity *= 0;
-		CharacterOwner_Steikemann->bDash = false;
+	if (activateDash) {
+		float speed = fDashLength / fDashTimerLength;
+
+		if (fDashTimer < fDashTimerLength)
+		{
+			fDashTimer += deltaTime;
+			Velocity = DashDirection * speed;
+		}
+		else
+		{
+			fPreDashTimer = 0.f;
+			fDashTimer = 0.f;
+			Velocity *= 0;
+			CharacterOwner_Steikemann->bDash = false;
+		}
 	}
 }
 

@@ -20,6 +20,11 @@ void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		/* Set speed variables */
 		Speed = SteikeOwner->GetVelocity().Size();
 		VerticalSpeed = SteikeOwner->GetVelocity().Z;
+		{
+			FVector Vel = SteikeOwner->GetVelocity();
+			Vel.Z = 0.f;
+			HorizontalSpeed = Vel.Size();
+		}
 
 		/* Is Character freefalling in air or on the ground? */
 		bFalling = SteikeOwner->IsFalling();
@@ -30,6 +35,12 @@ void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		bActivateJump = SteikeOwner->IsJumping();
 		bPressedJump = SteikeOwner->bPressedJump;
 		bActivateJump ? PRINT("JUMPING") : PRINT("NOT jumping");
+
+		/* Dash */
+		bDashing = SteikeOwner->IsDashing();
+
+		/* Grappling */
+		bGrappling = SteikeOwner->IsGrappling();
 
 		//bPressedJump = SteikeOwner->bJumping;
 		//bPressedJump = SteikeOwner->bAddJumpVelocity;
