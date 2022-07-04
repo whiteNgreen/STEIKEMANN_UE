@@ -16,7 +16,8 @@ void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	Super::NativeUpdateAnimation(DeltaSeconds);
 
 
-	if (SteikeOwner.IsValid()) {
+	//if (SteikeOwner.IsValid()) {
+	if (SteikeOwner) {
 		/* Set speed variables */
 		Speed = SteikeOwner->GetVelocity().Size();
 		VerticalSpeed = SteikeOwner->GetVelocity().Z;
@@ -29,12 +30,12 @@ void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		/* Is Character freefalling in air or on the ground? */
 		bFalling = SteikeOwner->IsFalling();
 		bOnGround = SteikeOwner->IsOnGround();
-		bOnGround ? PRINT("On Ground") : PRINT("In Air");
+		//bOnGround ? PRINT("On Ground") : PRINT("In Air");
 
 		/* Jump */
 		bActivateJump = SteikeOwner->IsJumping();
 		bPressedJump = SteikeOwner->bPressedJump;
-		bActivateJump ? PRINT("JUMPING") : PRINT("NOT jumping");
+		//bActivateJump ? PRINT("JUMPING") : PRINT("NOT jumping");
 
 		/* Dash */
 		bDashing = SteikeOwner->IsDashing();

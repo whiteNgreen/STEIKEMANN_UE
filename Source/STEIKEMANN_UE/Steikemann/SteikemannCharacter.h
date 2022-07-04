@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "../Interfaces/GrappleTargetInterface.h"
 #include "../DebugMacros.h"
+#include "Camera/CameraShakeBase.h"
 
 #include "SteikemannCharacter.generated.h"
 
@@ -88,6 +89,18 @@ public:
 	FVector InputVectorRaw;
 	/* Input vector rotated to match the playercontrollers rotation */
 	FVector InputVector;
+
+#pragma region Camera
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		TSubclassOf<UCameraShakeBase> MYShake;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "CameraShakes|Jump")
+		TSubclassOf<UCameraShakeBase> Jump_Land;
+
+	UFUNCTION(BlueprintCallable)
+		void PlayCameraShake(TSubclassOf<UCameraShakeBase> shake);
+
+#pragma endregion //Camera
 
 #pragma region Basic_Movement
 public:/* ------------------- Basic Movement ------------------- */
@@ -243,7 +256,13 @@ public: /* ------------------------ Grapplehook --------------------- */
 		float GrappleHookRange{ 2000.f };
 	
 	/* The onscreen aiming location */
-	FVector2D AimingLocation;
+	UPROPERTY(BlueprintReadOnly)
+		FVector2D AimingLocation;
+	UPROPERTY(BlueprintReadOnly)
+		FVector2D AimingLocationPercentage {};
+	UPROPERTY(BlueprintReadOnly)
+		FVector2D ViewPortSize;
+
 	/* Shows the debug aiming reticle */
 	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Targeting")
 		bool bShowAimingLocaiton_Debug{};
