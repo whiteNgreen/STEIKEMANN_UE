@@ -241,7 +241,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	{
 		if (!bGrapple_PreLaunch) {
 			//GrappleHook_Swing_RotateCamera(DeltaTime);
-			Update_GrappleHook_Swing();
+			Update_GrappleHook_Swing(DeltaTime);
 			if (GetMovementComponent()->IsFalling() && !IsJumping()) { RotateActor_GrappleHook_Swing(DeltaTime); }
 			bGrapple_Launch = false;
 		}
@@ -465,10 +465,10 @@ void ASteikemannCharacter::DetectPhysMaterial()
 	}
 }
 
-void ASteikemannCharacter::PlayCameraShake(TSubclassOf<UCameraShakeBase> shake)
+void ASteikemannCharacter::PlayCameraShake(TSubclassOf<UCameraShakeBase> shake, float falloff)
 {
 	/* Skal regne ut Velocity.Z også basere falloff på hvor stor den er */
-	UGameplayStatics::PlayWorldCameraShake(GetWorld(), shake, Camera->GetComponentLocation() + FVector(0, 0, 1), 0.f, 1.f, 0.f);
+	UGameplayStatics::PlayWorldCameraShake(GetWorld(), shake, Camera->GetComponentLocation() + FVector(0, 0, 1), 0.f, 10.f, falloff);
 }
 
 void ASteikemannCharacter::MoveForward(float value)
@@ -1004,7 +1004,7 @@ void ASteikemannCharacter::Initial_GrappleHook_Swing()
 	}
 }
 
-void ASteikemannCharacter::Update_GrappleHook_Swing()
+void ASteikemannCharacter::Update_GrappleHook_Swing(float DeltaTime)
 {
 	if (!GrappledActor.IsValid()) { return; }
 	PRINTPAR("GrappleRadiusLength: %f", GrappleRadiusLength);
@@ -1043,6 +1043,20 @@ void ASteikemannCharacter::Update_GrappleHook_Swing()
 		if (GetMovementComponent()->IsFalling() && !IsJumping()) {
 			GetCharacterMovement()->Velocity = newVelocity;	// Setter nye velocity
 		}
+
+		static float Timer{};
+		Timer += DeltaTime;
+		//if (Timer > 0.1f)
+		//{
+			/* Play camera shake */
+			float x =		 FMath::Clamp((newVelocity.Size() / 5000.f),	  0.001f, 1.f);
+			float falloff =	 FMath::Clamp((cosf((x) * (PI / 2)) * 50.f),		0.f, 50.f);
+			PRINTPAR("Speed: %f", newVelocity.Size());
+			PRINTPAR("Camera shake Falloff: %f", falloff);
+			PlayCameraShake(MYShake, falloff);
+			Timer = 0.f;
+		//}
+		PRINTPAR("CS Timer: %f", Timer);
 	}
 }
 

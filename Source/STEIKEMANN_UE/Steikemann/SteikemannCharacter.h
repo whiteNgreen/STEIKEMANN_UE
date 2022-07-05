@@ -98,7 +98,7 @@ public:
 		TSubclassOf<UCameraShakeBase> Jump_Land;
 
 	UFUNCTION(BlueprintCallable)
-		void PlayCameraShake(TSubclassOf<UCameraShakeBase> shake);
+		void PlayCameraShake(TSubclassOf<UCameraShakeBase> shake, float falloff);
 
 #pragma endregion //Camera
 
@@ -300,7 +300,7 @@ public: /* ------------------------ Grapplehook --------------------- */
 	/* Grapplehook swing */
 	UFUNCTION(BlueprintCallable)
 	void Initial_GrappleHook_Swing();
-	void Update_GrappleHook_Swing();
+	void Update_GrappleHook_Swing(float DeltaTime);
 	void RotateActor_GrappleHook_Swing(float DeltaTime);
 	void GrappleHook_Swing_RotateCamera(float DeltaTime);	// Slightly dissorienting
 
