@@ -11,7 +11,7 @@
 /**
  * 
  */
-UCLASS()
+UCLASS(transient, Blueprintable, hideCategories = AnimInstance, BlueprintType)
 class STEIKEMANN_UE_API USteikeAnimInstance : public UAnimInstance
 {
 	GENERATED_BODY()
@@ -23,7 +23,6 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 		class ASteikemannCharacter* SteikeOwner{ nullptr };
-		//TWeakObjectPtr<class ASteikemannCharacter> SteikeOwner{ nullptr };
 
 	/* Walking Speed */
 	UPROPERTY(BlueprintReadOnly)
@@ -43,6 +42,7 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		bool bOnGround{};
 
+#pragma region Jump
 	
 	/* Checks the Character script if Jump button is pressed */
 	UPROPERTY(BlueprintReadOnly)
@@ -50,6 +50,10 @@ public:
 	/* The Jump animations anim notify activates this bool to start the jump sequence */
 	UPROPERTY(BlueprintReadWrite)
 		bool bActivateJump{};
+
+	void ActivateJump();
+
+#pragma endregion //Jump
 
 	UPROPERTY(BlueprintReadWrite)
 		bool bGrappling{};

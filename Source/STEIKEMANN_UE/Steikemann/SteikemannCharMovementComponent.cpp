@@ -47,7 +47,7 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 
 
 	/* Jump velocity */
-	if (CharacterOwner_Steikemann->IsJumping())
+	if (/*CharacterOwner_Steikemann->IsJumping()*/ CharacterOwner_Steikemann->bAddJumpVelocity)
 	{
 		if (bWallJump) {
 			Velocity = WallJump_VelocityDirection;

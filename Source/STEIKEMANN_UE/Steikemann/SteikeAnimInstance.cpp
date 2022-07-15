@@ -9,6 +9,11 @@ void USteikeAnimInstance::NativeBeginPlay()
 	Super::NativeBeginPlay();
 
 	SteikeOwner = Cast<ASteikemannCharacter>(TryGetPawnOwner());
+
+	/* Assign this animinstance the owners animinstance ptr */
+	if (SteikeOwner) {
+		SteikeOwner->AssignAnimInstance(this);
+	}
 }
 
 void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
@@ -18,6 +23,12 @@ void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 	//if (SteikeOwner.IsValid()) {
 	if (SteikeOwner) {
+
+		/* Assign this animinstance the owners animinstance ptr */
+		if (!SteikeOwner->GetAnimInstance()) { 
+			SteikeOwner->AssignAnimInstance(this); 
+		}
+
 		/* Set speed variables */
 		Speed = SteikeOwner->GetVelocity().Size();
 		VerticalSpeed = SteikeOwner->GetVelocity().Z;
@@ -28,39 +39,39 @@ void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		}
 
 		/* Is Character freefalling in air or on the ground? */
-		bFalling = SteikeOwner->IsFalling();
+		if (!bActivateJump) {
+			bFalling = SteikeOwner->IsFalling();
+
+		}
 		bOnGround = SteikeOwner->IsOnGround();
-		//bOnGround ? PRINT("On Ground") : PRINT("In Air");
+		PRINTPAR("AnimInstance Falling: %s", bFalling ? (TEXT("True")) : (TEXT("False")));
 
 		/* Jump */
-		bActivateJump = SteikeOwner->IsJumping();
-		bPressedJump = SteikeOwner->bPressedJump;
-		//bActivateJump ? PRINT("JUMPING") : PRINT("NOT jumping");
+		if (bActivateJump) {
+			static float Timer{};
+			Timer += DeltaSeconds;
+			if (Timer >= 0.15f) {
+				Timer = 0.f;
+				bActivateJump = false;
+			}
+			bFalling = false;
+		}
 
 		/* Dash */
 		bDashing = SteikeOwner->IsDashing();
 
 		/* Grappling */
 		bGrappling = SteikeOwner->IsGrappling();
-
-		//bPressedJump = SteikeOwner->bJumping;
-		//bPressedJump = SteikeOwner->bAddJumpVelocity;
-		//bPressedJump = SteikeOwner->bPressedJump && SteikeOwner->IsJumping();
-
-		//if (bActivateJump) {
-		//	SteikeOwner->bActivateJump = true;
-		//	//bActivateJump = false;
-		//	//PRINTLONG("Anim Script: Activate Jump");
-		//	static float Timer{};
-		//	PRINTPAR("Timer: %f", Timer);
-		//	Timer += DeltaSeconds;
-		//	if (Timer >= 0.5f) {
-		//		Timer = 0.f;
-		//		bActivateJump = false;
-		//	}
-		//}
 	}
 	else {
 		SteikeOwner = Cast<ASteikemannCharacter>(TryGetPawnOwner());
 	}
+}
+
+void USteikeAnimInstance::ActivateJump()
+{
+	PRINTLONG("Animinstance JUMP");
+
+	bActivateJump = true;
+
 }

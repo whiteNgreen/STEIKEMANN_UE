@@ -7,6 +7,7 @@
 #include "../Interfaces/GrappleTargetInterface.h"
 #include "../DebugMacros.h"
 #include "Camera/CameraShakeBase.h"
+#include "SteikeAnimInstance.h"
 
 #include "SteikemannCharacter.generated.h"
 
@@ -37,8 +38,12 @@ public:
 	class UPoseableMeshComponent* GrappleHookMesh{ nullptr };
 
 
-	//class USteikemannCharMovementComponent* MovementComponent{ nullptr };
 	TWeakObjectPtr<class USteikemannCharMovementComponent> MovementComponent;
+
+	USteikeAnimInstance* SteikeAnimInstance{ nullptr };
+
+	void AssignAnimInstance(USteikeAnimInstance* AnimInstance) { SteikeAnimInstance = AnimInstance; }
+	USteikeAnimInstance* GetAnimInstance() const { return SteikeAnimInstance; }
 
 #pragma region Gamepads
 

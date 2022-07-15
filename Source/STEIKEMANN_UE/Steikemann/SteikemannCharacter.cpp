@@ -224,6 +224,15 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	//bActivateJump ? PRINT("bActivateJump = true") : PRINT("bActivateJump = false");
 
 	if (bJumping /*bActivateJump*/){
+		static float Timer{};
+		if (Timer > 0.1f) {
+			Timer = 0.f;
+			bJumping = false;
+			bAddJumpVelocity = false;
+		}
+		Timer += DeltaTime;
+		PRINTPAR("Timer %f", Timer);
+
 		if (JumpKeyHoldTime < fJumpTimerMax){
 			JumpKeyHoldTime += DeltaTime;
 		}
@@ -233,7 +242,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	}
 	PostEdge_JumpTimer += DeltaTime;
 	if (GetCharacterMovement()->IsWalking()) { PostEdge_JumpTimer = 0.f; }
-	//PRINTPAR("PostEdge JumpTimer: %f", PostEdge_JumpTimer);
+	IsJumping() ? PRINT("Jumping: True") : PRINT("Jumping: False");
 
 
 	/*		Grapplehook			*/
@@ -571,7 +580,7 @@ void ASteikemannCharacter::Jump()
 	bPressedJump = true;
 	bJumping = true;	
 	bAddJumpVelocity = (CanJump() || CanDoubleJump());
-
+	
 }
 
 void ASteikemannCharacter::JumpDualshock()
@@ -585,8 +594,8 @@ void ASteikemannCharacter::StopJumping()
 {
 	bPressedJump = false;
 	bActivateJump = false;
-	bJumping = false;
-	bAddJumpVelocity = false;
+	//bJumping = false;
+	//bAddJumpVelocity = false;
 	bCanEdgeJump = false;
 	bCanPostEdgeJump = false;
 	if (MovementComponent.IsValid()){
@@ -606,10 +615,10 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 			/* If player is sticking to a wall */
 			if (( MovementComponent->bStickingToWall || WallJump_DetectNearbyWall() ) && MovementComponent->IsFalling())
 			{
-				//PRINTLONG("JUMP: WALLJUMP");
 				JumpCurrentCount = 1;
-				MovementComponent->WallJump(Wall_Normal);
 				bAddJumpVelocity = true;
+				SteikeAnimInstance->ActivateJump();
+				MovementComponent->WallJump(Wall_Normal);
 				return;
 			}
 
@@ -619,6 +628,7 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 				//PRINTLONG("POST EDGE JUMP");
 				bCanPostEdgeJump = true;
 				JumpCurrentCount++;
+				SteikeAnimInstance->ActivateJump();
 				bAddJumpVelocity = GetCharacterMovement()->DoJump(bClientUpdating);
 				return;
 			}
@@ -627,7 +637,7 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 			{
 				bCanEdgeJump = true;
 				JumpCurrentCount += 2;
-				//JumpCurrentCount++;
+				SteikeAnimInstance->ActivateJump();
 				bAddJumpVelocity = GetCharacterMovement()->DoJump(bClientUpdating);
 				return;
 			}
@@ -637,10 +647,12 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 			const bool bFirstJump = JumpCurrentCount == 0;
 			if (bFirstJump && GetCharacterMovement()->IsFalling())
 			{
+				SteikeAnimInstance->ActivateJump();
 				JumpCurrentCount++;
 			}
 			if (CanDoubleJump() && GetCharacterMovement()->IsFalling())
 			{
+				SteikeAnimInstance->ActivateJump();
 				GetCharacterMovement()->DoJump(bClientUpdating);
 				JumpCurrentCount++;
 			}
@@ -648,6 +660,7 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 			const bool bDidJump = CanJump() && GetCharacterMovement()->DoJump(bClientUpdating);
 			if (bDidJump)
 			{
+				SteikeAnimInstance->ActivateJump();
 				// Transition from not (actively) jumping to jumping.
 				if (!bWasJumping)
 				{
@@ -793,48 +806,61 @@ bool ASteikemannCharacter::LineTraceToGrappleableObject()
 
 	int traces{};
 	/* Linetrace through the entire screen to get all grappletargets on screen */
-	for (int i{ 0 }; i <= 16; i++)
-	{
-		DeprojectScreenLocation.Y = 0;
+	//for (int i{ 0 }; i <= 16; i++)
+	//{
+	//	DeprojectScreenLocation.Y = 0;
 
-		for (int j{ 0 }; j <= 9; j++)
-		{
-			UGameplayStatics::DeprojectScreenToWorld(UGameplayStatics::GetPlayerController(GetWorld(), 0), DeprojectScreenLocation, DeprojectWorldLocation, DeprojectDirection);
+	//	for (int j{ 0 }; j <= 9; j++)
+	//	{
+	//		UGameplayStatics::DeprojectScreenToWorld(UGameplayStatics::GetPlayerController(GetWorld(), 0), DeprojectScreenLocation, DeprojectWorldLocation, DeprojectDirection);
 
-			const bool b = GetWorld()->LineTraceMultiByChannel(MultiHit, DeprojectWorldLocation, DeprojectWorldLocation + (DeprojectDirection * GrappleHookRange), GRAPPLE_HOOK, Params);
-			traces++;
+	//		const bool b = GetWorld()->LineTraceMultiByChannel(MultiHit, DeprojectWorldLocation, DeprojectWorldLocation + (DeprojectDirection * GrappleHookRange), GRAPPLE_HOOK, Params);
+	//		traces++;
 
-			if (MultiHit.Num() > 0) 
-			{ 
-				for (const auto& it : MultiHit) {
-					OnScreenActors.AddUnique(it.GetActor());
-				}
-			}
-			if (b) { PRINT("Block hit is True"); }
+	//		if (MultiHit.Num() > 0) 
+	//		{ 
+	//			for (const auto& it : MultiHit) {
+	//				OnScreenActors.AddUnique(it.GetActor());
+	//			}
+	//		}
+	//		if (b) { PRINT("Block hit is True"); }
 
-			DeprojectScreenLocation.Y += Step;
-		}
+	//		DeprojectScreenLocation.Y += Step;
+	//	}
 
-		DeprojectScreenLocation.X += Step;
-	}
-	PRINTPAR("Traces: %i", traces);
-	PRINTPAR("Hits: %i", OnScreenActors.Num());
+	//	DeprojectScreenLocation.X += Step;
+	//}
+	//PRINTPAR("Traces: %i", traces);
 
 	TWeakObjectPtr<AActor> Grappled{ nullptr };
 	
 	/* Adjusting the GrappleAimYChange based on the playercontrollers pitch */
-	FVector Back = GetControlRotation().Vector() * -1.f;
-	Back *= FVector(0, 0, 1);
-	GrappleAimYChange = GrappleAimYChange_Base + (GrappleAimYChange_Base * (Back.Z));
+	FVector BackwardControllerPitch = GetControlRotation().Vector() * -1.f;
+	BackwardControllerPitch *= FVector(0, 0, 1);
 
-	if (GrappleAimYChange != 0.f) {
-		AimingLocation = ViewPortSize / 2 - FVector2D(0.f, ViewPortSize.Y / GrappleAimYChange);
+	/* Adjusts the aiminglocation based on controller pitch */
+	//GrappleAimYChange = GrappleAimYChange_Base + (GrappleAimYChange_Base * (BackwardControllerPitch.Z));
+	//if (GrappleAimYChange != 0.f) {
+	//	AimingLocation = ViewPortSize / 2 - FVector2D(0.f, ViewPortSize.Y / GrappleAimYChange);
+	//}
+	//else {
+	//	AimingLocation = ViewPortSize / 2;
+	//}
+
+	AimingLocation = ViewPortSize / 2 - FVector2D(0.f, ViewPortSize.Y / GrappleAimYChange_Base);
+	AimingLocationPercentage = FVector2D(AimingLocation.X / ViewPortSize.X, AimingLocation.Y / ViewPortSize.Y);
+
+	/* Do a multilinetrace from the onscreen location of 'AimingLocation' */
+	UGameplayStatics::DeprojectScreenToWorld(UGameplayStatics::GetPlayerController(GetWorld(), 0), AimingLocation, DeprojectWorldLocation, DeprojectDirection);
+	GetWorld()->LineTraceMultiByChannel(MultiHit, DeprojectWorldLocation, DeprojectWorldLocation + (DeprojectDirection * GrappleHookRange), GRAPPLE_HOOK, Params);
+	if (MultiHit.Num() > 0) 
+	{ 
+		for (const auto& it : MultiHit) {
+			OnScreenActors.AddUnique(it.GetActor());
+		}
 	}
-	else {
-		AimingLocation = ViewPortSize / 2;
-	}
-	AimingLocation = ViewPortSize / 2 - FVector2D(0.f, ViewPortSize.Y / GrappleAimYChange);
-	
+	PRINTPAR("Hits: %i", OnScreenActors.Num());
+
 	/* If the linetrace hit grappletarget actors, find the one closest to the middle of the screen */
 	if (OnScreenActors.Num() > 0)
 	{
