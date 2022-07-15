@@ -47,7 +47,7 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 
 
 	/* Jump velocity */
-	if (/*CharacterOwner_Steikemann->IsJumping()*/ CharacterOwner_Steikemann->bAddJumpVelocity)
+	if (CharacterOwner_Steikemann->IsJumping() /*CharacterOwner_Steikemann->bAddJumpVelocity*/)
 	{
 		if (bWallJump) {
 			Velocity = WallJump_VelocityDirection;
@@ -158,6 +158,8 @@ bool USteikemannCharMovementComponent::WallJump(const FVector& ImpactNormal)
 	DrawDebugLine(GetWorld(), CharacterOwner_Steikemann->GetActorLocation(), CharacterOwner_Steikemann->GetActorLocation() + WallJump_VelocityDirection, FColor::Yellow, false, 2.f, 0, 4.f);
 
 	bWallJump = true;
+	CharacterOwner_Steikemann->bCanStickToWall = true;
+	CharacterOwner_Steikemann->WallJump_MaxNonStickTimer = 0.f;
 	return false;
 }
 

@@ -219,19 +219,14 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 
 	
 	/*		Jump		*/
-	//bJumping ? PRINT("bJumping = true") : PRINT("bJumping = false");
-	//bAddJumpVelocity ? PRINT("bAddJumpVelocity = true") : PRINT("bAddJumpVelocity = false");
-	//bActivateJump ? PRINT("bActivateJump = true") : PRINT("bActivateJump = false");
-
-	if (bJumping /*bActivateJump*/){
-		static float Timer{};
-		if (Timer > 0.1f) {
-			Timer = 0.f;
-			bJumping = false;
-			bAddJumpVelocity = false;
-		}
-		Timer += DeltaTime;
-		PRINTPAR("Timer %f", Timer);
+	if (bJumping){
+		//static float Timer{};
+		//if (Timer > 0.1f) {
+		//	Timer = 0.f;
+		//	bJumping = false;
+		//	bAddJumpVelocity = false;
+		//}
+		//Timer += DeltaTime;
 
 		if (JumpKeyHoldTime < fJumpTimerMax){
 			JumpKeyHoldTime += DeltaTime;
@@ -242,8 +237,9 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	}
 	PostEdge_JumpTimer += DeltaTime;
 	if (GetCharacterMovement()->IsWalking()) { PostEdge_JumpTimer = 0.f; }
-	IsJumping() ? PRINT("Jumping: True") : PRINT("Jumping: False");
+	//IsJumping() ? PRINT("Jumping: True") : PRINT("Jumping: False");
 
+	
 
 	/*		Grapplehook			*/
 	if ((bGrapple_Swing && !bGrappleEnd) || (bGrapple_PreLaunch && !bGrappleEnd)) 
@@ -306,7 +302,20 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 
 	/*		Wall Jump		*/
 	if (MovementComponent->IsFalling() && !IsGrappling()) {
-		bFoundStickableWall = WallJump_DetectNearbyWall();
+		/* Venter 0.25 sekunder før den skal kunne fortsette med å søke etter nære vegger */
+		static float PostWallJumpTimer{};
+		if (MovementComponent->bWallJump) {
+			PostWallJumpTimer += DeltaTime;
+			if (PostWallJumpTimer > 0.25f) {
+				PostWallJumpTimer = 0.f;
+				bFoundStickableWall = WallJump_DetectNearbyWall();
+			}
+		}
+		else {
+			PostWallJumpTimer = 0.f;
+			bFoundStickableWall = WallJump_DetectNearbyWall();
+		}
+		PRINTPAR("PostWallTimer %f", PostWallJumpTimer);
 	}
 	if (!bFoundStickableWall) {
 		bCanStickToWall = false;
@@ -339,6 +348,14 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		}
 	}
 	else { WallJump_NonStickTimer = 0.f; }
+
+	PRINTPAR("StickTimer: %f", WallJump_StickTimer);
+	PRINTPAR("NonStickTimer: %f", WallJump_NonStickTimer);
+
+
+	bFoundStickableWall ? PRINT("bFoundStickableWall: True") : PRINT("bFoundStickableWall: False");
+	bStickingToWall ? PRINT("bStickingToWall: True") : PRINT("bStickingToWall: False");
+	bCanStickToWall ? PRINT("bCanStickToWall: True") : PRINT("bCanStickToWall: False");
 
 }
 
@@ -423,10 +440,10 @@ void ASteikemannCharacter::Start_Grapple_Drag()
 {
 	if (GrappledActor.IsValid())
 	{
-	bGrapple_PreLaunch = true;
+		bGrapple_PreLaunch = true;
 		IGrappleTargetInterface::Execute_Hooked(GrappledActor.Get());
+		if (JumpCurrentCount == 2) { JumpCurrentCount--; }
 	}
-	if (JumpCurrentCount == 2) { JumpCurrentCount--; }
 }
 
 void ASteikemannCharacter::Stop_Grapple_Drag()
@@ -575,7 +592,7 @@ void ASteikemannCharacter::Jump()
 {
 	/* Don't Jump if player is Grappling */
 	if (IsGrappling() && GetMovementComponent()->IsFalling()) { return; }
-	PRINTLONG("Jumping");
+	//PRINTLONG("Jumping");
 
 	bPressedJump = true;
 	bJumping = true;	
@@ -594,8 +611,8 @@ void ASteikemannCharacter::StopJumping()
 {
 	bPressedJump = false;
 	bActivateJump = false;
-	//bJumping = false;
-	//bAddJumpVelocity = false;
+	bJumping = false;
+	bAddJumpVelocity = false;
 	bCanEdgeJump = false;
 	bCanPostEdgeJump = false;
 	if (MovementComponent.IsValid()){
@@ -617,7 +634,7 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 			{
 				JumpCurrentCount = 1;
 				bAddJumpVelocity = true;
-				SteikeAnimInstance->ActivateJump();
+				Activate_Jump();
 				MovementComponent->WallJump(Wall_Normal);
 				return;
 			}
@@ -628,7 +645,7 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 				//PRINTLONG("POST EDGE JUMP");
 				bCanPostEdgeJump = true;
 				JumpCurrentCount++;
-				SteikeAnimInstance->ActivateJump();
+				Activate_Jump();
 				bAddJumpVelocity = GetCharacterMovement()->DoJump(bClientUpdating);
 				return;
 			}
@@ -637,7 +654,7 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 			{
 				bCanEdgeJump = true;
 				JumpCurrentCount += 2;
-				SteikeAnimInstance->ActivateJump();
+				Activate_Jump();
 				bAddJumpVelocity = GetCharacterMovement()->DoJump(bClientUpdating);
 				return;
 			}
@@ -647,12 +664,12 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 			const bool bFirstJump = JumpCurrentCount == 0;
 			if (bFirstJump && GetCharacterMovement()->IsFalling())
 			{
-				SteikeAnimInstance->ActivateJump();
+				Activate_Jump();
 				JumpCurrentCount++;
 			}
 			if (CanDoubleJump() && GetCharacterMovement()->IsFalling())
 			{
-				SteikeAnimInstance->ActivateJump();
+				Activate_Jump();
 				GetCharacterMovement()->DoJump(bClientUpdating);
 				JumpCurrentCount++;
 			}
@@ -660,7 +677,7 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 			const bool bDidJump = CanJump() && GetCharacterMovement()->DoJump(bClientUpdating);
 			if (bDidJump)
 			{
-				SteikeAnimInstance->ActivateJump();
+				Activate_Jump();
 				// Transition from not (actively) jumping to jumping.
 				if (!bWasJumping)
 				{
@@ -859,7 +876,7 @@ bool ASteikemannCharacter::LineTraceToGrappleableObject()
 			OnScreenActors.AddUnique(it.GetActor());
 		}
 	}
-	PRINTPAR("Hits: %i", OnScreenActors.Num());
+	//PRINTPAR("Hits: %i", OnScreenActors.Num());
 
 	/* If the linetrace hit grappletarget actors, find the one closest to the middle of the screen */
 	if (OnScreenActors.Num() > 0)
@@ -920,7 +937,6 @@ void ASteikemannCharacter::Bounce()
 		FCollisionQueryParams Params = FCollisionQueryParams(FName(""), false, this);
 		bBounce = GetWorld()->LineTraceSingleByChannel(Hit, GetActorLocation(), GetActorLocation() - FVector{ 0, 0, BounceCheckLength }, ECC_Visibility, Params);
 		if (bBounce) {
-			//PRINTLONG("Bounce");
 			MovementComponent->Bounce(Hit.ImpactNormal);
 		}
 	}
@@ -940,6 +956,7 @@ void ASteikemannCharacter::Dash()
 	{
 		bDash = true;
 		DashCounter--;
+		Activate_Dash();
 		MovementComponent->Start_Dash(Pre_DashTime, DashTime, DashLength, DashDirection);
 	}
 	bDashClick = true;

@@ -148,6 +148,9 @@ public:/* ------------------- Basic Movement ------------------- */
 	void StopJumping() override;
 	void CheckJumpInput(float DeltaTime) override;
 
+	/* Animation activation */
+	UFUNCTION(BlueprintImplementableEvent)
+		void Activate_Jump();
 
 	bool CanDoubleJump() const;
 	bool IsJumping() const;
@@ -197,6 +200,8 @@ public:/* ------------------- Basic Movement ------------------- */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Dash")
 		float DashLength{ 1000.f };
 
+	UFUNCTION(BlueprintImplementableEvent)
+		void Activate_Dash();
 
 	void Dash();
 	void Stop_Dash();

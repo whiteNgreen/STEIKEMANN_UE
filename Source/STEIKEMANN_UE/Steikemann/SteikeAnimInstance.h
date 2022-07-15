@@ -12,7 +12,7 @@
  * 
  */
 UCLASS(transient, Blueprintable, hideCategories = AnimInstance, BlueprintType)
-class STEIKEMANN_UE_API USteikeAnimInstance : public UAnimInstance
+class USteikeAnimInstance : public UAnimInstance
 {
 	GENERATED_BODY()
 
@@ -22,7 +22,8 @@ public:
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 
 	UPROPERTY(BlueprintReadOnly)
-		class ASteikemannCharacter* SteikeOwner{ nullptr };
+		TWeakObjectPtr<class ASteikemannCharacter> SteikeOwner{ nullptr };
+		//class ASteikemannCharacter* SteikeOwner{ nullptr };
 
 	/* Walking Speed */
 	UPROPERTY(BlueprintReadOnly)
@@ -51,7 +52,7 @@ public:
 	UPROPERTY(BlueprintReadWrite)
 		bool bActivateJump{};
 
-	void ActivateJump();
+
 
 #pragma endregion //Jump
 
