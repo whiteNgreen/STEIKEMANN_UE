@@ -9,11 +9,6 @@ void USteikeAnimInstance::NativeBeginPlay()
 	Super::NativeBeginPlay();
 
 	SteikeOwner = Cast<ASteikemannCharacter>(TryGetPawnOwner());
-
-	/* Assign this animinstance the owners animinstance ptr */
-	if (SteikeOwner) {
-		SteikeOwner->AssignAnimInstance(this);
-	}
 }
 
 void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
@@ -21,13 +16,8 @@ void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	Super::NativeUpdateAnimation(DeltaSeconds);
 
 
-	//if (SteikeOwner.IsValid()) {
-	if (SteikeOwner) {
-
-		/* Assign this animinstance the owners animinstance ptr */
-		if (!SteikeOwner->GetAnimInstance()) { 
-			SteikeOwner->AssignAnimInstance(this); 
-		}
+	if (SteikeOwner.IsValid()) {
+	//if (SteikeOwner) {
 
 		/* Set speed variables */
 		Speed = SteikeOwner->GetVelocity().Size();
@@ -39,39 +29,27 @@ void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		}
 
 		/* Is Character freefalling in air or on the ground? */
-		if (!bActivateJump) {
-			bFalling = SteikeOwner->IsFalling();
-
-		}
+		bFalling = SteikeOwner->IsFalling();
 		bOnGround = SteikeOwner->IsOnGround();
-		PRINTPAR("AnimInstance Falling: %s", bFalling ? (TEXT("True")) : (TEXT("False")));
 
 		/* Jump */
-		if (bActivateJump) {
-			static float Timer{};
-			Timer += DeltaSeconds;
-			if (Timer >= 0.15f) {
-				Timer = 0.f;
-				bActivateJump = false;
-			}
-			bFalling = false;
-		}
+		bJumping = SteikeOwner->IsJumping();
 
 		/* Dash */
 		bDashing = SteikeOwner->IsDashing();
 
 		/* Grappling */
 		bGrappling = SteikeOwner->IsGrappling();
+
+		/* Wall Sticking */
+		bOnWall = SteikeOwner->IsOnWall();
+		bStickingToWall = SteikeOwner->IsStickingToWall();
+		//OnWallRotation = SteikeOwner->InputAngleToForward * -1.f;
+		OnWallRotation = FMath::FInterpTo(OnWallRotation,FMath::Clamp(SteikeOwner->InputAngleToForward * -1.f, -90.f, 90.f), DeltaSeconds, SteikeOwner->OnWall_InterpolationSpeed);
+		PRINTPAR("OnWallRotation = %f", OnWallRotation);
+		
 	}
 	else {
 		SteikeOwner = Cast<ASteikemannCharacter>(TryGetPawnOwner());
 	}
-}
-
-void USteikeAnimInstance::ActivateJump()
-{
-	PRINTLONG("Animinstance JUMP");
-
-	bActivateJump = true;
-
 }

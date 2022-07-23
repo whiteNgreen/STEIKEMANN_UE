@@ -9,6 +9,10 @@
 #include "PhysicalMaterials/PhysicalMaterial.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/PoseableMeshComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
+#include "Components/AudioComponent.h"
 
 /* Gamepad support */
 #include "RawInput.h"
@@ -52,8 +56,43 @@ ASteikemannCharacter::ASteikemannCharacter(const FObjectInitializer& ObjectIniti
 	GrappleHookMesh = CreateDefaultSubobject<UPoseableMeshComponent>(TEXT("GrappleHook Mesh"));
 	GrappleHookMesh->SetupAttachment(RootComponent);
 
+	Component_Audio = CreateDefaultSubobject<UAudioComponent>(TEXT("AudioComponent"));
+	Component_Audio->SetupAttachment(RootComponent);
+
+	Component_Niagara = CreateDefaultSubobject<UNiagaraComponent>(TEXT("NiagaraComponent"));
+	Component_Niagara->SetupAttachment(RootComponent);
+
 	/* Gamepad support */
 	FCoreDelegates::OnControllerConnectionChange.AddUObject(this, &ASteikemannCharacter::ListenForControllerChange);
+}
+
+void ASteikemannCharacter::NS_Land_Implementation(const FHitResult& Hit)
+{
+	/* Play Landing particle effect */
+	float Velocity = GetVelocity().Size();
+	UNiagaraComponent* NiagaraPlayer;
+
+	if (Component_Niagara->IsComplete())
+	{
+		NiagaraPlayer = Component_Niagara;
+	}
+	else
+	{
+		PRINTLONG("Niagara Component not yet completed with its task. Creating temp Niagara Component.");
+
+		UNiagaraComponent* TempNiagaraLand = NewObject<UNiagaraComponent>(this, "Niagara_Land");
+		TempNiagaraLand->AttachToComponent(RootComponent, FAttachmentTransformRules::SnapToTargetIncludingScale);
+		TempNiagaraLand->RegisterComponent();
+		TempNiagaraComponents.Add(TempNiagaraLand);
+
+		NiagaraPlayer = TempNiagaraLand;
+	}
+	
+	NiagaraPlayer->SetAsset(NS_Land);
+	NiagaraPlayer->SetNiagaraVariableInt("User.SpawnAmount", static_cast<int>(Velocity * NSM_Land_ParticleAmount));
+	NiagaraPlayer->SetNiagaraVariableFloat("User.Velocity", Velocity * NSM_Land_ParticleSpeed);
+	NiagaraPlayer->SetWorldLocationAndRotation(Hit.ImpactPoint, Hit.ImpactNormal.Rotation());
+	NiagaraPlayer->Activate(true);
 }
 
 /* Gamepad support */
@@ -162,15 +201,12 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	// Testing around with applying PlayWorldCameraShake each frame
-	//static float time{};
-	//time += DeltaTime;
-	//UGameplayStatics::PlayWorldCameraShake(GetWorld(), MYShake, GetActorLocation(), 0.f, 2000.f, 5.f);
-
 	/* Rotate Inputvector to match the playercontroller */
 	{
+		InputVector = InputVectorRaw;
+		InputVector.Normalize();
 		FRotator Rot = GetControlRotation();
-		InputVector = InputVector.RotateAngleAxis(Rot.Yaw, FVector(0, 0, 1));
+		InputVector = InputVector.RotateAngleAxis(Rot.Yaw, FVector::UpVector);
 	}
 
 	/*		Gamepad Ticks		*/
@@ -203,7 +239,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	if (IsFalling() || MovementComponent->IsWalking()) {
 		ResetActorRotationPitchAndRoll(DeltaTime);
 	}
-	//IsFalling() ? PRINT("Falling: True") : PRINT("Falling: False");
+
 
 	DetectPhysMaterial();
 
@@ -219,20 +255,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 
 	
 	/*		Jump		*/
-	//bJumping ? PRINT("bJumping = true") : PRINT("bJumping = false");
-	//bAddJumpVelocity ? PRINT("bAddJumpVelocity = true") : PRINT("bAddJumpVelocity = false");
-	//bActivateJump ? PRINT("bActivateJump = true") : PRINT("bActivateJump = false");
-
-	if (bJumping /*bActivateJump*/){
-		static float Timer{};
-		if (Timer > 0.1f) {
-			Timer = 0.f;
-			bJumping = false;
-			bAddJumpVelocity = false;
-		}
-		Timer += DeltaTime;
-		PRINTPAR("Timer %f", Timer);
-
+	if (bJumping){
 		if (JumpKeyHoldTime < fJumpTimerMax){
 			JumpKeyHoldTime += DeltaTime;
 		}
@@ -242,8 +265,8 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	}
 	PostEdge_JumpTimer += DeltaTime;
 	if (GetCharacterMovement()->IsWalking()) { PostEdge_JumpTimer = 0.f; }
-	IsJumping() ? PRINT("Jumping: True") : PRINT("Jumping: False");
 
+	
 
 	/*		Grapplehook			*/
 	if ((bGrapple_Swing && !bGrappleEnd) || (bGrapple_PreLaunch && !bGrappleEnd)) 
@@ -296,50 +319,115 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	if (IsDashing()) { RotateActorYawToVector(DeltaTime, DashDirection); }
 
 
-	//PRINTPAR("Velocity: %f", GetVelocity().Size());
-		/* Hjelper å se hvor dashen går hen */
-		//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (DashDirection * 3000), FColor::Red, false, 0, 0, 5.f);
-		//PRINTPAR("Rot: %s", *GetControlRotation().ToString());
-
-
 
 
 	/*		Wall Jump		*/
-	if (MovementComponent->IsFalling() && !IsGrappling()) {
-		bFoundStickableWall = WallJump_DetectNearbyWall();
-	}
-	if (!bFoundStickableWall) {
-		bCanStickToWall = false;
-		WallJump_StickTimer = 0.f;
-		MovementComponent->bStickingToWall = false;
-	};
-	
-	bStickingToWall = MovementComponent->bStickingToWall;
-	if (bStickingToWall) 
-	{
-		if (JumpCurrentCount == 2) { JumpCurrentCount = 1; }	// Resets DoubleJump
-		if (WallJump_StickTimer < WallJump_MaxStickTimer) {
-			WallJump_StickTimer += DeltaTime;
+	if (MovementComponent->IsFalling() && !IsGrappling() && bOnWallActive/*bCanStickToWall*/) {
+
+		/* Venter 0.25 sekunder før den skal kunne fortsette med å søke etter nære vegger */
+		static float PostWallJumpTimer{};
+		if (MovementComponent->bWallJump) {
+			PostWallJumpTimer += DeltaTime;
+			if (PostWallJumpTimer > 0.25f) {
+				PostWallJumpTimer = 0.f;
+				bFoundStickableWall = WallJump_DetectNearbyWall();
+			}
 		}
 		else {
-			bStickingToWall = false;
-			bCanStickToWall = false;
+			PostWallJumpTimer = 0.f;
+			bFoundStickableWall = WallJump_DetectNearbyWall();
+		}
+
+		if (MovementComponent->bStickingToWall)
+		{
+			if (JumpCurrentCount == 2) { JumpCurrentCount = 1; }	// Resets DoubleJump
+			WallJump_StickTimer += DeltaTime;
+			if (WallJump_StickTimer > WallJump_MaxStickTimer) {
+				bOnWallActive = false;
+				WallJump_NonStickTimer = 0.f;
+				MovementComponent->ReleaseFromWall(Wall_Normal);
+			}
+		}
+		else { WallJump_StickTimer = 0.f; }
+
+
+		if (MovementComponent->bStickingToWall || MovementComponent->bWallSlowDown) {
+			SetActorLocation_WallJump(DeltaTime);
+			RotateActorYawToVector(DeltaTime, Wall_Normal * -1.f);
+			RotateActorPitchToVector(DeltaTime, Wall_Normal * -1.f);
+
+			/* Checks the angle between the actors forward axis and the input vector. Used in animations*/
+			if (InputVector.SizeSquared() > 0.2f)
+			{
+				InputAngleToForward = FMath::RadiansToDegrees(acosf(FVector::DotProduct(GetActorForwardVector(), InputVector)));
+				float InputAngleDirection{ FVector::DotProduct(GetActorRightVector(), InputVector) };
+				if (InputAngleDirection > 0.f) { InputAngleToForward *= -1.f; }
+				//PRINTPAR("INPUT ANGLE FROM ACTOR FORWARD: %f", InputAngleToForward);
+			}
+			else { InputAngleToForward = 0.f; }
+		}
+
+		// Wall Slow Down	(On way down)
+		if (MovementComponent->bWallSlowDown/* && Steike_NiagaraComponent*/)
+		{
+			// Play particle effects
+			if (NS_WallSlide) {
+				Component_Niagara->SetAsset(NS_WallSlide);
+				Component_Niagara->SetNiagaraVariableInt("User.SpawnAmount", NS_WallSlide_ParticleAmount * DeltaTime);
+				Component_Niagara->SetWorldLocationAndRotation(GetMesh()->GetSocketLocation("Front"), GetMesh()->GetSocketRotation("Front"));
+				Component_Niagara->Activate(true);
+			}
+
+			// Play Sound
 
 		}
-	}
-	else { WallJump_StickTimer = 0.f; }
+			// Sticking To Wall	(Stop)
+			
+			// Wall Slow Down	
+			// Stop
 
-	if (!bCanStickToWall)
+		// Do adjustments to the actor rotation acording to animation
+	}
+	else if (!bOnWallActive)
 	{
-		if (WallJump_NonStickTimer < WallJump_MaxNonStickTimer) {
+		if (WallJump_NonStickTimer < WallJump_MaxNonStickTimer)	{
 			WallJump_NonStickTimer += DeltaTime;
+
+			MovementComponent->bWallSlowDown = false;
+			MovementComponent->bStickingToWall = false;
+			bFoundStickableWall = false;
+			InputAngleToForward = 0.f;
 		}
-		else{
-			bCanStickToWall = true;
+		else {
+			bOnWallActive = true;
 		}
 	}
-	else { WallJump_NonStickTimer = 0.f; }
+		// Debug Prints for WallJump
+	//PRINTPAR("StickTimer: %f", WallJump_StickTimer);
+	//PRINTPAR("NonStickTimer: %f", WallJump_NonStickTimer);
 
+	//MovementComponent->bStickingToWall ? PRINT("MovementComponent->bStickingToWall: True") : PRINT("MovementComponent->bStickingToWall: False");
+	//MovementComponent->bWallSlowDown ? PRINT("MovementComponent->bWallSlowDown: True") : PRINT("MovementComponent->bWallSlowDown: False");
+
+	//bOnWallActive ? PRINT("bOnWallActive: True") : PRINT("bOnWallActive: False");
+	//bFoundStickableWall ? PRINT("bFoundStickableWall: True") : PRINT("bFoundStickableWall: False");
+
+	
+	/* Checking TempNiagaraComponents array if they are completed, then deleting them if they are */
+	if (TempNiagaraComponents.Num() > 0)
+	{
+		PRINT("Cleaning TempNiagaraComponents");
+		for (int i = 0; i < TempNiagaraComponents.Num(); i++)
+		{
+			if (TempNiagaraComponents[i]->IsComplete())
+			{
+				PRINTLONG("Removing completed TempNiagaraComponent");
+				TempNiagaraComponents[i]->DestroyComponent();
+				TempNiagaraComponents.RemoveAt(i);
+				i--;
+			}
+		}
+	}
 }
 
 // Called to bind functionality to input
@@ -383,6 +471,7 @@ void ASteikemannCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &ASteikemannCharacter::Dash).bConsumeInput = true;
 	PlayerInputComponent->BindAction("Dash", IE_Released, this, &ASteikemannCharacter::Stop_Dash).bConsumeInput = true;
 
+
 	/* GrappleHook */
 		/* Grapplehook SWING */
 	PlayerInputComponent->BindAction("GrappleHook_Swing", IE_Pressed, this,	  &ASteikemannCharacter::Start_Grapple_Swing);
@@ -423,10 +512,10 @@ void ASteikemannCharacter::Start_Grapple_Drag()
 {
 	if (GrappledActor.IsValid())
 	{
-	bGrapple_PreLaunch = true;
+		bGrapple_PreLaunch = true;
 		IGrappleTargetInterface::Execute_Hooked(GrappledActor.Get());
+		if (JumpCurrentCount == 2) { JumpCurrentCount--; }
 	}
-	if (JumpCurrentCount == 2) { JumpCurrentCount--; }
 }
 
 void ASteikemannCharacter::Stop_Grapple_Drag()
@@ -484,6 +573,8 @@ void ASteikemannCharacter::MoveForward(float value)
 {
 	InputVectorRaw.X = value;
 
+	if (IsStickingToWall()) { return; }
+
 	float movement = value;
 	if (bSlipping)
 		movement *= 0.1;
@@ -513,6 +604,8 @@ void ASteikemannCharacter::MoveForwardDualshock(float value)
 void ASteikemannCharacter::MoveRight(float value)
 {
 	InputVectorRaw.Y = value;
+
+	if (IsStickingToWall()) { return; }
 
 	float movement = value;
 	if (bSlipping)
@@ -571,11 +664,17 @@ void ASteikemannCharacter::LookUpAtRate(float rate)
 	AddControllerPitchInput(rate * TurnRate * GetWorld()->GetDeltaSeconds());
 }
 
+void ASteikemannCharacter::Landed(const FHitResult& Hit)
+{
+	OnLanded(Hit);
+
+	LandedDelegate.Broadcast(Hit);
+}
+
 void ASteikemannCharacter::Jump()
 {
 	/* Don't Jump if player is Grappling */
 	if (IsGrappling() && GetMovementComponent()->IsFalling()) { return; }
-	PRINTLONG("Jumping");
 
 	bPressedJump = true;
 	bJumping = true;	
@@ -594,8 +693,8 @@ void ASteikemannCharacter::StopJumping()
 {
 	bPressedJump = false;
 	bActivateJump = false;
-	//bJumping = false;
-	//bAddJumpVelocity = false;
+	bJumping = false;
+	bAddJumpVelocity = false;
 	bCanEdgeJump = false;
 	bCanPostEdgeJump = false;
 	if (MovementComponent.IsValid()){
@@ -617,7 +716,7 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 			{
 				JumpCurrentCount = 1;
 				bAddJumpVelocity = true;
-				SteikeAnimInstance->ActivateJump();
+				Activate_Jump();
 				MovementComponent->WallJump(Wall_Normal);
 				return;
 			}
@@ -628,7 +727,7 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 				//PRINTLONG("POST EDGE JUMP");
 				bCanPostEdgeJump = true;
 				JumpCurrentCount++;
-				SteikeAnimInstance->ActivateJump();
+				Activate_Jump();
 				bAddJumpVelocity = GetCharacterMovement()->DoJump(bClientUpdating);
 				return;
 			}
@@ -637,7 +736,7 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 			{
 				bCanEdgeJump = true;
 				JumpCurrentCount += 2;
-				SteikeAnimInstance->ActivateJump();
+				Activate_Jump();
 				bAddJumpVelocity = GetCharacterMovement()->DoJump(bClientUpdating);
 				return;
 			}
@@ -647,12 +746,12 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 			const bool bFirstJump = JumpCurrentCount == 0;
 			if (bFirstJump && GetCharacterMovement()->IsFalling())
 			{
-				SteikeAnimInstance->ActivateJump();
+				Activate_Jump();
 				JumpCurrentCount++;
 			}
 			if (CanDoubleJump() && GetCharacterMovement()->IsFalling())
 			{
-				SteikeAnimInstance->ActivateJump();
+				Activate_Jump();
 				GetCharacterMovement()->DoJump(bClientUpdating);
 				JumpCurrentCount++;
 			}
@@ -660,7 +759,7 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 			const bool bDidJump = CanJump() && GetCharacterMovement()->DoJump(bClientUpdating);
 			if (bDidJump)
 			{
-				SteikeAnimInstance->ActivateJump();
+				Activate_Jump();
 				// Transition from not (actively) jumping to jumping.
 				if (!bWasJumping)
 				{
@@ -708,13 +807,42 @@ void ASteikemannCharacter::RotateActorYawToVector(float DeltaTime, FVector AimVe
 {
 	FVector Aim = AimVector;
 	Aim.Normalize();
-	FVector Forward = GetActorForwardVector();
-	FVector Right = GetActorRightVector();
-	FVector Up = FVector::UpVector;
+
+	FVector AimXY = Aim;
+	AimXY.Z = 0.f;
+	AimXY.Normalize();
+
+	float YawDotProduct = FVector::DotProduct(AimXY, FVector::ForwardVector);
+	float Yaw = FMath::RadiansToDegrees(acosf(YawDotProduct));
+
+	/*		Check if yaw is to the right or left		*/
+	float RightDotProduct = FVector::DotProduct(AimXY, FVector::RightVector);
+	if (RightDotProduct < 0.f) { Yaw *= -1.f; }
+
+	SetActorRotation(FRotator(GetActorRotation().Pitch, Yaw, 0.f), ETeleportType::TeleportPhysics);
+}
+
+void ASteikemannCharacter::RotateActorPitchToVector(float DeltaTime, FVector AimVector)
+{
+	FVector Aim{ AimVector };
+	Aim.Normalize();
+
+	float Pitch{ FMath::RadiansToDegrees(asinf(Aim.Z)) };
+
+	PRINTPAR("Pitch Angle: %f", Pitch);
+
+	SetActorRotation( FRotator{ Pitch, GetActorRotation().Yaw, 0.f }, ETeleportType::TeleportPhysics );
+}
+
+void ASteikemannCharacter::RotateActorYawPitchToVector(float DeltaTime, FVector AimVector)
+{
+	FVector Velocity = AimVector;	Velocity.Normalize();
+	FVector Forward = FVector::ForwardVector;
+	FVector Right = FVector::RightVector;
 
 
 	/*		Yaw Rotation		*/
-	FVector AimXY = Aim;
+	FVector AimXY = AimVector;
 	AimXY.Z = 0.f;
 	AimXY.Normalize();
 
@@ -725,43 +853,18 @@ void ASteikemannCharacter::RotateActorYawToVector(float DeltaTime, FVector AimVe
 	float RightDotProduct = FVector::DotProduct(AimXY, Right);
 	if (RightDotProduct < 0.f) { Yaw *= -1.f; }
 
-	FRotator Rot{ 0.f, Yaw, 0.f };
-	AddActorLocalRotation(Rot);
-}
-
-void ASteikemannCharacter::RotateActorYawPitchToVector(float DeltaTime, FVector AimVector)
-{
-	FVector Velocity = GetVelocity();	Velocity.Normalize();
-	FVector Forward = FVector::ForwardVector;
-	FVector Right = FVector::RightVector;
-	FVector Up = FVector::UpVector;
-
-
-	/*		Yaw Rotation		*/
-	FVector VelocityXY = Velocity;
-	VelocityXY.Z = 0.f;
-	VelocityXY.Normalize();
-
-	float YawDotProduct = FVector::DotProduct(VelocityXY, Forward);
-	float Yaw = FMath::RadiansToDegrees(acosf(YawDotProduct));
-
-	/*		Check if yaw is to the right or left		*/
-	float RightDotProduct = FVector::DotProduct(VelocityXY, Right);
-	if (RightDotProduct < 0.f) { Yaw *= -1.f; }
-
-
 
 	/*		Pitch Rotation		*/
-	FVector VelocityPitch = FVector(1.f, 0.f, Velocity.Z);
-	VelocityPitch.Normalize();
+	FVector AimPitch = FVector(1.f, 0.f, AimVector.Z);
+	AimPitch.Normalize();
 	FVector ForwardPitch = FVector(1.f, 0.f, Forward.Z);
 	ForwardPitch.Normalize();
 
-	float PitchDotProduct = FVector::DotProduct(VelocityPitch, ForwardPitch);
+	float PitchDotProduct = FVector::DotProduct(AimPitch, ForwardPitch);
 	float Pitch = FMath::RadiansToDegrees(acosf(PitchDotProduct));
 
 	/*		Check if pitch is up or down		*/
-	float PitchDirection = Forward.Z - Velocity.Z;
+	float PitchDirection = ForwardPitch.Z - AimPitch.Z;
 	if (PitchDirection > 0.f) { Pitch *= -1.f; }
 
 
@@ -770,14 +873,14 @@ void ASteikemannCharacter::RotateActorYawPitchToVector(float DeltaTime, FVector 
 	SetActorRotation(Rot);
 }
 
-void ASteikemannCharacter::RollAroundPoint(float DeltaTime, FVector Point)
+void ASteikemannCharacter::RollActorTowardsLocation(float DeltaTime, FVector Location)
 {
 	/*		Roll Rotation		*/
-	FVector TowardsPoint = Point - GetActorLocation();
-	TowardsPoint.Normalize();
+	FVector TowardsLocation = Location - GetActorLocation();
+	TowardsLocation.Normalize();
 
 	FVector right = GetActorRightVector();
-	float RollDotProduct = FVector::DotProduct(TowardsPoint, right);
+	float RollDotProduct = FVector::DotProduct(TowardsLocation, right);
 	float Roll = FMath::RadiansToDegrees(acosf(RollDotProduct)) - 90.f;
 	Roll *= -1.f;
 
@@ -788,8 +891,6 @@ void ASteikemannCharacter::RollAroundPoint(float DeltaTime, FVector Point)
 /* Aiming system for grapplehook */
 bool ASteikemannCharacter::LineTraceToGrappleableObject()
 {
-	//PRINT("LinetraceToGrappleableObject");
-
 	FVector DeprojectWorldLocation{};
 	FVector DeprojectDirection{};
 
@@ -805,47 +906,12 @@ bool ASteikemannCharacter::LineTraceToGrappleableObject()
 	FVector2D DeprojectScreenLocation{};
 
 	int traces{};
-	/* Linetrace through the entire screen to get all grappletargets on screen */
-	//for (int i{ 0 }; i <= 16; i++)
-	//{
-	//	DeprojectScreenLocation.Y = 0;
-
-	//	for (int j{ 0 }; j <= 9; j++)
-	//	{
-	//		UGameplayStatics::DeprojectScreenToWorld(UGameplayStatics::GetPlayerController(GetWorld(), 0), DeprojectScreenLocation, DeprojectWorldLocation, DeprojectDirection);
-
-	//		const bool b = GetWorld()->LineTraceMultiByChannel(MultiHit, DeprojectWorldLocation, DeprojectWorldLocation + (DeprojectDirection * GrappleHookRange), GRAPPLE_HOOK, Params);
-	//		traces++;
-
-	//		if (MultiHit.Num() > 0) 
-	//		{ 
-	//			for (const auto& it : MultiHit) {
-	//				OnScreenActors.AddUnique(it.GetActor());
-	//			}
-	//		}
-	//		if (b) { PRINT("Block hit is True"); }
-
-	//		DeprojectScreenLocation.Y += Step;
-	//	}
-
-	//	DeprojectScreenLocation.X += Step;
-	//}
-	//PRINTPAR("Traces: %i", traces);
 
 	TWeakObjectPtr<AActor> Grappled{ nullptr };
 	
 	/* Adjusting the GrappleAimYChange based on the playercontrollers pitch */
 	FVector BackwardControllerPitch = GetControlRotation().Vector() * -1.f;
 	BackwardControllerPitch *= FVector(0, 0, 1);
-
-	/* Adjusts the aiminglocation based on controller pitch */
-	//GrappleAimYChange = GrappleAimYChange_Base + (GrappleAimYChange_Base * (BackwardControllerPitch.Z));
-	//if (GrappleAimYChange != 0.f) {
-	//	AimingLocation = ViewPortSize / 2 - FVector2D(0.f, ViewPortSize.Y / GrappleAimYChange);
-	//}
-	//else {
-	//	AimingLocation = ViewPortSize / 2;
-	//}
 
 	AimingLocation = ViewPortSize / 2 - FVector2D(0.f, ViewPortSize.Y / GrappleAimYChange_Base);
 	AimingLocationPercentage = FVector2D(AimingLocation.X / ViewPortSize.X, AimingLocation.Y / ViewPortSize.Y);
@@ -859,7 +925,6 @@ bool ASteikemannCharacter::LineTraceToGrappleableObject()
 			OnScreenActors.AddUnique(it.GetActor());
 		}
 	}
-	PRINTPAR("Hits: %i", OnScreenActors.Num());
 
 	/* If the linetrace hit grappletarget actors, find the one closest to the middle of the screen */
 	if (OnScreenActors.Num() > 0)
@@ -920,7 +985,6 @@ void ASteikemannCharacter::Bounce()
 		FCollisionQueryParams Params = FCollisionQueryParams(FName(""), false, this);
 		bBounce = GetWorld()->LineTraceSingleByChannel(Hit, GetActorLocation(), GetActorLocation() - FVector{ 0, 0, BounceCheckLength }, ECC_Visibility, Params);
 		if (bBounce) {
-			//PRINTLONG("Bounce");
 			MovementComponent->Bounce(Hit.ImpactNormal);
 		}
 	}
@@ -940,6 +1004,7 @@ void ASteikemannCharacter::Dash()
 	{
 		bDash = true;
 		DashCounter--;
+		Activate_Dash();
 		MovementComponent->Start_Dash(Pre_DashTime, DashTime, DashLength, DashDirection);
 	}
 	bDashClick = true;
@@ -958,55 +1023,96 @@ bool ASteikemannCharacter::IsDashing() const
 bool ASteikemannCharacter::WallJump_DetectNearbyWall()
 {
 	bool bHit{};
-	FHitResult Hit;
+	//FHitResult0 WallHit;
 	FCollisionQueryParams Params = FCollisionQueryParams(FName(""), false, this);
 
 	/* Raytrace in a total of 8 directions around the player */
 	
 	/* Raytrace first in the Forward/Backwards axis and Right/Left */
-	FVector Forward = GetControlRotation().Vector();
-		Forward.Z = 0.f;
-		Forward.Normalize();
+	FVector LinetraceVector = GetControlRotation().Vector();
+		LinetraceVector.Z = 0.f;
+		LinetraceVector.Normalize();
 	for (int i = 0; i < 4; i++)
 	{
-			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (Forward * WallJump_DetectionLength), FColor::Yellow, false, 0.f, 0, 4.f);
-		bHit = GetWorld()->LineTraceSingleByChannel(Hit, GetActorLocation(), GetActorLocation() + (Forward * WallJump_DetectionLength), ECC_Visibility, Params);
-		Forward = Forward.RotateAngleAxis(90, FVector(0, 0, 1));
+			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (LinetraceVector * WallJump_DetectionLength), FColor::Yellow, false, 0.f, 0, 4.f);
+		bHit = GetWorld()->LineTraceSingleByChannel(WallHit, GetActorLocation(), GetActorLocation() + (LinetraceVector * WallJump_DetectionLength), ECC_Visibility, Params);
+		LinetraceVector = LinetraceVector.RotateAngleAxis(90, FVector(0, 0, 1));
 		if (bHit) { 
-			StickingSpot = Hit.ImpactPoint; 
-			Wall_Normal = Hit.Normal; 
-			return bHit; 
+			StickingSpot = WallHit.ImpactPoint; 
+			Wall_Normal = WallHit.Normal; 
+			//return bHit; 
+			break;
 		}
 	}
 
-
-	/* Then do raytrace of the 45 degree angle between the 4 previous axis */
-	Forward = Forward.RotateAngleAxis(45.f, FVector(0, 0, 1));
-	for (int i = 0; i < 4; i++)
+	if (!bHit)
 	{
-			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (Forward * WallJump_DetectionLength), FColor::Red, false, 0.f, 0, 4.f);
-		bHit = GetWorld()->LineTraceSingleByChannel(Hit, GetActorLocation(), GetActorLocation() + (Forward * WallJump_DetectionLength), ECC_Visibility, Params);
-		Forward = Forward.RotateAngleAxis(90, FVector(0, 0, 1));
-		if (bHit) {
-			StickingSpot = Hit.ImpactPoint;
-			Wall_Normal = Hit.Normal;
-			return bHit;
+		/* Then do raytrace of the 45 degree angle between the 4 previous axis */
+		LinetraceVector = LinetraceVector.RotateAngleAxis(45.f, FVector(0, 0, 1));
+		for (int i = 0; i < 4; i++)
+		{
+			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (LinetraceVector * WallJump_DetectionLength), FColor::Red, false, 0.f, 0, 4.f);
+			bHit = GetWorld()->LineTraceSingleByChannel(WallHit, GetActorLocation(), GetActorLocation() + (LinetraceVector * WallJump_DetectionLength), ECC_Visibility, Params);
+			LinetraceVector = LinetraceVector.RotateAngleAxis(90, FVector(0, 0, 1));
+			if (bHit) {
+				StickingSpot = WallHit.ImpactPoint;
+				Wall_Normal = WallHit.Normal;
+				//return bHit;
+				break;
+			}
 		}
 	}
 
-	//if (bHit) { StickingSpot = Hit.ImpactPoint; return bHit; }
 	return bHit;
+}
+
+void ASteikemannCharacter::SetActorLocation_WallJump(float DeltaTime)
+{
+	FCollisionQueryParams Params = FCollisionQueryParams(FName(""), false, this);
+
+	/* Dette fungerer på flate vegger, men kommer til og føre til problemer på cylindriske- / mer avanserte- former */
+	FVector ActorToWall = WallHit.Normal;
+	ActorToWall *= -1.f;
+
+	DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (ActorToWall * 200.f), FColor::White, false, 0.f, 0.f, 6.f);
+
+	const bool b = GetWorld()->LineTraceSingleByChannel(WallHit, GetActorLocation(), GetActorLocation() + (ActorToWall * 200.f), ECC_Visibility, Params);
+	if (b)
+	{
+		float LengthToWall = FVector(GetActorLocation() - WallHit.ImpactPoint).Size();
+		PRINTPAR("Length To Wall = %f", LengthToWall);
+
+		float CapsuleRadius = GetCapsuleComponent()->GetScaledCapsuleRadius() + 1.f;
+		if (LengthToWall > CapsuleRadius) {
+			float Move{};
+			if ((LengthToWall - CapsuleRadius) > 5.f) {
+				Move = FMath::FInterpTo(Move, LengthToWall - CapsuleRadius, DeltaTime, 10.f);
+			}
+			else {
+				Move = LengthToWall - CapsuleRadius;
+			}
+			SetActorRelativeLocation(GetActorLocation() + (ActorToWall * Move), false, nullptr, ETeleportType::TeleportPhysics);
+			PRINTPAR("Move to wall : %f", Move);
+		}
+	}
 }
 
 bool ASteikemannCharacter::IsStickingToWall() const
 {
-	return bStickingToWall;
+	if (MovementComponent.IsValid()) {
+		return MovementComponent->bStickingToWall;
+	}
+	return false;
 }
 
 bool ASteikemannCharacter::IsOnWall() const
 {
-	return MovementComponent->bWallSlowDown;
+	if (MovementComponent.IsValid()) {
+		return MovementComponent->bWallSlowDown;
+	}
+	return false;
 }
+
 
 void ASteikemannCharacter::Initial_GrappleHook_Swing()
 {
@@ -1090,8 +1196,9 @@ void ASteikemannCharacter::RotateActor_GrappleHook_Swing(float DeltaTime)
 {
 	if (!GrappledActor.IsValid()) { return; }
 
-	RotateActorYawPitchToVector(DeltaTime, GetVelocity());
-	RollAroundPoint(DeltaTime, GrappledActor->GetActorLocation());
+	RotateActorYawToVector(DeltaTime, GetVelocity());
+	RotateActorPitchToVector(DeltaTime, GetVelocity());
+	RollActorTowardsLocation(DeltaTime, GrappledActor->GetActorLocation());
 }
 
 void ASteikemannCharacter::Initial_GrappleHook_Drag(float DeltaTime)
@@ -1178,7 +1285,8 @@ void ASteikemannCharacter::RotateActor_GrappleHook_Drag(float DeltaTime)
 {
 	if (!GrappledActor.IsValid()) { return; }
 
-	RotateActorYawPitchToVector(DeltaTime, GrappledActor->GetActorLocation());
+	RotateActorYawToVector(DeltaTime, GrappledActor->GetActorLocation() - GetActorLocation());
+	RotateActorPitchToVector(DeltaTime, GrappledActor->GetActorLocation() - GetActorLocation());
 }
 
 void ASteikemannCharacter::GrappleHook_Swing_RotateCamera(float DeltaTime)
