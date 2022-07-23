@@ -92,13 +92,19 @@ public:
 	bool bWallSlowDown{};
 	FVector StickingSpot{};
 
+	/* The angle from the walls normal that the character will jump from */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Wall Jump")
 		float WallJump_JumpAngle UMETA(DisplayName = "Jump Angle") { 45.f };
+	/* The angle the jump vector will be rotated when the character walljumps towards the left or right */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Wall Jump")
+		float WallJump_SidewaysJumpAngle UMETA(DisplayName = "Jump Angle Sideways") { 45.f };
 	
+
 	bool bWallJump{};
 	FVector WallJump_VelocityDirection{};
 	bool WallJump(const FVector& ImpactNormal);
 	bool StickToWall(float DeltaTime);
+	bool ReleaseFromWall(const FVector& ImpactNormal);
 
 #pragma endregion //Wall Jump
 

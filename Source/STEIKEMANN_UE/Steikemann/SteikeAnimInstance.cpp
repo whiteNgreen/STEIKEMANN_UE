@@ -32,11 +32,22 @@ void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		bFalling = SteikeOwner->IsFalling();
 		bOnGround = SteikeOwner->IsOnGround();
 
+		/* Jump */
+		bJumping = SteikeOwner->IsJumping();
+
 		/* Dash */
 		bDashing = SteikeOwner->IsDashing();
 
 		/* Grappling */
 		bGrappling = SteikeOwner->IsGrappling();
+
+		/* Wall Sticking */
+		bOnWall = SteikeOwner->IsOnWall();
+		bStickingToWall = SteikeOwner->IsStickingToWall();
+		//OnWallRotation = SteikeOwner->InputAngleToForward * -1.f;
+		OnWallRotation = FMath::FInterpTo(OnWallRotation,FMath::Clamp(SteikeOwner->InputAngleToForward * -1.f, -90.f, 90.f), DeltaSeconds, SteikeOwner->OnWall_InterpolationSpeed);
+		PRINTPAR("OnWallRotation = %f", OnWallRotation);
+		
 	}
 	else {
 		SteikeOwner = Cast<ASteikemannCharacter>(TryGetPawnOwner());

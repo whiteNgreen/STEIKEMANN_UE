@@ -47,7 +47,7 @@ public:
 	
 	/* Checks the Character script if Jump button is pressed */
 	UPROPERTY(BlueprintReadOnly)
-		bool bPressedJump{};
+		bool bJumping{};
 	/* The Jump animations anim notify activates this bool to start the jump sequence */
 	UPROPERTY(BlueprintReadWrite)
 		bool bActivateJump{};
@@ -55,6 +55,19 @@ public:
 
 
 #pragma endregion //Jump
+
+#pragma region WallSticking
+
+	UPROPERTY(BlueprintReadOnly)
+		bool bOnWall{};
+
+	UPROPERTY(BlueprintReadOnly)
+		bool bStickingToWall{};
+
+	UPROPERTY(BlueprintReadOnly)
+		float OnWallRotation{};
+
+#pragma endregion //WallSticking
 
 	UPROPERTY(BlueprintReadWrite)
 		bool bGrappling{};

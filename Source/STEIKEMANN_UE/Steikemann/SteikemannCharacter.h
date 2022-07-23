@@ -13,6 +13,10 @@
 
 #define GRAPPLE_HOOK ECC_GameTraceChannel1
 
+class UNiagaraSystem;
+class UNiagaraComponent;
+class USoundBase;
+
 enum GamepadType
 {
 	Xbox,
@@ -44,6 +48,51 @@ public:
 
 	void AssignAnimInstance(USteikeAnimInstance* AnimInstance) { SteikeAnimInstance = AnimInstance; }
 	USteikeAnimInstance* GetAnimInstance() const { return SteikeAnimInstance; }
+
+#pragma region Audio
+	UPROPERTY(EditAnywhere, Category = "Audio")
+		UAudioComponent* Component_Audio{ nullptr };
+
+
+#pragma endregion //Audio
+
+#pragma region ParticleEffects
+
+	/* ------------------- Particle Effects ------------------- */
+	UPROPERTY(EditAnywhere, Category = "Particle Effects")
+		UNiagaraComponent* Component_Niagara{ nullptr };
+
+	/* Temporary niagara components created when main component is busy */
+	TArray<UNiagaraComponent*> TempNiagaraComponents;
+
+	#pragma region Landing
+		/* ------------------- PE: Landing ------------------- */
+		UPROPERTY(EditAnywhere, Category = "Particle Effects|Land")
+			UNiagaraSystem* NS_Land{ nullptr };
+
+		UFUNCTION(BlueprintCallable)
+			void NS_Land_Implementation(const FHitResult& Hit);
+
+		/* The amount of particles that will spawn determined by the characters landing velocity, times this multiplier */
+		UPROPERTY(EditAnywhere, Category = "Particle Effects|Land")
+			float NSM_Land_ParticleAmount		UMETA(DisplayName = "Particle Amount Multiplier") { 0.5f };
+		/* The speed of the particles will be determined by the characters velocity when landing, times this multiplier */
+		UPROPERTY(EditAnywhere, Category = "Particle Effects|Land")
+			float NSM_Land_ParticleSpeed		UMETA(DisplayName = "Particle Speed Multiplier") { 0.5f };
+
+		#pragma endregion //Landing
+
+	#pragma region OnWall
+		/* ------------------- PE: OnWall ------------------- */
+		UPROPERTY(EditAnywhere, Category = "Particle Effects|WallJump")
+			UNiagaraSystem* NS_WallSlide{ nullptr };
+		/* The amount of particles per second the system should emit */
+		UPROPERTY(EditAnywhere, Category = "Particle Effects|WallJump")
+			float NS_WallSlide_ParticleAmount	UMETA(DisplayName = "WallSlide ParticleAmount") { 1000.f };
+	#pragma endregion //OnWall
+
+
+#pragma endregion //ParticleEffects
 
 #pragma region Gamepads
 
@@ -85,17 +134,20 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Variables", meta = (AllowPrivateAcces = "true"))
-	bool bSlipping;
-
-	void DetectPhysMaterial();
-
 	/* The Raw InputVector */
 	FVector InputVectorRaw;
 	/* Input vector rotated to match the playercontrollers rotation */
 	FVector InputVector;
 
+#pragma region Slipping
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Variables", meta = (AllowPrivateAcces = "true"))
+	bool bSlipping;
+
+	void DetectPhysMaterial();
+#pragma endregion //Slipping
+
 #pragma region Camera
+	/* ------------------- Camera Shakes ------------------- */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		TSubclassOf<UCameraShakeBase> MYShake;
 
@@ -141,7 +193,7 @@ public:/* ------------------- Basic Movement ------------------- */
 	float PostEdge_JumpTimer{};
 	bool bCanPostEdgeJump{};
 
-
+	void Landed(const FHitResult& Hit) override;
 
 	void Jump() override;
 	void JumpDualshock();
@@ -163,8 +215,12 @@ public:/* ------------------- Basic Movement ------------------- */
 	
 	void ResetActorRotationPitchAndRoll(float DeltaTime);
 	void RotateActorYawToVector(float DeltaTime, FVector AimVector);
-	void RotateActorYawPitchToVector(float DeltaTime, FVector AimVector);
-	void RollAroundPoint(float DeltaTime, FVector Point);
+	void RotateActorPitchToVector(float DeltaTime, FVector AimVector);
+		void RotateActorYawPitchToVector(float DeltaTime, FVector AimVector);	//Old
+	void RollActorTowardsLocation(float DeltaTime, FVector Point);
+
+	/* Returns the angle and direction*/
+	//float AngleBetweenVectors(const FVector& FirstVec, const FVector& SecondVec);
 
 #pragma region Bounce
 	/* ------------------------ Bounce --------------------- */
@@ -214,7 +270,7 @@ public:/* ------------------- Basic Movement ------------------- */
 	/* ------------------------ Wall Jump --------------------- */
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Wall Jump")
-		float WallJump_DetectionLength UMETA(DisplayName = "Detection Length") { 100.f };
+		float WallJump_DetectionLength UMETA(DisplayName = "Detection Length") { 80.f };
 	/* The maximum time the character can hold on to the wall they stick to during wall jump */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Wall Jump")
 		float WallJump_MaxStickTimer UMETA(DisplayName = "Max Sticking Time") { 1.f };
@@ -222,20 +278,30 @@ public:/* ------------------- Basic Movement ------------------- */
 
 	/* Time until character can stick to wall again */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Wall Jump")
-		float WallJump_MaxNonStickTimer UMETA(DisplayName = "No Stick Timer") { 1.f };
+		float WallJump_MaxNonStickTimer UMETA(DisplayName = "No Stick Timer") { 0.5f };
 	float WallJump_NonStickTimer{};
 
+	float InputAngleToForward{};
 
 	bool bStickingToWall{};
 	bool bFoundStickableWall{};
 	bool bCanStickToWall{ true };
+	bool bOnWallActive{ true };
 	FVector StickingSpot{};
 
 	FVector Wall_Normal{};
+	FHitResult WallHit{};
 	bool WallJump_DetectNearbyWall();
+	void SetActorLocation_WallJump(float DeltaTime);
 
+	/* Is currently sticking to a wall */
 	bool IsStickingToWall() const;
+	/* Is in contact with a wall and slowing down */
 	bool IsOnWall() const;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Wall Jump|Animation")
+		float OnWall_InterpolationSpeed{ 10.f };
+
 
 #pragma endregion //Wall Jump
 
@@ -261,17 +327,17 @@ public: /* ------------------------ Grapplehook --------------------- */
 
 
 	UPROPERTY(BlueprintReadOnly)
-		bool bGrapple_Available;
+		bool bGrapple_Available{};
 	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
 		float GrappleHookRange{ 2000.f };
 	
 	/* The onscreen aiming location */
 	UPROPERTY(BlueprintReadOnly)
-		FVector2D AimingLocation;
+		FVector2D AimingLocation {};
 	UPROPERTY(BlueprintReadOnly)
 		FVector2D AimingLocationPercentage {};
 	UPROPERTY(BlueprintReadOnly)
-		FVector2D ViewPortSize;
+		FVector2D ViewPortSize {};
 
 	/* Shows the debug aiming reticle */
 	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Targeting")
@@ -292,17 +358,17 @@ public: /* ------------------------ Grapplehook --------------------- */
 
 
 	UPROPERTY(BlueprintReadOnly)
-		bool bGrapple_Swing;
+		bool bGrapple_Swing {};
 	
 	UPROPERTY(BlueprintReadOnly)
-		bool bGrapple_PreLaunch;
+		bool bGrapple_PreLaunch {};
 	UPROPERTY(BlueprintReadOnly)
-		bool bGrapple_Launch;
+		bool bGrapple_Launch {};
 	
 	/* Time it takes for half a rotation around the GrappledActor */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing", meta = (AllowPrivateAcces = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing")
 		float GrappleHook_SwingTime{ 1.f };
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing", meta = (AllowPrivateAcces = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing")
 		float GrappleHook_Swing_MaxSpeed{ 2000.f };
 	/* Initial length between actor and grappled object */
 	float GrappleRadiusLength{};
@@ -322,23 +388,23 @@ public: /* ------------------------ Grapplehook --------------------- */
 
 	/* Interpolation speed of the camera rotation during grapplehook Drag */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag|Camera Rotation")
-		float GrappleDrag_Camera_InterpSpeed UMETA(DisplayName = "Interpolation Speed") { 3.f };
+		float GrappleDrag_Camera_InterpSpeed			UMETA(DisplayName = "Interpolation Speed")		{ 3.f };
 
 	/* Pitch adjustment for the camera rotation during the Pre_Launch of Grapple Drag  */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag|Camera Rotation")
-		float GrappleDrag_Camera_PitchPoint UMETA(DisplayName = "Pitch Point") { 20.f };
+		float GrappleDrag_Camera_PitchPoint				UMETA(DisplayName = "Pitch Point")				{ 20.f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag")
-		float GrappleDrag_MaxSpeed UMETA(DisplayName = "Max Speed") { 2000.f };
+		float GrappleDrag_MaxSpeed						UMETA(DisplayName = "Max Speed")				{ 2000.f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag")
-		float GrappleDrag_MinRadiusDistance UMETA(DisplayName = "Min Radius Distance") { 50.f };
+		float GrappleDrag_MinRadiusDistance				UMETA(DisplayName = "Min Radius Distance")		{ 50.f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag")
-		float GrappleDrag_Update_TimeMultiplier UMETA(DisplayName = "Time Multiplier") { 2.f };
+		float GrappleDrag_Update_TimeMultiplier			UMETA(DisplayName = "Time Multiplier")			{ 2.f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag")
-		float GrappleDrag_Update_Time_MIN_Multiplier UMETA(DisplayName = "Minimum Time Multiplier") { 2.f };
+		float GrappleDrag_Update_Time_MIN_Multiplier	UMETA(DisplayName = "Minimum Time Multiplier")	{ 2.f };
 
 	float GrappleDrag_CurrentSpeed{};
 
