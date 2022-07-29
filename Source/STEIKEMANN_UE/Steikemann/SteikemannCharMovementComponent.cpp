@@ -57,6 +57,7 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 		}
 		else if (bLedgeJump) {
 			Velocity.Z = FMath::Max(Velocity.Z, JumpZVelocity * (1.f + LedgeJumpBoost_Multiplier));
+			//Velocity = LedgeJumpDirection;
 			SetMovementMode(MOVE_Falling);
 		}
 		else {
@@ -256,6 +257,19 @@ void USteikemannCharMovementComponent::Update_LedgeGrab()
 
 bool USteikemannCharMovementComponent::LedgeJump(const FVector& LedgeLocation)
 {
+	float InputAngle = CharacterOwner_Steikemann->InputAngleToForward;
+	//float Angle = 45.f;
+
+	//float ImpulseStrength = 300.f;
+
+	LedgeJumpDirection = CharacterOwner_Steikemann->GetActorForwardVector();
+	float ClampedAngle = FMath::Clamp(InputAngle, -LedgeJump_AngleClamp, LedgeJump_AngleClamp);
+	LedgeJumpDirection = LedgeJumpDirection.RotateAngleAxis(-ClampedAngle, FVector::UpVector);
+	
+	AddImpulse(LedgeJumpDirection * LedgeJump_ImpulseStrength, true);
+		DrawDebugLine(GetWorld(), CharacterOwner_Steikemann->GetActorLocation(), CharacterOwner_Steikemann->GetActorLocation() + (LedgeJumpDirection * LedgeJump_ImpulseStrength), FColor::Orange, false, 1.f, 0, 4.f);
+
+
 	bLedgeJump = true;
 
 	bLedgeGrab = false;

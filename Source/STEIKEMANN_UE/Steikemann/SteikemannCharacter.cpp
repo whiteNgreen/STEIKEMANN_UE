@@ -619,8 +619,8 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 			if ((MovementComponent->bLedgeGrab) && MovementComponent->IsFalling())
 			{
 				JumpCurrentCount = 1;
-				ResetWallJumpAndLedgeGrab();
 				bAddJumpVelocity = MovementComponent->LedgeJump(LedgeLocation);
+				ResetWallJumpAndLedgeGrab();
 				Activate_Jump();
 				return;
 			}

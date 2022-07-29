@@ -118,7 +118,12 @@ public:
 	bool bLedgeGrab{};
 	bool bLedgeJump{};
 
+	FVector LedgeJumpDirection{};
 
+	UPROPERTY(EditAnywhere, Category = "MyVariables|LedgeJump")
+		float LedgeJump_AngleClamp{ 45.f };
+	UPROPERTY(EditAnywhere, Category = "MyVariables|LedgeJump")
+		float LedgeJump_ImpulseStrength{ 300.f };
 	UPROPERTY(EditAnywhere, Category = "MyVariables|LedgeJump")
 		float LedgeJumpBoost_Multiplier{ 0.2f };
 	float LedgeJumpBoost{};
