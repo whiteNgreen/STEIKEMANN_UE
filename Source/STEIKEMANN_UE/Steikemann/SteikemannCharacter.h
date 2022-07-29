@@ -17,12 +17,6 @@ class UNiagaraSystem;
 class UNiagaraComponent;
 class USoundBase;
 
-enum GamepadType
-{
-	Xbox,
-	Playstation,
-	MouseandKeyboard
-};
 
 UCLASS()
 class STEIKEMANN_UE_API ASteikemannCharacter : public ACharacter, 
@@ -94,34 +88,6 @@ public:
 
 #pragma endregion //ParticleEffects
 
-#pragma region Gamepads
-
-	UPROPERTY(BlueprintReadWrite)
-		bool bCanChangeGamepad{};
-	UPROPERTY(BlueprintReadWrite)
-		bool bDontChangefromXboxPad{};
-	/* Timer to ensure that it doesn't accidentaly change gamepad type */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gamepads")
-		float Gamepad_ChangeTimerLength{ 1.f }; 
-	float Gamepad_ChangeTimer{};
-
-
-	UPROPERTY(EditAnywhere, Category = "Gamepads|Dualshock")
-		float DS_LeftStickDrift{ 0.06f };	
-	UPROPERTY(EditAnywhere, Category = "Gamepads|Dualshock")
-		float DS_RightStickDrift{ 0.08f };
-
-	GamepadType CurrentGamepadType{ MouseandKeyboard };
-
-	void ListenForControllerChange(bool isConnected, int32 useless, int32 uselessIndex);
-	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, Category = "Controller Events")
-		void OnControllerConnection();
-
-	UFUNCTION(BlueprintCallable)
-	void AnyKey(FKey key);
-	UFUNCTION(BlueprintCallable)
-	void AnyKeyRelease(FKey key);
-#pragma endregion //Gamepads
 
 protected:
 	// Called when the game starts or when spawned
@@ -172,10 +138,6 @@ public:/* ------------------- Basic Movement ------------------- */
 	void TurnAtRate(float rate);
 	void LookUpAtRate(float rate);
 
-	void MoveForwardDualshock(float value);
-	void MoveRightDualshock(float value);
-	void TurnAtRateDualshock(float rate);
-	void LookUpAtRateDualshock(float rate);
 
 	bool bActivateJump{};
 	UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
@@ -198,7 +160,6 @@ public:/* ------------------- Basic Movement ------------------- */
 	void Landed(const FHitResult& Hit) override;
 
 	void Jump() override;
-	void JumpDualshock();
 	void StopJumping() override;
 	void CheckJumpInput(float DeltaTime) override;
 
@@ -228,10 +189,10 @@ public:/* ------------------- Basic Movement ------------------- */
 		float WallDetectionRange		UMETA(DisplayName = "Wall Detection Range") { 200.f };
 	/* If the player is within this length from the wall, WallJump / WallSlide mechanics are enabled. Should NOT be lower then Wall Detection Range */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall")
-		float WallJump_ActivationRange	UMETA(DisplayName = "Detection Length") { 80.f };
+		float WallJump_ActivationRange	UMETA(DisplayName = "Wall-Jump/Slide Activation Length") { 80.f };
 	/* Activate ledgegrab if a wall + ledge is detected and the player is within this range */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall")
-		float LedgeGrab_ActivationRange		UMETA(DisplayName = "Detection Length") { 120.f };
+		float LedgeGrab_ActivationRange		UMETA(DisplayName = " Ledgegrab Activation Length") { 120.f };
 
 	FVector Wall_Normal{};
 	FHitResult WallHit{};
@@ -284,31 +245,34 @@ public:/* ------------------- Basic Movement ------------------- */
 		//UPROPERTY(BlueprintReadOnly)
 			//bool bShouldLedgeGrabNextFrame{};
 
+
 		bool IsLedgeGrabbing() const { return bIsLedgeGrabbing; }
 
 		void Do_LedgeGrab(float DeltaTime);
 
-		//class UCapsuleComponent* LedgeDetector{ nullptr };
-		//UCapsuleComponent* CreateLedgeDetector(const UCapsuleComponent* RefCapsule);
-
-		//UFUNCTION()
-			//void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
-	
 		/* How far above ifself the character will be able to grab a ledge */
-		UPROPERTY(EditAnywhere, Category = "Movement|OnWall|LedgeGrag")
-			float LedgeGrab_GrabLength			UMETA(DisplayName = "GrabLength")	{ 100.f };
+		//UPROPERTY(EditAnywhere, Category = "Movement|OnWall|LedgeGrab")
+			//float LedgeGrab_GrabLength				UMETA(DisplayName = "GrabLength")	{ 100.f };
+		/* Vertical Grab length */
+		UPROPERTY(EditAnywhere, Category = "Movement|OnWall|LedgeGrab")
+			float LedgeGrab_VerticalGrabLength		UMETA(DisplayName = "Vertical GrabLength") { 100.f };
+		/* Horizontal Grab length */
+		UPROPERTY(EditAnywhere, Category = "Movement|OnWall|LedgeGrab")
+			float LedgeGrab_HorizontalGrabLength	UMETA(DisplayName = "Horizontal GrabLength") { 100.f };
 		/* How far below from the ledge will the character hold itself */
-		UPROPERTY(EditAnywhere, Category = "Movement|OnWall|LedgeGrag")
-			float LedgeGrab_HoldLength			UMETA(DisplayName = "HoldLength")	{ 100.f };
+		UPROPERTY(EditAnywhere, Category = "Movement|OnWall|LedgeGrab")
+			float LedgeGrab_HoldLength				UMETA(DisplayName = "HoldLength")	{ 100.f };
+
+		/* The positional interpolation alpha for each frame between the actors location and the intended ledgegrab location */
+		UPROPERTY(EditAnywhere, Category = "Movement|OnWall|LedgeGrab")
+			float PositionLerpAlpha{ 0.5f };
 
 		FHitResult LedgeHit{};
 		FVector LedgeLocation{};
 		float LengthToLedge{};
-		//bool DetectLedge(FVector& Out_LedgeLocation, FVector& Out_LengthToLedge, const FHitResult& InitialWallImpact, const FVector& PlayerLocation, float GrabLength);
 		FVector PlayersLedgeLocation{};
-		bool DetectLedge(FVector& Out_IntendedPlayerLedgeLocation, const FHitResult& In_WallHit, FHitResult& Out_Ledge, float GrabLength);
+		bool DetectLedge(FVector& Out_IntendedPlayerLedgeLocation, const FHitResult& In_WallHit, FHitResult& Out_Ledge, float Vertical_GrabLength, float Horizontal_GrabLength);
 	
-
 		void MoveActorToLedge(float DeltaTime);
 
 	#pragma endregion //LedgeGrab

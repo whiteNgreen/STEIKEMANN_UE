@@ -15,12 +15,6 @@
 #include "Components/AudioComponent.h"
 
 
-/* Gamepad support */
-#include "RawInput.h"
-#include "RawInputFunctionLibrary.h"
-#include "IInputDeviceModule.h"
-#include "IInputDevice.h"
-#include "GenericPlatform/GenericApplicationMessageHandler.h"
 
 
 // Sets default values
@@ -63,8 +57,7 @@ ASteikemannCharacter::ASteikemannCharacter(const FObjectInitializer& ObjectIniti
 	Component_Niagara = CreateDefaultSubobject<UNiagaraComponent>(TEXT("NiagaraComponent"));
 	Component_Niagara->SetupAttachment(RootComponent);
 
-	/* Gamepad support */
-	FCoreDelegates::OnControllerConnectionChange.AddUObject(this, &ASteikemannCharacter::ListenForControllerChange);
+
 }
 
 void ASteikemannCharacter::NS_Land_Implementation(const FHitResult& Hit)
@@ -96,96 +89,13 @@ void ASteikemannCharacter::NS_Land_Implementation(const FHitResult& Hit)
 	NiagaraPlayer->Activate(true);
 }
 
-/* Gamepad support */
-void ASteikemannCharacter::ListenForControllerChange(bool isConnected, int32 useless, int32 uselessIndex)
-{
-	IRawInput* RawInput = static_cast<IRawInput*>(static_cast<FRawInputPlugin*>(&FRawInputPlugin::Get())->GetRawInputDevice().Get());
-	RawInput->QueryConnectedDevices();
 
-	OnControllerConnection();
-}
-
-void ASteikemannCharacter::AnyKey(FKey key)
-{
-	//PRINTPARLONG("%s", *key.GetDisplayName().ToString());
-
-	Gamepad_ChangeTimer = 0.0f;
-	FString s = key.GetDisplayName().ToString();
-	FString t;
-	for (int i = 0; i < s.Len(); i++)
-	{
-		if (i > 6) { break; }
-
-		t += s[i];
-	}
-	t = t.ToLower();
-
-	GamepadType incommingPad{};
-	FString c;
-	if (t == "gamepad"){
-		incommingPad = Xbox;
-		c = "Xbox";
-		//bDontChangefromXboxPad = true;
-	}
-	else if (t == "generic"){
-		incommingPad = Playstation;
-		c = "Playstation";
-	}
-	else  {
-		incommingPad = MouseandKeyboard;
-		c = "Mouse and Keyboard";
-	}
-	
-	if (incommingPad != CurrentGamepadType && bCanChangeGamepad)
-	{
-		CurrentGamepadType = incommingPad;	
-		//PRINTPARLONG("Change gamepad to : %s", *c);
-	}
-}
-
-void ASteikemannCharacter::AnyKeyRelease(FKey key)
-{
-	Gamepad_ChangeTimer = 0.0f;
-	FString s = key.GetDisplayName().ToString();
-	FString t;
-	for (int i = 0; i < s.Len(); i++)
-	{
-		if (i > 6) { break; }
-
-		t += s[i];
-	}
-	t = t.ToLower();
-
-	GamepadType incommingPad{};
-	FString c;
-	if (t == "gamepad") {
-		incommingPad = Xbox;
-		c = "Xbox";
-		//bDontChangefromXboxPad = false;
-	}
-	else if (t == "generic") {
-		incommingPad = Playstation;
-		c = "Playstation";
-	}
-	else {
-		incommingPad = MouseandKeyboard;
-		c = "Mouse and Keyboard";
-	}
-}
 
 // Called when the game starts or when spawned
 void ASteikemannCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	FCoreDelegates::OnControllerConnectionChange.AddUObject(this, &ASteikemannCharacter::ListenForControllerChange);
-	/* Gamepad support */
-	IRawInput* RawInput = static_cast<IRawInput*>(static_cast<FRawInputPlugin*>(&FRawInputPlugin::Get())->GetRawInputDevice().Get());
-	if (RawInput != nullptr)
-	{
-		RawInput->QueryConnectedDevices();
-		OnControllerConnection();
-	}
+
 	
 	//APlayerController* player = UGameplayStatics::GetPlayerController(GetWorld(), 0);
 	//player->EnableInput(player);
@@ -208,32 +118,6 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		InputVector.Normalize();
 		FRotator Rot = GetControlRotation();
 		InputVector = InputVector.RotateAngleAxis(Rot.Yaw, FVector::UpVector);
-	}
-
-	/*		Gamepad Ticks		*/
-	//bDontChangefromXboxPad ? PRINT("True") : PRINT("False");
-	switch (CurrentGamepadType)
-	{
-	case Xbox:
-		//PRINT("Xbox");
-		break;
-	case Playstation:
-		//PRINT("Dualshock");
-		break;
-	case MouseandKeyboard:
-		//PRINT("Mouse and Keyboard");
-		break;
-
-	default:
-		break;
-	}
-	//PRINTPAR("%f", Gamepad_ChangeTimer);
-	if (Gamepad_ChangeTimer < Gamepad_ChangeTimerLength) {
-		Gamepad_ChangeTimer += DeltaTime;
-		bCanChangeGamepad = false;
-	}
-	else {
-		bCanChangeGamepad = true;
 	}
 
 
@@ -330,17 +214,17 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 			if (bFoundWall) 
 			{
 				/*		Find Ledge 		 */
-				bFoundLedge = DetectLedge(PlayersLedgeLocation, WallHit, LedgeHit, LedgeGrab_GrabLength);
+				bFoundLedge = DetectLedge(PlayersLedgeLocation, WallHit, LedgeHit, LedgeGrab_VerticalGrabLength, LedgeGrab_HorizontalGrabLength);
 			}
 		}
 
 		/*			Ledge Grab			*/
 		if (bFoundLedge)
 		{
-			// initiate ledgegrab
-			PRINTPAR("Length To Ledge: %f", LengthToLedge);
-			PRINTPAR("WallHit: %s", *WallHit.ImpactPoint.ToString());
-			PRINTPAR("PlayersLedgeLocation: %s", *PlayersLedgeLocation.ToString());
+			//PRINTPAR("Length To Ledge: %f", LengthToLedge);
+			//PRINTPAR("WallHit: %s", *WallHit.ImpactPoint.ToString());
+			//PRINTPAR("PlayersLedgeLocation: %s", *PlayersLedgeLocation.ToString());
+
 			/* Only activate LedgeGrab if the actor is below the ledge */
 			if (GetActorLocation().Z < LedgeHit.ImpactPoint.Z)
 			{
@@ -367,7 +251,6 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		/*			Wall Jump / Wall Slide			 */
 		if (bFoundStickableWall && !bFoundLedge/* && (ActorToWall_Length < WallJump_ActivationRange)*/)
 		{
-			PRINT("WallJump / WallSliding");
 			if (MovementComponent->bStickingToWall)
 			{
 				if (JumpCurrentCount == 2) { JumpCurrentCount = 1; }	// Resets DoubleJump
@@ -500,31 +383,23 @@ void ASteikemannCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 
 	check(PlayerInputComponent);
 	
-	PlayerInputComponent->BindAction("AnyKey", IE_Pressed, this, &ASteikemannCharacter::AnyKey).bConsumeInput = true;
-	PlayerInputComponent->BindAction("AnyKey", IE_Released, this, &ASteikemannCharacter::AnyKeyRelease).bConsumeInput = true;
-
 
 	/* Basic Movement */
 		/* Movement control */
 			/* Gamepad and Keyboard */
 	PlayerInputComponent->BindAxis("Move Forward / Backward", this, &ASteikemannCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("Move Right / Left", this, &ASteikemannCharacter::MoveRight);
-			/* Dualshock */
-	PlayerInputComponent->BindAxis("Move Forward Dualshock", this, &ASteikemannCharacter::MoveForwardDualshock);
-	PlayerInputComponent->BindAxis("Move Right / Left PS4", this, &ASteikemannCharacter::MoveRightDualshock);
 		/* Looking control */
 	PlayerInputComponent->BindAxis("Turn Right / Left Mouse", this,		&APawn::AddControllerYawInput);
 	PlayerInputComponent->BindAxis("Look Up / Down Mouse", this,		&APawn::AddControllerPitchInput);
 	PlayerInputComponent->BindAxis("Turn Right / Left Gamepad", this,	&ASteikemannCharacter::TurnAtRate);
 	PlayerInputComponent->BindAxis("Look Up/Down Gamepad", this,		&ASteikemannCharacter::LookUpAtRate);
 			/* Dualshock */
-	//PlayerInputComponent->BindAxis("Look Up/Down PS4", this,		&ASteikemannCharacter::LookUpAtRateDualshock);
-	//PlayerInputComponent->BindAxis("Turn Right/Left PS4", this,	&ASteikemannCharacter::TurnAtRateDualshock);
+
 		/* Jump */
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ASteikemannCharacter::Jump).bConsumeInput = true;
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ASteikemannCharacter::StopJumping).bConsumeInput = true;
-	//PlayerInputComponent->BindAction("Jump Dualshock", IE_Pressed, this, &ASteikemannCharacter::JumpDualshock).bConsumeInput = true;
-	//PlayerInputComponent->BindAction("Jump Dualshock", IE_Released, this, &ASteikemannCharacter::StopJumping).bConsumeInput = true;
+
 
 		/* Crouch*/
 	PlayerInputComponent->BindAction("Crouch", IE_Pressed, this, &ASteikemannCharacter::Start_Crouch);
@@ -659,15 +534,7 @@ void ASteikemannCharacter::MoveForward(float value)
 	}
 }
 
-void ASteikemannCharacter::MoveForwardDualshock(float value)
-{
-	float V = (value - 0.5f) * 2;
-	if (CurrentGamepadType == Playstation && (V >= DS_LeftStickDrift || V <= -DS_LeftStickDrift))
-	{
-		//PRINT("Playstation Forward");
-		MoveForward(V);
-	}
-}
+
 
 void ASteikemannCharacter::MoveRight(float value)
 {
@@ -694,33 +561,6 @@ void ASteikemannCharacter::MoveRight(float value)
 
 }
 
-void ASteikemannCharacter::MoveRightDualshock(float value)
-{
-	float V = (value - 0.5f) * 2;
-	if (CurrentGamepadType == Playstation && (V >= DS_LeftStickDrift || V <= -DS_LeftStickDrift))
-	{
-		//PRINT("Playstation Right");
-		MoveRight(V);
-	}
-}
-
-void ASteikemannCharacter::TurnAtRateDualshock(float rate)
-{
-	float V = (rate - 0.5f) * 2;
-	if (CurrentGamepadType == Playstation && (V >= 0.05f || V <= -0.05f)) {
-		TurnAtRate(V);
-		//PRINTPAR("Turnright: %f", rate);
-	}
-}
-
-void ASteikemannCharacter::LookUpAtRateDualshock(float rate)
-{
-	float V = (rate - 0.5f) * 2;
-	if (CurrentGamepadType == Playstation && (V >= DS_RightStickDrift || V <= -DS_RightStickDrift)) {
-		LookUpAtRate(V);
-		//PRINTPAR("Lookup: %f", rate);
-	}
-}
 
 void ASteikemannCharacter::TurnAtRate(float rate)
 {
@@ -751,12 +591,6 @@ void ASteikemannCharacter::Jump()
 	
 }
 
-void ASteikemannCharacter::JumpDualshock()
-{
-	if (CurrentGamepadType == Playstation) {
-		Jump();
-	}
-}
 
 void ASteikemannCharacter::StopJumping()
 {
@@ -903,73 +737,8 @@ void ASteikemannCharacter::Stop_Crouch()
 	}
 }
 
-//UCapsuleComponent* ASteikemannCharacter::CreateLedgeDetector(const UCapsuleComponent* RefCapsule)
-//{
-//	UCapsuleComponent* Cap = NewObject<UCapsuleComponent>(this, "LedgeDetector");
-//	Cap->AttachToComponent(RootComponent, FAttachmentTransformRules::SnapToTargetIncludingScale);
-//	Cap->RegisterComponent();
-//
-//	Cap->SetCapsuleSize(RefCapsule->GetUnscaledCapsuleRadius(), RefCapsule->GetUnscaledCapsuleHalfHeight());
-//
-//	return Cap;
-//}
 
-//bool ASteikemannCharacter::DetectLedge(FVector& Out_LedgeLocation, FVector& Out_LengthToLedge, const FHitResult& InitialWallImpact, const FVector& PlayerLocation, float GrabLength)
-//{
-//	FVector TowardsWall = InitialWallImpact.ImpactNormal * -1.f;
-//	float LengthFromPlayerToWall = FVector(InitialWallImpact.ImpactPoint - GetActorLocation()).Size();
-//	
-//	FHitResult Hit;
-//	FCollisionQueryParams Params (FName(""), false, this);
-//
-//	FVector Ortho_PlayerToUp = FVector::CrossProduct(TowardsWall, FVector::CrossProduct(FVector::UpVector, TowardsWall));
-//		DrawDebugLine(GetWorld(), PlayerLocation, PlayerLocation + (Ortho_PlayerToUp * GrabLength), FColor::Orange, false, 0.f, 0, 4.f);
-//
-//	FHitResult HitForwardAbove;
-//	const bool bHitForwardAbove = GetWorld()->LineTraceSingleByChannel(HitForwardAbove, 
-//			PlayerLocation + (Ortho_PlayerToUp * GrabLength),
-//			PlayerLocation + (Ortho_PlayerToUp * GrabLength) + (TowardsWall * 100.f),
-//			ECC_WorldStatic, Params);
-//		DrawDebugLine(GetWorld(), 
-//				PlayerLocation + (Ortho_PlayerToUp * GrabLength),
-//				PlayerLocation + (Ortho_PlayerToUp * GrabLength) + (TowardsWall * 100.f),
-//				FColor::Red, false, 0.f, 0, 4.f);
-//
-//	if (!bHitForwardAbove)
-//	{
-//		PRINT("Do second trace");
-//		float ContingencyLength{ 5.f };
-//		FHitResult HitDownAbove;
-//		const bool  bHitDownAbove = GetWorld()->LineTraceSingleByChannel(HitDownAbove,
-//				PlayerLocation + (Ortho_PlayerToUp * GrabLength) + (TowardsWall * (LengthFromPlayerToWall + ContingencyLength)),
-//				PlayerLocation + (Ortho_PlayerToUp * GrabLength) + (TowardsWall * (LengthFromPlayerToWall + ContingencyLength)) + ((Ortho_PlayerToUp * -1.f) * GrabLength),
-//				ECC_WorldStatic, Params);
-//			DrawDebugLine(GetWorld(), 
-//					PlayerLocation + (Ortho_PlayerToUp * GrabLength) + (TowardsWall * (LengthFromPlayerToWall + ContingencyLength)),
-//					//PlayerLocation + (Ortho_PlayerToUp * LedgeGrab_GrabLength) + (TowardsWall * (LengthFromPlayerToWall + ContingencyLength)) + ((Ortho_PlayerToUp * -1.f) * LedgeGrab_GrabLength),
-//					HitDownAbove.ImpactPoint,
-//					FColor::Blue, false, 0.f, 0, 4.f);
-//			DrawDebugBox(GetWorld(), HitDownAbove.ImpactPoint, FVector(10, 10, 10), FColor::Yellow, false, 0.f, 0, 3.f);
-//			DrawDebugLine(GetWorld(), HitDownAbove.ImpactPoint, FVector(0, 0, 0), FColor::Purple, false, 1.f, 0, 5.f);
-//		
-//		PRINTPAR("ActorLocation: %s", *GetActorLocation().ToString());
-//		PRINTPAR("Impact Point:  %s", *HitDownAbove.ImpactPoint.ToString());
-//
-//		if (bHitDownAbove)
-//		{
-//			PRINT("Found Ledge");
-//			Out_LedgeLocation = HitDownAbove.ImpactPoint;
-//			Out_LengthToLedge 
-//					= HitDownAbove.ImpactPoint 
-//					- (PlayerLocation + (Ortho_PlayerToUp * LedgeGrab_GrabLength) + (TowardsWall * (LengthFromPlayerToWall + ContingencyLength)));
-//
-//			return true;
-//		}
-//	}
-//	return false;
-//}
-
-bool ASteikemannCharacter::DetectLedge(FVector& Out_IntendedPlayerLedgeLocation, const FHitResult& In_WallHit, FHitResult& Out_Ledge, float GrabLength)
+bool ASteikemannCharacter::DetectLedge(FVector& Out_IntendedPlayerLedgeLocation, const FHitResult& In_WallHit, FHitResult& Out_Ledge, float Vertical_GrabLength, float Horizontal_GrabLength)
 {
 	FCollisionQueryParams Params(FName(""), false, this);
 
@@ -979,8 +748,8 @@ bool ASteikemannCharacter::DetectLedge(FVector& Out_IntendedPlayerLedgeLocation,
 	//		Common locations
 	FVector LocationFromWallHit		{ In_WallHit.ImpactPoint + ((In_WallHit.Normal * -1.f) * ActorToWall_Length) };	// What would be the players location from the wall itself
 	
-	FVector FirstTracePoint_Start	{ LocationFromWallHit + (OrthoPlayerToUp * GrabLength) };
-	FVector FirstTracePoint_End		{ LocationFromWallHit + (OrthoPlayerToUp * GrabLength) + (In_WallHit.Normal * (ActorToWall_Length * 2)) };
+	FVector FirstTracePoint_Start	{ LocationFromWallHit + (OrthoPlayerToUp * Vertical_GrabLength) };
+	FVector FirstTracePoint_End		{ LocationFromWallHit + (OrthoPlayerToUp * Vertical_GrabLength) + (In_WallHit.Normal * (ActorToWall_Length * 2)) };
 
 	/* Do a raytrace above the In_WallHit to check if there is a ledge nearby */
 	FHitResult FirstHit{};
@@ -996,7 +765,7 @@ bool ASteikemannCharacter::DetectLedge(FVector& Out_IntendedPlayerLedgeLocation,
 	{
 		float ContingencyLength{ 5.f };	// Trace a little inward of the edge just to make sure that the linetrace hits
 		FVector SecondTracePoint_Start	{ FirstTracePoint_Start + ((In_WallHit.Normal * -1.f) * (FromActorToWall + ContingencyLength)) };
-		FVector SecondTracePoint_End	{ SecondTracePoint_Start + ((OrthoPlayerToUp * -1.f) * GrabLength) };
+		FVector SecondTracePoint_End	{ SecondTracePoint_Start + ((OrthoPlayerToUp * -1.f) * Horizontal_GrabLength) };
 		
 		FHitResult SecondHit{};
 		const bool bSecondHit = GetWorld()->LineTraceSingleByChannel(SecondHit,
@@ -1017,9 +786,9 @@ bool ASteikemannCharacter::DetectLedge(FVector& Out_IntendedPlayerLedgeLocation,
 			/* Find the players intended position in relation to the ledge */
 			Out_IntendedPlayerLedgeLocation =
 				SecondHit.ImpactPoint
-				+ (In_WallHit.Normal * (ActorToWall_Length + (ContingencyLength) + GetCapsuleComponent()->GetUnscaledCapsuleRadius()));			// From Wall
+				+ (In_WallHit.Normal * (ActorToWall_Length + (ContingencyLength) + GetCapsuleComponent()->GetUnscaledCapsuleRadius()));	// From Wall
 				//+ ((OrthoPlayerToUp * -1.f) * LedgeGrab_GrabLength);																				// Downward
-			Out_IntendedPlayerLedgeLocation.Z = SecondHit.ImpactPoint.Z - LedgeGrab_HoldLength;
+			Out_IntendedPlayerLedgeLocation.Z = SecondHit.ImpactPoint.Z - LedgeGrab_HoldLength;											// Downward
 
 			return true;
 		}
@@ -1034,7 +803,7 @@ void ASteikemannCharacter::MoveActorToLedge(float DeltaTime)
 	FVector Position{};
 	if (FVector(GetActorLocation() - PlayersLedgeLocation).Size() > 50.f)
 	{
-		Position = FMath::Lerp(GetActorLocation(), PlayersLedgeLocation, 0.5f);
+		Position = FMath::Lerp(GetActorLocation(), PlayersLedgeLocation, PositionLerpAlpha);
 	}
 	else 
 	{

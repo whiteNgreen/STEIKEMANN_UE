@@ -74,8 +74,6 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		bool bLedgeGrab{};
 
-	//UPROPERTY(BlueprintReadOnly)
-		//float OnLedgeRotation{};
 
 
 #pragma endregion //LedgeGrab

@@ -44,13 +44,10 @@ void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		/* Wall Sticking */
 		bOnWall = SteikeOwner->IsOnWall();
 		bStickingToWall = SteikeOwner->IsStickingToWall();
-		//OnWallRotation = SteikeOwner->InputAngleToForward * -1.f;
 		OnWallRotation = FMath::FInterpTo(OnWallRotation,FMath::Clamp(SteikeOwner->InputAngleToForward * -1.f, -90.f, 90.f), DeltaSeconds, SteikeOwner->OnWall_InterpolationSpeed);
-		//PRINTPAR("OnWallRotation = %f", OnWallRotation);
 
 		/* Ledge Grab */
 		bLedgeGrab = SteikeOwner->IsLedgeGrabbing();
-		bLedgeGrab ? PRINT("anim bLedgeGrab = true") : PRINT("anim bLedgeGrab = true");
 	}
 	else {
 		SteikeOwner = Cast<ASteikemannCharacter>(TryGetPawnOwner());
