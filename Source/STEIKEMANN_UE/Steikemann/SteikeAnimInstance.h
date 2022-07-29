@@ -69,6 +69,17 @@ public:
 
 #pragma endregion //WallSticking
 
+#pragma region LedgeGrab
+
+	UPROPERTY(BlueprintReadOnly)
+		bool bLedgeGrab{};
+
+	//UPROPERTY(BlueprintReadOnly)
+		//float OnLedgeRotation{};
+
+
+#pragma endregion //LedgeGrab
+
 	UPROPERTY(BlueprintReadWrite)
 		bool bGrappling{};
 

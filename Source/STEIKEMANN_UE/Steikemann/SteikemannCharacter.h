@@ -140,10 +140,12 @@ public:
 	FVector InputVector;
 
 #pragma region Slipping
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Variables", meta = (AllowPrivateAcces = "true"))
 	bool bSlipping;
 
 	void DetectPhysMaterial();
+
 #pragma endregion //Slipping
 
 #pragma region Camera
@@ -213,6 +215,109 @@ public:/* ------------------- Basic Movement ------------------- */
 
 #pragma endregion //Basic_Movement
 	
+#pragma region Crouch
+
+	void Start_Crouch();
+	void Stop_Crouch();
+
+#pragma endregion //Crouch
+
+#pragma region OnWall
+	/* How far from the player walls will be detected */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall")
+		float WallDetectionRange		UMETA(DisplayName = "Wall Detection Range") { 200.f };
+	/* If the player is within this length from the wall, WallJump / WallSlide mechanics are enabled. Should NOT be lower then Wall Detection Range */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall")
+		float WallJump_ActivationRange	UMETA(DisplayName = "Detection Length") { 80.f };
+	/* Activate ledgegrab if a wall + ledge is detected and the player is within this range */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall")
+		float LedgeGrab_ActivationRange		UMETA(DisplayName = "Detection Length") { 120.f };
+
+	FVector Wall_Normal{};
+	FHitResult WallHit{};
+	bool DetectNearbyWall();
+	bool bFoundWall{};
+
+	FVector FromActorToWall{};
+	float ActorToWall_Length{};
+
+
+	#pragma region Wall Jump
+		/* ------------------------ Wall Jump --------------------- */
+
+		/* The maximum time the character can hold on to the wall they stick to during wall jump */
+		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall|Wall Jump")
+			float WallJump_MaxStickTimer UMETA(DisplayName = "Max Sticking Time") { 1.f };
+		float WallJump_StickTimer{};
+
+		/* Time until character can stick to wall again */
+		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall|Wall Jump")
+			float WallJump_MaxNonStickTimer UMETA(DisplayName = "No Stick Timer") { 0.5f };
+		float WallJump_NonStickTimer{};
+
+		float InputAngleToForward{};
+
+		bool bStickingToWall{};
+		bool bFoundStickableWall{};
+		bool bCanStickToWall{ true };
+		bool bOnWallActive{ true };
+		FVector StickingSpot{};
+
+		void SetActorLocation_WallJump(float DeltaTime);
+
+		/* Is currently sticking to a wall */
+		bool IsStickingToWall() const;
+		/* Is in contact with a wall and slowing down */
+		bool IsOnWall() const;
+
+		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall|Wall Jump|Animation")
+			float OnWall_InterpolationSpeed{ 10.f };
+
+	#pragma endregion //Wall Jump
+
+	#pragma region LedgeGrab
+
+		UPROPERTY(BlueprintReadOnly)
+			bool bFoundLedge{};
+		UPROPERTY(BlueprintReadOnly)
+			bool bIsLedgeGrabbing{};
+		//UPROPERTY(BlueprintReadOnly)
+			//bool bShouldLedgeGrabNextFrame{};
+
+		bool IsLedgeGrabbing() const { return bIsLedgeGrabbing; }
+
+		void Do_LedgeGrab(float DeltaTime);
+
+		//class UCapsuleComponent* LedgeDetector{ nullptr };
+		//UCapsuleComponent* CreateLedgeDetector(const UCapsuleComponent* RefCapsule);
+
+		//UFUNCTION()
+			//void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	
+		/* How far above ifself the character will be able to grab a ledge */
+		UPROPERTY(EditAnywhere, Category = "Movement|OnWall|LedgeGrag")
+			float LedgeGrab_GrabLength			UMETA(DisplayName = "GrabLength")	{ 100.f };
+		/* How far below from the ledge will the character hold itself */
+		UPROPERTY(EditAnywhere, Category = "Movement|OnWall|LedgeGrag")
+			float LedgeGrab_HoldLength			UMETA(DisplayName = "HoldLength")	{ 100.f };
+
+		FHitResult LedgeHit{};
+		FVector LedgeLocation{};
+		float LengthToLedge{};
+		//bool DetectLedge(FVector& Out_LedgeLocation, FVector& Out_LengthToLedge, const FHitResult& InitialWallImpact, const FVector& PlayerLocation, float GrabLength);
+		FVector PlayersLedgeLocation{};
+		bool DetectLedge(FVector& Out_IntendedPlayerLedgeLocation, const FHitResult& In_WallHit, FHitResult& Out_Ledge, float GrabLength);
+	
+
+		void MoveActorToLedge(float DeltaTime);
+
+	#pragma endregion //LedgeGrab
+
+#pragma endregion //OnWall
+
+
+	void ResetWallJumpAndLedgeGrab();
+
 	void ResetActorRotationPitchAndRoll(float DeltaTime);
 	void RotateActorYawToVector(float DeltaTime, FVector AimVector);
 	void RotateActorPitchToVector(float DeltaTime, FVector AimVector);
@@ -266,44 +371,6 @@ public:/* ------------------- Basic Movement ------------------- */
 
 #pragma endregion //Dash
 
-#pragma region Wall Jump
-	/* ------------------------ Wall Jump --------------------- */
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Wall Jump")
-		float WallJump_DetectionLength UMETA(DisplayName = "Detection Length") { 80.f };
-	/* The maximum time the character can hold on to the wall they stick to during wall jump */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Wall Jump")
-		float WallJump_MaxStickTimer UMETA(DisplayName = "Max Sticking Time") { 1.f };
-	float WallJump_StickTimer{};
-
-	/* Time until character can stick to wall again */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Wall Jump")
-		float WallJump_MaxNonStickTimer UMETA(DisplayName = "No Stick Timer") { 0.5f };
-	float WallJump_NonStickTimer{};
-
-	float InputAngleToForward{};
-
-	bool bStickingToWall{};
-	bool bFoundStickableWall{};
-	bool bCanStickToWall{ true };
-	bool bOnWallActive{ true };
-	FVector StickingSpot{};
-
-	FVector Wall_Normal{};
-	FHitResult WallHit{};
-	bool WallJump_DetectNearbyWall();
-	void SetActorLocation_WallJump(float DeltaTime);
-
-	/* Is currently sticking to a wall */
-	bool IsStickingToWall() const;
-	/* Is in contact with a wall and slowing down */
-	bool IsOnWall() const;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Wall Jump|Animation")
-		float OnWall_InterpolationSpeed{ 10.f };
-
-
-#pragma endregion //Wall Jump
 
 #pragma region GrappleHook
 public: /* ------------------------ Grapplehook --------------------- */

@@ -17,6 +17,7 @@ void USteikemannCharMovementComponent::BeginPlay()
 
 	CharacterOwner_Steikemann = Cast<ASteikemannCharacter>(GetCharacterOwner());
 
+	GroundFriction = CharacterFriction;
 }
 
 void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -25,7 +26,7 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 
 	/* Friction */
 	{
-		GroundFriction = CharacterFriction * Traced_GroundFriction;
+		//GroundFriction = CharacterFriction * Traced_GroundFriction;
 	}
 
 	/* Gravity */
@@ -54,6 +55,10 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 			Velocity = WallJump_VelocityDirection;
 			SetMovementMode(MOVE_Falling);
 		}
+		else if (bLedgeJump) {
+			Velocity.Z = FMath::Max(Velocity.Z, JumpZVelocity * (1.f + LedgeJumpBoost_Multiplier));
+			SetMovementMode(MOVE_Falling);
+		}
 		else {
 			Velocity.Z = FMath::Max(Velocity.Z, JumpZVelocity);
 			SetMovementMode(MOVE_Falling);
@@ -72,11 +77,19 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 	{
 		if (CharacterOwner_Steikemann->bOnWallActive)
 		{
-			if (CharacterOwner_Steikemann->bFoundStickableWall/* && CharacterOwner_Steikemann->bCanStickToWall*/) {
-				bStickingToWall = StickToWall(DeltaTime);
+			if (bLedgeGrab) {
+				//PRINT("bLedgeGrab = true");
+				Update_LedgeGrab();
 			}
-			else /*(!CharacterOwner_Steikemann->bFoundStickableWall && !CharacterOwner_Steikemann->bCanStickToWall)*/ {
-				bWallSlowDown = false;
+			else /*if (!CharacterOwner_Steikemann->bFoundLedge)*/
+			{
+				PRINT("WallJump / WallSliding - CharacterMovementComponent");
+				if (CharacterOwner_Steikemann->bFoundStickableWall /* && CharacterOwner_Steikemann->bCanStickToWall*/) {
+					bStickingToWall = StickToWall(DeltaTime);
+				}
+				else /*(!CharacterOwner_Steikemann->bFoundStickableWall && !CharacterOwner_Steikemann->bCanStickToWall)*/ {
+					bWallSlowDown = false;
+				}
 			}
 		}
 	}
@@ -154,6 +167,8 @@ void USteikemannCharMovementComponent::Update_Dash(float deltaTime)
 
 bool USteikemannCharMovementComponent::WallJump(const FVector& ImpactNormal)
 {
+	PRINTLONG("WallJump");
+
 	FVector InputDirection{ CharacterOwner_Steikemann->InputVector };
 	float InputToForwardAngle{ 0.f };
 	if (InputDirection.SizeSquared() > 0.5f)
@@ -191,7 +206,7 @@ bool USteikemannCharMovementComponent::WallJump(const FVector& ImpactNormal)
 	bWallSlowDown = false;
 	//CharacterOwner_Steikemann->bCanStickToWall = true;
 	CharacterOwner_Steikemann->WallJump_NonStickTimer = 0.f;
-	return false;
+	return true;
 }
 
 bool USteikemannCharMovementComponent::StickToWall(float DeltaTime)
@@ -227,4 +242,30 @@ bool USteikemannCharMovementComponent::ReleaseFromWall(const FVector& ImpactNorm
 	AddImpulse(ReleaseVector * 200.f, true);
 
 	return false;
+}
+
+void USteikemannCharMovementComponent::Start_LedgeGrab()
+{
+	//PRINTLONG("START LEDGEGRAB");
+	bLedgeGrab = true;
+}
+
+void USteikemannCharMovementComponent::Update_LedgeGrab()
+{
+	Velocity *= 0;
+	GravityScale = 0;
+	PRINT("Is LedgeGrabbing");
+}
+
+bool USteikemannCharMovementComponent::LedgeJump(const FVector& LedgeLocation)
+{
+	//LedgeJumpBoost = CharacterOwner_Steikemann->LengthToLedge * LedgeJumpBoost_Multiplier;
+	//LedgeJumpBoost = 100.f;
+	PRINTPARLONG("LedgeJumpLength: %f", JumpZVelocity + LedgeJumpBoost);
+	
+	bLedgeJump = true;
+
+	bLedgeGrab = false;
+	//CharacterOwner_Steikemann->ResetWallJumpAndLedgeGrab();
+	return true;
 }

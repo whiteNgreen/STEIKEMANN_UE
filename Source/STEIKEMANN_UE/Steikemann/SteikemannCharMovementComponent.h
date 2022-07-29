@@ -31,13 +31,16 @@ public:
 
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
+	class ASteikemannCharacter* CharacterOwner_Steikemann{ nullptr };
+	
 	TEnumAsByte<enum ECustomMovementMode> CustomMovementMode;
+
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Friction")
 	float CharacterFriction{ 15.f };
 
-	class ASteikemannCharacter* CharacterOwner_Steikemann{ nullptr };
 
+#pragma region Gravity
 
 	/* Gravity over time while character is in the air */
 		/* The Base gravity scale override */
@@ -49,6 +52,8 @@ public:
 		/* Interpolation speed between gravityscale override and freefall gravity */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|GravityOverride")
 		float GravityScaleOverride_InterpSpeed{ 2.f };
+
+#pragma endregion //Gravity
 
 #pragma region Jump
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Jump")
@@ -107,6 +112,23 @@ public:
 	bool ReleaseFromWall(const FVector& ImpactNormal);
 
 #pragma endregion //Wall Jump
+
+#pragma region LedgeGrab
+
+	bool bLedgeGrab{};
+	bool bLedgeJump{};
+
+
+	UPROPERTY(EditAnywhere, Category = "MyVariables|LedgeJump")
+		float LedgeJumpBoost_Multiplier{ 0.2f };
+	float LedgeJumpBoost{};
+
+	void Start_LedgeGrab();
+	void Update_LedgeGrab();
+
+	bool LedgeJump(const FVector& LedgeLocation);
+
+#pragma endregion //LedgeGrab
 
 public: // Slipping
 	UPROPERTY(BlueprintReadWrite)
