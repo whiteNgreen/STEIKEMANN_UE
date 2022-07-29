@@ -238,6 +238,7 @@ bool USteikemannCharMovementComponent::ReleaseFromWall(const FVector& ImpactNorm
 	bStickingToWall = false;
 	bWallSlowDown = false;
 
+
 	AddImpulse(ReleaseVector * 200.f, true);
 
 	return false;
@@ -271,7 +272,6 @@ bool USteikemannCharMovementComponent::LedgeJump(const FVector& LedgeLocation)
 
 
 	bLedgeJump = true;
-
 	bLedgeGrab = false;
 	return true;
 }

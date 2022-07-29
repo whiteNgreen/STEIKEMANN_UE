@@ -43,6 +43,16 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		bool bOnGround{};
 
+#pragma region Crouch
+
+	UPROPERTY(BlueprintReadOnly)
+		bool bCrouch{};
+	
+	UPROPERTY(BlueprintReadOnly)
+		bool bAnimCrouchSliding{};
+
+#pragma endregion //Croucn
+
 #pragma region Jump
 	
 	/* Checks the Character script if Jump button is pressed */
@@ -75,14 +85,16 @@ public:
 		bool bLedgeGrab{};
 
 
-
 #pragma endregion //LedgeGrab
 
+#pragma region Grappling
 	UPROPERTY(BlueprintReadWrite)
 		bool bGrappling{};
+#pragma endregion //Grappling
 
+#pragma region Dash
 	/* Checks if character is dashing */
 	UPROPERTY(BlueprintReadOnly)
 		bool bDashing{};
-
+#pragma endregion //Dash
 };

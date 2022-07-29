@@ -28,9 +28,13 @@ void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 			HorizontalSpeed = Vel.Size();
 		}
 
-		/* Is Character freefalling in air or on the ground? */
+		/* In Air or on the Ground? */
 		bFalling = SteikeOwner->IsFalling();
 		bOnGround = SteikeOwner->IsOnGround();
+
+		/* Crouch */
+		bCrouch = SteikeOwner->bIsCrouched;
+		bAnimCrouchSliding = SteikeOwner->bCrouchSliding;
 
 		/* Jump */
 		bJumping = SteikeOwner->IsJumping();
@@ -53,3 +57,4 @@ void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		SteikeOwner = Cast<ASteikemannCharacter>(TryGetPawnOwner());
 	}
 }
+

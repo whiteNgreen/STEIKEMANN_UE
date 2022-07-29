@@ -178,10 +178,13 @@ public:/* ------------------- Basic Movement ------------------- */
 	
 #pragma region Crouch
 
+	bool bCrouchSliding{};
+
 	void Start_Crouch();
 	void Stop_Crouch();
 
 #pragma endregion //Crouch
+
 
 #pragma region OnWall
 	/* How far from the player walls will be detected */
@@ -194,14 +197,23 @@ public:/* ------------------- Basic Movement ------------------- */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall")
 		float LedgeGrab_ActivationRange		UMETA(DisplayName = " Ledgegrab Activation Length") { 120.f };
 
+	void Do_OnWallMechanics(float DeltaTime);
+
 	FVector Wall_Normal{};
 	FHitResult WallHit{};
 	bool DetectNearbyWall();
 	bool bFoundWall{};
 
+
 	FVector FromActorToWall{};
 	float ActorToWall_Length{};
 
+	/* The angle between the actors forward axis and the players input during OnWall Mechanics */
+	float InputAngleToForward{};
+	/* The angle between the actors forward axis and the players input during OnWall Mechanics */
+	float InputDotProdToForward{};
+
+	void CalcAngleFromActorForwardToInput();
 
 	#pragma region Wall Jump
 		/* ------------------------ Wall Jump --------------------- */
@@ -215,8 +227,6 @@ public:/* ------------------- Basic Movement ------------------- */
 		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall|Wall Jump")
 			float WallJump_MaxNonStickTimer UMETA(DisplayName = "No Stick Timer") { 0.5f };
 		float WallJump_NonStickTimer{};
-
-		float InputAngleToForward{};
 
 		bool bStickingToWall{};
 		bool bFoundStickableWall{};
@@ -246,9 +256,16 @@ public:/* ------------------- Basic Movement ------------------- */
 			//bool bShouldLedgeGrabNextFrame{};
 
 
+		FHitResult LedgeHit{};
+		FVector LedgeLocation{};
+		float LengthToLedge{};
+		FVector PlayersLedgeLocation{};
+		bool DetectLedge(FVector& Out_IntendedPlayerLedgeLocation, const FHitResult& In_WallHit, FHitResult& Out_Ledge, float Vertical_GrabLength, float Horizontal_GrabLength);
+	
+
 		bool IsLedgeGrabbing() const { return bIsLedgeGrabbing; }
 
-		void Do_LedgeGrab(float DeltaTime);
+		bool Do_LedgeGrab(float DeltaTime);
 
 		/* How far above ifself the character will be able to grab a ledge */
 		//UPROPERTY(EditAnywhere, Category = "Movement|OnWall|LedgeGrab")
@@ -266,14 +283,9 @@ public:/* ------------------- Basic Movement ------------------- */
 		/* The positional interpolation alpha for each frame between the actors location and the intended ledgegrab location */
 		UPROPERTY(EditAnywhere, Category = "Movement|OnWall|LedgeGrab")
 			float PositionLerpAlpha{ 0.5f };
-
-		FHitResult LedgeHit{};
-		FVector LedgeLocation{};
-		float LengthToLedge{};
-		FVector PlayersLedgeLocation{};
-		bool DetectLedge(FVector& Out_IntendedPlayerLedgeLocation, const FHitResult& In_WallHit, FHitResult& Out_Ledge, float Vertical_GrabLength, float Horizontal_GrabLength);
-	
 		void MoveActorToLedge(float DeltaTime);
+
+		void DrawDebugArms(const float& InputAngle);
 
 	#pragma endregion //LedgeGrab
 
