@@ -13,6 +13,7 @@
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraComponent.h"
 #include "Components/AudioComponent.h"
+#include "Components/BoxComponent.h"
 
 
 
@@ -57,14 +58,58 @@ ASteikemannCharacter::ASteikemannCharacter(const FObjectInitializer& ObjectIniti
 	Component_Niagara = CreateDefaultSubobject<UNiagaraComponent>(TEXT("NiagaraComponent"));
 	Component_Niagara->SetupAttachment(RootComponent);
 
+	AttackCollider = CreateDefaultSubobject<UBoxComponent>(TEXT("AttackCollider"));
+	AttackCollider->SetupAttachment(RootComponent);
+	AttackCollider->SetGenerateOverlapEvents(false);
+}
 
+// Called when the game starts or when spawned
+void ASteikemannCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	MovementComponent = Cast<USteikemannCharMovementComponent>(GetCharacterMovement());
+
+
+	/* Creating Niagara Compnents */
+	{
+		NiComp_CrouchSlide = CreateNiagaraComponent("Niagara_CrouchSlide", RootComponent, FAttachmentTransformRules::SnapToTargetIncludingScale);
+			NiComp_CrouchSlide->bAutoActivate = false;
+			if (NS_CrouchSlide) { NiComp_CrouchSlide->SetAsset(NS_CrouchSlide); }
+
+
+	}
+	
+	/* Setting Variables */
+	{
+		GrappleDrag_PreLaunch_Timer = GrappleDrag_PreLaunch_Timer_Length;
+
+	}
+
+	/* Attack Collider */
+	{
+		AttackCollider->OnComponentBeginOverlap.AddDynamic(this, &ASteikemannCharacter::OnAttackColliderBeginOverlap);
+		AttackColliderScale = AttackCollider->GetRelativeScale3D();
+		AttackCollider->SetRelativeScale3D(FVector(0, 0, 0));
+	}
+}
+
+UNiagaraComponent* ASteikemannCharacter::CreateNiagaraComponent(FName Name, USceneComponent* Parent, FAttachmentTransformRules AttachmentRule, bool bTemp /*= false*/)
+{
+	UNiagaraComponent* TempNiagaraComp = NewObject<UNiagaraComponent>(this, Name);
+	TempNiagaraComp->AttachToComponent(Parent, AttachmentRule);
+	TempNiagaraComp->RegisterComponent();
+
+	if (bTemp) { TempNiagaraComponents.Add(TempNiagaraComp); } // Adding as temp comp
+
+	return TempNiagaraComp;
 }
 
 void ASteikemannCharacter::NS_Land_Implementation(const FHitResult& Hit)
 {
 	/* Play Landing particle effect */
 	float Velocity = GetVelocity().Size();
-	UNiagaraComponent* NiagaraPlayer;
+	UNiagaraComponent* NiagaraPlayer{ nullptr };
 
 	if (Component_Niagara->IsComplete())
 	{
@@ -74,11 +119,7 @@ void ASteikemannCharacter::NS_Land_Implementation(const FHitResult& Hit)
 	{
 		PRINTLONG("Niagara Component not yet completed with its task. Creating temp Niagara Component.");
 
-		UNiagaraComponent* TempNiagaraLand = NewObject<UNiagaraComponent>(this, "Niagara_Land");
-		TempNiagaraLand->AttachToComponent(RootComponent, FAttachmentTransformRules::SnapToTargetIncludingScale);
-		TempNiagaraLand->RegisterComponent();
-		TempNiagaraComponents.Add(TempNiagaraLand);
-
+		UNiagaraComponent* TempNiagaraLand = CreateNiagaraComponent("Niagara_Land", RootComponent, FAttachmentTransformRules::SnapToTargetIncludingScale, true);
 		NiagaraPlayer = TempNiagaraLand;
 	}
 	
@@ -89,23 +130,6 @@ void ASteikemannCharacter::NS_Land_Implementation(const FHitResult& Hit)
 	NiagaraPlayer->Activate(true);
 }
 
-
-
-// Called when the game starts or when spawned
-void ASteikemannCharacter::BeginPlay()
-{
-	Super::BeginPlay();
-
-	
-	//APlayerController* player = UGameplayStatics::GetPlayerController(GetWorld(), 0);
-	//player->EnableInput(player);
-
-	MovementComponent = Cast<USteikemannCharMovementComponent>(GetCharacterMovement());
-
-	GrappleDrag_PreLaunch_Timer = GrappleDrag_PreLaunch_Timer_Length;
-
-
-}
 
 // Called every frame
 void ASteikemannCharacter::Tick(float DeltaTime)
@@ -229,12 +253,10 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		}
 	}
 
-
 	
 	/* Checking TempNiagaraComponents array if they are completed, then deleting them if they are */
 	if (TempNiagaraComponents.Num() > 0)
 	{
-		PRINT("Cleaning TempNiagaraComponents");
 		for (int i = 0; i < TempNiagaraComponents.Num(); i++)
 		{
 			if (TempNiagaraComponents[i]->IsComplete())
@@ -301,7 +323,9 @@ void ASteikemannCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	PlayerInputComponent->BindAction("GrappleHook_Drag", IE_Pressed, this,	  &ASteikemannCharacter::Start_Grapple_Drag);
 	PlayerInputComponent->BindAction("GrappleHook_Drag", IE_Released, this,	  &ASteikemannCharacter::Stop_Grapple_Drag);
 
-
+	/* Attack - SmackAttack */
+	PlayerInputComponent->BindAction("SmackAttack", IE_Pressed, this, &ASteikemannCharacter::Click_Attack);
+	PlayerInputComponent->BindAction("SmackAttack", IE_Released, this, &ASteikemannCharacter::UnClick_Attack);
 }
 
 void ASteikemannCharacter::Start_Grapple_Swing()
@@ -396,6 +420,7 @@ void ASteikemannCharacter::MoveForward(float value)
 
 	if (IsStickingToWall()) { return; }
 	if (IsLedgeGrabbing()) { return; }
+	if (IsCrouchSliding()) { return; }
 
 	float movement = value;
 	if (bSlipping)
@@ -421,6 +446,7 @@ void ASteikemannCharacter::MoveRight(float value)
 
 	if (IsStickingToWall()) { return; }
 	if (IsLedgeGrabbing())	{ return; }
+	if (IsCrouchSliding()) { return; }
 
 	float movement = value;
 	if (bSlipping)
@@ -593,10 +619,21 @@ bool ASteikemannCharacter::IsOnGround() const
 
 void ASteikemannCharacter::Start_Crouch()
 {
-	
+	bPressedCrouch = true;
+
 	if (MovementComponent->IsWalking())
 	{
+		/* Crouch Slide */
+		if (GetVelocity().Size() > Crouch_WalkToSlideSpeed && bCanCrouchSlide && !IsCrouchSliding() && !IsCrouchWalking())	// Start Crouch Slide
+		{
+			Start_CrouchSliding();
+			return;
+		}
+
+		/* Crouch */
 		PRINTLONG("Crouch");
+		
+		bIsCrouchWalking = true;
 		GetCapsuleComponent()->SetCapsuleRadius(25.f);	// Temporary solution for cube to crouch
 
 		Crouch();
@@ -605,15 +642,56 @@ void ASteikemannCharacter::Start_Crouch()
 
 void ASteikemannCharacter::Stop_Crouch()
 {
+	bPressedCrouch = false;
 
-	if (bIsCrouched)
+	if (bIsCrouchWalking)
 	{
 		PRINTLONG("UnCrouch");
-		const float UnScaledRadius = GetCapsuleComponent()->GetUnscaledCapsuleRadius();
-		GetCapsuleComponent()->SetCapsuleRadius(UnScaledRadius);
+
+		bIsCrouchWalking = false;
 
 		UnCrouch();
 	}
+}
+
+void ASteikemannCharacter::Start_CrouchSliding()
+{
+	if (!bCrouchSliding)
+	{
+		PRINTLONG("Start CrouchSliding");
+		
+		bCrouchSliding = true;
+
+		GetCapsuleComponent()->SetCapsuleRadius(25.f);	// Temporary solution for cube to crouch
+
+		Crouch();
+
+		NiComp_CrouchSlide->SetNiagaraVariableVec3("User.M_Velocity", GetVelocity() * -1.f);
+		NiComp_CrouchSlide->Activate();
+
+		MovementComponent->Initiate_CrouchSlide(InputVector);
+
+		GetWorldTimerManager().SetTimer(CrouchSlide_TimerHandle, this, &ASteikemannCharacter::Stop_CrouchSliding, CrouchSlide_Time);
+	}
+}
+
+void ASteikemannCharacter::Stop_CrouchSliding()
+{
+	PRINTLONG("STOP CrouchSliding");
+
+	bCrouchSliding = false;
+	bCanCrouchSlide = false;
+	NiComp_CrouchSlide->Deactivate();
+	GetWorldTimerManager().SetTimer(Post_CrouchSlide_TimerHandle, this, &ASteikemannCharacter::Reset_CrouchSliding, Post_CrouchSlide_Time);
+
+	if (bPressedCrouch) { Start_Crouch(); return; }	// If player is still holding the crouch button, move over to crouch movement
+
+	UnCrouch();
+}
+
+void ASteikemannCharacter::Reset_CrouchSliding()
+{
+	bCanCrouchSlide = true;
 }
 
 
@@ -626,7 +704,7 @@ bool ASteikemannCharacter::DetectLedge(FVector& Out_IntendedPlayerLedgeLocation,
 
 	//		Common locations
 	FVector LocationFromWallHit	{ In_WallHit.ImpactPoint + (In_WallHit.Normal * (GetCapsuleComponent()->GetUnscaledCapsuleRadius() + 5.f))};	// What would be the players location from the wall itself
-		DrawDebugBox(GetWorld(), LocationFromWallHit, FVector(10), FColor::White, false, 0.f, 1, 3.f);
+		//DrawDebugBox(GetWorld(), LocationFromWallHit, FVector(10), FColor::White, false, 0.f, 1, 3.f);
 
 	FVector FirstTracePoint_Start{ LocationFromWallHit + (OrthoPlayerToUp * Vertical_GrabLength) };
 	FVector FirstTracePoint_End	 { LocationFromWallHit + (OrthoPlayerToUp * Vertical_GrabLength) + (In_WallHit.Normal * -1.f * Horizontal_GrabLength) };
@@ -637,8 +715,6 @@ bool ASteikemannCharacter::DetectLedge(FVector& Out_IntendedPlayerLedgeLocation,
 		FirstTracePoint_Start,
 		FirstTracePoint_End,	
 		ECC_Visibility, Params);
-
-	DrawDebugLine(GetWorld(), FirstTracePoint_Start, FirstTracePoint_End, FColor::Red, false, 0.f, 0, 4.f);
 
 
 	/* Potential ledge above */
@@ -653,8 +729,6 @@ bool ASteikemannCharacter::DetectLedge(FVector& Out_IntendedPlayerLedgeLocation,
 			SecondTracePoint_Start,
 			SecondTracePoint_End,
 			ECC_Visibility, Params);
-
-		DrawDebugLine(GetWorld(), SecondTracePoint_Start, SecondTracePoint_End, FColor::Blue, false, 0.f, 0, 4.f);
 
 
 		/* Found Ledge */
@@ -673,8 +747,8 @@ bool ASteikemannCharacter::DetectLedge(FVector& Out_IntendedPlayerLedgeLocation,
 			
 			/* Draw Permanent DebugLines  */
 			{
-				DrawDebugLine(GetWorld(), FirstTracePoint_Start,	FirstTracePoint_End,	FColor::Red,	true, 0.f, 0, 4.f);
-				DrawDebugLine(GetWorld(), SecondTracePoint_Start,	SecondTracePoint_End,	FColor::Blue,	true, 0.f, 0, 4.f);
+				DrawDebugLine(GetWorld(), FirstTracePoint_Start,	FirstTracePoint_End,	FColor::Red,	false, 1.f, 0, 4.f);
+				DrawDebugLine(GetWorld(), SecondTracePoint_Start,	SecondTracePoint_End,	FColor::Blue,	false, 1.f, 0, 4.f);
 			}
 
 			return true;
@@ -1128,7 +1202,7 @@ bool ASteikemannCharacter::DetectNearbyWall()
 		LinetraceVector = LinetraceVector.RotateAngleAxis(45.f, FVector(0, 0, 1));
 		for (int i = 0; i < 4; i++)
 		{
-			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (LinetraceVector * WallDetectionRange), FColor::Red, false, 0.f, 0, 4.f);
+				DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (LinetraceVector * WallDetectionRange), FColor::Red, false, 0.f, 0, 4.f);
 			bHit = GetWorld()->LineTraceSingleByChannel(WallHit, GetActorLocation(), GetActorLocation() + (LinetraceVector * WallDetectionRange), ECC_Visibility, Params);
 			LinetraceVector = LinetraceVector.RotateAngleAxis(90, FVector(0, 0, 1));
 			if (bHit) {
@@ -1382,6 +1456,66 @@ bool ASteikemannCharacter::IsGrappling() const
 {
 	return bGrapple_Swing || bGrapple_PreLaunch || bGrapple_Launch;
 }
+
+void ASteikemannCharacter::Click_Attack()
+{
+	if (!bAttackPress) 
+	{
+		bAttackPress = true;
+		
+		if (!bAttacking)
+		{
+			bAttacking = true;
+
+			/* Selve angrepet*/
+			{
+				PRINTLONG("Attacking");
+					//AttackCollider->SetVisibility(true);	// For Debugging
+					AttackCollider->SetHiddenInGame(false);	// For Debugging
+				AttackCollider->SetGenerateOverlapEvents(true);
+				AttackCollider->SetRelativeScale3D(AttackColliderScale);
+				GetWorldTimerManager().SetTimer(AttackTimerHandle, this, &ASteikemannCharacter::Stop_Attack, TimeBetweenAttacks, false);
+			}
+		}
+	}
+}
+
+void ASteikemannCharacter::UnClick_Attack()
+{
+	bAttackPress = false;
+}
+
+void ASteikemannCharacter::Stop_Attack()
+{
+	bAttacking = false;
+		//AttackCollider->SetVisibility(false);	// For Debugging
+		AttackCollider->SetHiddenInGame(true);	// For Debugging
+	AttackCollider->SetGenerateOverlapEvents(false);
+	AttackCollider->SetRelativeScale3D(FVector(0, 0, 0));
+
+}
+
+void ASteikemannCharacter::OnAttackColliderBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (OtherActor != this)
+	{
+		PRINTLONG("Attack: Colliding");
+		PRINTPARLONG("Attacking: %s", *OtherActor->GetName());
+		if (OtherActor->GetClass()->ImplementsInterface(UAttackInterface::StaticClass())) {
+			PRINTLONG("OtherActor has Interface Attack");
+			IAttackInterface::Execute_SmackAttack(OtherActor);
+		}
+		else {
+			PRINTLONG("OtherActor does NOT have Interface Attack");
+		}
+	}
+}
+
+void ASteikemannCharacter::ISmackAttack_Pure()
+{
+}
+
+
 
 void ASteikemannCharacter::GrappleHook_Drag_RotateCamera(float DeltaTime)
 {

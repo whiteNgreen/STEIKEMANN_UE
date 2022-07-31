@@ -55,6 +55,18 @@ public:
 
 #pragma endregion //Gravity
 
+#pragma region Crouch
+
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Crouch|CrouchSlide")
+
+	float CrouchSlideSpeed{};
+	FVector CrouchSlideDirection{};
+
+	void Initiate_CrouchSlide(const FVector& InputDirection);
+	void Do_CrouchSlide(float DeltaTime);
+
+#pragma endregion //Crouch
+
 #pragma region Jump
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Jump")
 		bool bJumping{};

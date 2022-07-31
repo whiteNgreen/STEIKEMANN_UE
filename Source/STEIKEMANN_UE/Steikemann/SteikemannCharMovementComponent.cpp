@@ -27,6 +27,7 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 	/* Friction */
 	{
 		//GroundFriction = CharacterFriction * Traced_GroundFriction;
+		GroundFriction = CharacterFriction;
 	}
 
 	/* Gravity */
@@ -34,19 +35,29 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 	{
 		GravityScale = FMath::FInterpTo(GravityScale, GravityScaleOverride, DeltaTime, GravityScaleOverride_InterpSpeed);
 	}
+
 	else if (CharacterOwner_Steikemann->IsDashing()) 
 	{
 		GravityScale = 0.f;
 	}
+
 	else if (bStickingToWall || bWallSlowDown)
 	{
 		GravityScale = FMath::FInterpTo(GravityScale, 1.f, GetWorld()->GetDeltaSeconds(), GravityScaleOverride_InterpSpeed);
 	}
+
 	else{
 		GravityScale = FMath::FInterpTo(GravityScale, GravityScaleOverride_Freefall, DeltaTime, GravityScaleOverride_InterpSpeed);
 	}
 	//PRINTPAR("GravityScale: %f", GravityScale);
 
+
+	/* Crouch */
+	if (CharacterOwner_Steikemann->IsCrouchSliding()) {
+		Do_CrouchSlide(DeltaTime);
+		GroundFriction = 0.f;
+	}
+	PRINTPAR("Velocity: %f", Velocity.Size());
 
 	/* Jump velocity */
 	if (CharacterOwner_Steikemann->IsJumping() /*CharacterOwner_Steikemann->bAddJumpVelocity*/)
@@ -94,6 +105,28 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 	}
 }
 
+
+void USteikemannCharMovementComponent::Initiate_CrouchSlide(const FVector& InputDirection)
+{
+	CrouchSlideDirection = InputDirection;
+	CrouchSlideSpeed = CharacterOwner_Steikemann->CrouchSlideSpeed;
+}
+
+void USteikemannCharMovementComponent::Do_CrouchSlide(float DeltaTime)
+{
+	float InterpSpeed = 1.f / CharacterOwner_Steikemann->CrouchSlide_Time;
+	//CrouchSlideSpeed = FMath::InterpEaseIn()
+	CrouchSlideSpeed = FMath::FInterpTo(CrouchSlideSpeed, CrouchSlideSpeed * CharacterOwner_Steikemann->EndCrouchSlideSpeedMultiplier, DeltaTime, InterpSpeed);
+
+	FVector Slide = CrouchSlideDirection * CrouchSlideSpeed;
+	PRINTPAR("CrouchSlideSpeed: %f", CrouchSlideSpeed);
+
+	/* Setting Velocity in only X and Y to still make gravity have an effect */
+	{
+		Velocity.X = Slide.X;
+		Velocity.Y = Slide.Y;
+	}
+}
 
 bool USteikemannCharMovementComponent::DoJump(bool bReplayingMoves)
 {

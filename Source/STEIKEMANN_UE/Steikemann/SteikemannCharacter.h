@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "../Interfaces/GrappleTargetInterface.h"
+#include "../Interfaces/AttackInterface.h"
 #include "../DebugMacros.h"
 #include "Camera/CameraShakeBase.h"
 #include "SteikeAnimInstance.h"
@@ -20,7 +21,8 @@ class USoundBase;
 
 UCLASS()
 class STEIKEMANN_UE_API ASteikemannCharacter : public ACharacter, 
-	public IGrappleTargetInterface
+	public IGrappleTargetInterface,
+	public IAttackInterface
 {
 	GENERATED_BODY()
 
@@ -56,6 +58,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Particle Effects")
 		UNiagaraComponent* Component_Niagara{ nullptr };
 
+	/* Create tmp niagara component */
+	UNiagaraComponent* CreateNiagaraComponent(FName Name, USceneComponent* Parent, FAttachmentTransformRules AttachmentRule, bool bTemp = false);
+
 	/* Temporary niagara components created when main component is busy */
 	TArray<UNiagaraComponent*> TempNiagaraComponents;
 
@@ -85,6 +90,13 @@ public:
 			float NS_WallSlide_ParticleAmount	UMETA(DisplayName = "WallSlide ParticleAmount") { 1000.f };
 	#pragma endregion //OnWall
 
+	#pragma region Crouch
+		UNiagaraComponent* NiComp_CrouchSlide{ nullptr };
+
+		UPROPERTY(EditAnywhere, Category = "Particle Effects|Crouch")
+			UNiagaraSystem* NS_CrouchSlide{ nullptr };
+
+	#pragma endregion //Crouch
 
 #pragma endregion //ParticleEffects
 
@@ -176,14 +188,46 @@ public:/* ------------------- Basic Movement ------------------- */
 
 #pragma endregion //Basic_Movement
 	
-#pragma region Crouch
+	/* Includes all actions related to the crouch button */
+#pragma region Crouch		
 
-	bool bCrouchSliding{};
+	bool bPressedCrouch{};
+	bool bIsCrouchWalking{};
+	bool IsCrouchWalking() const { return bIsCrouchWalking; }
 
+	/* Regular Crouch */
+	/* Crouch slide will only start if the player is walking with a speed above this */
+	UPROPERTY(EditAnywhere, Category = "Movement|Crouch")
+		float Crouch_WalkToSlideSpeed  UMETA(DisplayName = "Walk To Crouch Slide Speed") { 400.f };
 	void Start_Crouch();
 	void Stop_Crouch();
 
-#pragma endregion //Crouch
+	/* Crouch Slide */
+	/* How long will the crouch slide last */
+	UPROPERTY(EditAnywhere, Category = "Movement|Crouch")
+		float CrouchSlide_Time  UMETA(DisplayName = "Crouch Slide Time") { 0.5f };
+	/* How long before a new crouchslide can begin */
+	UPROPERTY(EditAnywhere, Category = "Movement|Crouch")
+		float Post_CrouchSlide_Time  UMETA(DisplayName = "Crouch Slide Wait Time") { 0.5f };
+	/* Initial CrouchSlide Speed */
+	UPROPERTY(EditAnywhere, Category = "Movement|Crouch")
+		float CrouchSlideSpeed{ 1000.f };
+	/* The End CrouchSlide Speed will be multiplied by this value */
+	UPROPERTY(EditAnywhere, Category = "Movement|Crouch")
+		float EndCrouchSlideSpeedMultiplier{ 0.5f };
+
+	bool bCanCrouchSlide{ true };
+	bool bCrouchSliding{};
+	bool IsCrouchSliding() const { return bCrouchSliding; }
+
+	FTimerHandle CrouchSlide_TimerHandle{};
+	FTimerHandle Post_CrouchSlide_TimerHandle{};
+
+	void Start_CrouchSliding();
+	void Stop_CrouchSliding();
+	void Reset_CrouchSliding();
+
+#pragma endregion //Crouch	
 
 
 #pragma region OnWall
@@ -464,4 +508,29 @@ public: /* ------------------------ Grapplehook --------------------- */
 	UFUNCTION(BlueprintCallable)
 	bool IsGrappling() const;
 #pragma endregion //GrappleHook
+
+#pragma region SmackAttack
+
+	bool bAttackPress{};
+	bool bAttacking{};
+
+	float TimeBetweenAttacks{ 1.f };
+
+	FTimerHandle AttackTimerHandle{};
+
+	FVector AttackColliderScale{};
+
+	void Click_Attack();
+	void UnClick_Attack();
+	void Stop_Attack();
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Attack")
+		class UBoxComponent* AttackCollider{ nullptr };
+
+	UFUNCTION()
+		void OnAttackColliderBeginOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	void ISmackAttack_Pure() override;
+
+#pragma endregion //SmackAttack
 };

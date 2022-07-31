@@ -33,7 +33,7 @@ void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		bOnGround = SteikeOwner->IsOnGround();
 
 		/* Crouch */
-		bCrouch = SteikeOwner->bIsCrouched;
+		bCrouch = SteikeOwner->bIsCrouchWalking;
 		bAnimCrouchSliding = SteikeOwner->bCrouchSliding;
 
 		/* Jump */
