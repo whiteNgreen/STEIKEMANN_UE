@@ -25,7 +25,10 @@ public:
 
 	UFUNCTION(BlueprintNativeEvent, Category = "Attack|SmackAttack")
 		void SmackAttack();
-	virtual void ISmackAttack_Pure() = 0;
+	virtual void Do_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength) = 0;
+	virtual void Recieve_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength) = 0;
+	virtual bool GetCanBeSmackAttacked() const = 0;
+	virtual void ResetCanBeSmackAttacked() = 0;
 
 
 };

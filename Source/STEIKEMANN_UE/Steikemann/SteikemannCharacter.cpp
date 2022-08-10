@@ -1459,7 +1459,7 @@ bool ASteikemannCharacter::IsGrappling() const
 
 void ASteikemannCharacter::Click_Attack()
 {
-	if (!bAttackPress) 
+	if (!bAttackPress && bCanAttack) 
 	{
 		bAttackPress = true;
 		
@@ -1470,11 +1470,13 @@ void ASteikemannCharacter::Click_Attack()
 			/* Selve angrepet*/
 			{
 				PRINTLONG("Attacking");
-					//AttackCollider->SetVisibility(true);	// For Debugging
+				bCanAttack = false;
 					AttackCollider->SetHiddenInGame(false);	// For Debugging
 				AttackCollider->SetGenerateOverlapEvents(true);
 				AttackCollider->SetRelativeScale3D(AttackColliderScale);
-				GetWorldTimerManager().SetTimer(AttackTimerHandle, this, &ASteikemannCharacter::Stop_Attack, TimeBetweenAttacks, false);
+
+				GetWorldTimerManager().SetTimer(THandle_AttackDuration, this, &ASteikemannCharacter::Deactivate_Attack, TimeAttackIsActive, false);
+				GetWorldTimerManager().SetTimer(THandle_AttackReset,	this, &ASteikemannCharacter::Stop_Attack,		TimeBetweenAttacks, false);
 			}
 		}
 	}
@@ -1487,31 +1489,48 @@ void ASteikemannCharacter::UnClick_Attack()
 
 void ASteikemannCharacter::Stop_Attack()
 {
+	PRINTLONG("Can attack again");
+	bCanAttack = true;
+}
+
+void ASteikemannCharacter::Deactivate_Attack()
+{
+	PRINTLONG("Deactivate Attack");
 	bAttacking = false;
-		//AttackCollider->SetVisibility(false);	// For Debugging
-		AttackCollider->SetHiddenInGame(true);	// For Debugging
+	AttackCollider->SetHiddenInGame(true);	// For Debugging
 	AttackCollider->SetGenerateOverlapEvents(false);
 	AttackCollider->SetRelativeScale3D(FVector(0, 0, 0));
-
 }
 
 void ASteikemannCharacter::OnAttackColliderBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	if (OtherActor != this)
 	{
-		PRINTLONG("Attack: Colliding");
-		PRINTPARLONG("Attacking: %s", *OtherActor->GetName());
-		if (OtherActor->GetClass()->ImplementsInterface(UAttackInterface::StaticClass())) {
-			PRINTLONG("OtherActor has Interface Attack");
-			IAttackInterface::Execute_SmackAttack(OtherActor);
-		}
-		else {
-			PRINTLONG("OtherActor does NOT have Interface Attack");
+
+		IAttackInterface* Interface = Cast<IAttackInterface>(OtherActor);
+		if (Interface) {
+			// Burde sjekke om den kan bli angrepet i det hele tatt. 
+			const bool b{ Interface->GetCanBeSmackAttacked() };
+			
+			if (b)
+			{
+				//PRINTPARLONG("Attacking: %s", *OtherActor->GetName());
+
+				FVector Direction{ OtherActor->GetActorLocation() - GetActorLocation() };
+				Direction = Direction.GetSafeNormal2D();
+				float angle = FMath::DegreesToRadians(45.f);
+				Direction = (cosf(angle) * Direction) + (sinf(angle) * FVector::UpVector);
+				Interface->Recieve_SmackAttack_Pure(Direction, 1000.f);
+			}
 		}
 	}
 }
 
-void ASteikemannCharacter::ISmackAttack_Pure()
+void ASteikemannCharacter::Do_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength)
+{
+}
+
+void ASteikemannCharacter::Recieve_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength)
 {
 }
 

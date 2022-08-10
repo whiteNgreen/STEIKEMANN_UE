@@ -31,11 +31,12 @@ public:
 	ASteikemannCharacter(const FObjectInitializer& ObjectInitializer);
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
-	class USpringArmComponent* CameraBoom{ nullptr };
+		class USpringArmComponent* CameraBoom{ nullptr };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
-	class UCameraComponent* Camera{ nullptr };
+		class UCameraComponent* Camera{ nullptr };
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
-	class UPoseableMeshComponent* GrappleHookMesh{ nullptr };
+		class UPoseableMeshComponent* GrappleHookMesh{ nullptr };
 
 
 	TWeakObjectPtr<class USteikemannCharMovementComponent> MovementComponent;
@@ -512,17 +513,23 @@ public: /* ------------------------ Grapplehook --------------------- */
 #pragma region SmackAttack
 
 	bool bAttackPress{};
+	bool bCanAttack{ true };
 	bool bAttacking{};
 
-	float TimeBetweenAttacks{ 1.f };
+	bool bCanBeSmackAttacked{ true };
 
-	FTimerHandle AttackTimerHandle{};
+	float TimeAttackIsActive{ 0.2f };
+	float TimeBetweenAttacks{ 0.5f };
+
+	FTimerHandle THandle_AttackDuration{};
+	FTimerHandle THandle_AttackReset{};
 
 	FVector AttackColliderScale{};
 
 	void Click_Attack();
 	void UnClick_Attack();
 	void Stop_Attack();
+	void Deactivate_Attack();
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Attack")
 		class UBoxComponent* AttackCollider{ nullptr };
@@ -530,7 +537,11 @@ public: /* ------------------------ Grapplehook --------------------- */
 	UFUNCTION()
 		void OnAttackColliderBeginOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
-	void ISmackAttack_Pure() override;
+	void Do_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength) override;
+	void Recieve_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength) override;
+
+	bool GetCanBeSmackAttacked() const override { return bCanBeSmackAttacked; }
+	void ResetCanBeSmackAttacked() override { bCanBeSmackAttacked = true; }
 
 #pragma endregion //SmackAttack
 };
