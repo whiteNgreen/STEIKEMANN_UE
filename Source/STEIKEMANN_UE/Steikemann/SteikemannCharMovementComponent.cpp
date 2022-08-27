@@ -40,7 +40,11 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 	{
 		GravityScale = 0.f;
 	}
-
+	else if (bGP_PreLaunch)
+	{
+		GravityScale = 0.f;
+		Velocity *= 0.f;
+	}
 	else if (bStickingToWall || bWallSlowDown)
 	{
 		GravityScale = FMath::FInterpTo(GravityScale, 1.f, GetWorld()->GetDeltaSeconds(), GravityScaleOverride_InterpSpeed);
@@ -49,7 +53,7 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 	else{
 		GravityScale = FMath::FInterpTo(GravityScale, GravityScaleOverride_Freefall, DeltaTime, GravityScaleOverride_InterpSpeed);
 	}
-	//PRINTPAR("GravityScale: %f", GravityScale);
+	PRINTPAR("GravityScale: %f", GravityScale);
 
 
 	/* Crouch */
@@ -307,4 +311,16 @@ bool USteikemannCharMovementComponent::LedgeJump(const FVector& LedgeLocation)
 	bLedgeJump = true;
 	bLedgeGrab = false;
 	return true;
+}
+
+void USteikemannCharMovementComponent::GP_PreLaunch()
+{
+	bGP_PreLaunch = true;
+}
+
+void USteikemannCharMovementComponent::GP_Launch()
+{
+	bGP_PreLaunch = false;
+	const float LaunchStrength = CharacterOwner_Steikemann->GP_LaunchStrength;
+	AddImpulse(FVector(0, 0, -LaunchStrength), true);
 }

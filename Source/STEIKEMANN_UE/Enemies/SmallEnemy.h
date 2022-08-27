@@ -42,9 +42,11 @@ public:
 	void WaitBeforeNewDamage(FTimerHandle TimerHandle, float Time);	
 	
 
-	void Do_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength) override;	// Getting SmackAttacked
-	void Recieve_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength) override;
+	void Do_SmackAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override;	// Getting SmackAttacked
+	void Receive_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength) override;
 	bool GetCanBeSmackAttacked() const override { return bCanBeSmackAttacked; }
 	void ResetCanBeSmackAttacked() override { bCanBeSmackAttacked = true; }
 
+	void Do_GroundPound_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override {}
+	void Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength) override;
 };

@@ -510,7 +510,8 @@ public: /* ------------------------ Grapplehook --------------------- */
 	bool IsGrappling() const;
 #pragma endregion //GrappleHook
 
-#pragma region SmackAttack
+#pragma region Attacks
+	#pragma region SmackAttack
 
 	bool bAttackPress{};
 	bool bCanAttack{ true };
@@ -518,8 +519,10 @@ public: /* ------------------------ Grapplehook --------------------- */
 
 	bool bCanBeSmackAttacked{ true };
 
-	float TimeAttackIsActive{ 0.2f };
-	float TimeBetweenAttacks{ 0.5f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|SmackAttack")
+		float TimeAttackIsActive{ 0.2f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|SmackAttack")
+		float TimeBetweenAttacks{ 0.5f };
 
 	FTimerHandle THandle_AttackDuration{};
 	FTimerHandle THandle_AttackReset{};
@@ -537,11 +540,61 @@ public: /* ------------------------ Grapplehook --------------------- */
 	UFUNCTION()
 		void OnAttackColliderBeginOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
-	void Do_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength) override;
-	void Recieve_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength) override;
+	//void Do_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength) override;
+	void Do_SmackAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override;
+	void Receive_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength) override;
 
 	bool GetCanBeSmackAttacked() const override { return bCanBeSmackAttacked; }
 	void ResetCanBeSmackAttacked() override { bCanBeSmackAttacked = true; }
 
-#pragma endregion //SmackAttack
+	#pragma endregion //SmackAttack
+
+	#pragma region GroundPound
+
+	bool bGroundPoundPress{};
+	bool bCanGroundPound{ true };
+	bool bIsGroundPounding{};
+
+	void Click_GroundPound();
+	void UnClick_GroundPound();
+
+	/* Movement */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GroundPound")
+		float GP_PrePoundAirtime{ 0.3f };
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|GroundPound")
+		float GP_LaunchStrength{ 2500.f };
+	FTimerHandle THandle_GPHangTime;
+
+
+	void Launch_GroundPound();
+
+	/* Collider */
+	/* Time it takes for the ground pound collider to expand to max size */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GroundPound")
+		float GroundPoundExpandTime{ 0.5f };
+	/* The size of the ground pound hitbox's radius */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GroundPound")
+		float MaxGroundPoundRadius{ 300.f };
+	float CurrentGroundPoundColliderSize{};
+
+	FTimerHandle THandle_GPExpandTime{};
+	FTimerHandle THandle_GPReset{};
+
+	void Start_GroundPound();
+	void Deactivate_GroundPound();
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+		class USphereComponent* GroundPoundCollider{ nullptr };
+
+
+	UFUNCTION(BlueprintCallable)
+		void GroundPoundLand(const FHitResult& Hit);
+	void ExpandGroundPoundCollider(float DeltaTime);
+
+	void Do_GroundPound_Pure(IAttackInterface* OtherInterface, AActor* OtherActor);
+	void Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength);
+
+	#pragma endregion //GroundPound
+
+#pragma endregion //Attacks
 };

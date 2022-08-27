@@ -147,6 +147,12 @@ public:
 
 #pragma endregion //LedgeGrab
 
+#pragma region GroundPound
+	bool bGP_PreLaunch{};
+	void GP_PreLaunch();
+	void GP_Launch();
+#pragma endregion //GroundPound
+
 public: // Slipping
 	UPROPERTY(BlueprintReadWrite)
 	float Traced_GroundFriction;
