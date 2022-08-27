@@ -14,6 +14,7 @@
 #include "NiagaraComponent.h"
 #include "Components/AudioComponent.h"
 #include "Components/BoxComponent.h"
+#include "Components/SphereComponent.h"
 
 
 
@@ -58,9 +59,17 @@ ASteikemannCharacter::ASteikemannCharacter(const FObjectInitializer& ObjectIniti
 	Component_Niagara = CreateDefaultSubobject<UNiagaraComponent>(TEXT("NiagaraComponent"));
 	Component_Niagara->SetupAttachment(RootComponent);
 
-	AttackCollider = CreateDefaultSubobject<UBoxComponent>(TEXT("AttackCollider"));
-	AttackCollider->SetupAttachment(RootComponent);
-	AttackCollider->SetGenerateOverlapEvents(false);
+
+		AttackCollider = CreateDefaultSubobject<UBoxComponent>(TEXT("AttackCollider"));
+		AttackCollider->SetupAttachment(RootComponent);
+		AttackCollider->SetGenerateOverlapEvents(false);
+
+		GroundPoundCollider = CreateDefaultSubobject<USphereComponent>(TEXT("GroundPoundCollider"));
+		GroundPoundCollider->SetupAttachment(RootComponent);
+		GroundPoundCollider->SetGenerateOverlapEvents(false);
+		GroundPoundCollider->SetSphereRadius(0.1f);
+
+
 }
 
 // Called when the game starts or when spawned
@@ -90,7 +99,11 @@ void ASteikemannCharacter::BeginPlay()
 	{
 		AttackCollider->OnComponentBeginOverlap.AddDynamic(this, &ASteikemannCharacter::OnAttackColliderBeginOverlap);
 		AttackColliderScale = AttackCollider->GetRelativeScale3D();
-		AttackCollider->SetRelativeScale3D(FVector(0, 0, 0));
+		AttackCollider->SetRelativeScale3D(FVector(0));
+
+		GroundPoundCollider->OnComponentBeginOverlap.AddDynamic(this, &ASteikemannCharacter::OnAttackColliderBeginOverlap);
+		//GroundPoundColliderScale = GroundPoundCollider->GetRelativeScale3D();
+
 	}
 }
 
@@ -107,6 +120,10 @@ UNiagaraComponent* ASteikemannCharacter::CreateNiagaraComponent(FName Name, USce
 
 void ASteikemannCharacter::NS_Land_Implementation(const FHitResult& Hit)
 {
+	if (bIsGroundPounding) {
+		GroundPoundLand(Hit);
+	}
+
 	/* Play Landing particle effect */
 	float Velocity = GetVelocity().Size();
 	UNiagaraComponent* NiagaraPlayer{ nullptr };
@@ -326,6 +343,10 @@ void ASteikemannCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	/* Attack - SmackAttack */
 	PlayerInputComponent->BindAction("SmackAttack", IE_Pressed, this, &ASteikemannCharacter::Click_Attack);
 	PlayerInputComponent->BindAction("SmackAttack", IE_Released, this, &ASteikemannCharacter::UnClick_Attack);
+
+	/* Attack - GroundPound */
+	PlayerInputComponent->BindAction("GroundPound", IE_Pressed, this, &ASteikemannCharacter::Click_GroundPound);
+	PlayerInputComponent->BindAction("GroundPound", IE_Released, this, &ASteikemannCharacter::UnClick_GroundPound);
 }
 
 void ASteikemannCharacter::Start_Grapple_Swing()
@@ -1467,7 +1488,7 @@ void ASteikemannCharacter::Click_Attack()
 		{
 			bAttacking = true;
 
-			/* Selve angrepet*/
+			/* Starter SmackAttack */
 			{
 				PRINTLONG("Attacking");
 				bCanAttack = false;
@@ -1506,34 +1527,144 @@ void ASteikemannCharacter::OnAttackColliderBeginOverlap(UPrimitiveComponent* Ove
 {
 	if (OtherActor != this)
 	{
+		/* Smack attack collider */
+		if (OverlappedComp == AttackCollider)
+		{
+			IAttackInterface* Interface = Cast<IAttackInterface>(OtherActor);
+			if (Interface) {
+				Do_SmackAttack_Pure(Interface, OtherActor);
+			}
+		}
 
-		IAttackInterface* Interface = Cast<IAttackInterface>(OtherActor);
-		if (Interface) {
-			// Burde sjekke om den kan bli angrepet i det hele tatt. 
-			const bool b{ Interface->GetCanBeSmackAttacked() };
-			
-			if (b)
-			{
-				//PRINTPARLONG("Attacking: %s", *OtherActor->GetName());
-
-				FVector Direction{ OtherActor->GetActorLocation() - GetActorLocation() };
-				Direction = Direction.GetSafeNormal2D();
-				float angle = FMath::DegreesToRadians(45.f);
-				Direction = (cosf(angle) * Direction) + (sinf(angle) * FVector::UpVector);
-				Interface->Recieve_SmackAttack_Pure(Direction, 1000.f);
+		/* GroundPound collision */
+		else if (OverlappedComp == GroundPoundCollider)
+		{
+			IAttackInterface* Interface = Cast<IAttackInterface>(OtherActor);
+			if (Interface) {
+				Do_GroundPound_Pure(Interface, OtherActor);
 			}
 		}
 	}
 }
 
-void ASteikemannCharacter::Do_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength)
+
+void ASteikemannCharacter::Do_SmackAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor)
+{
+	// Burde sjekke om den kan bli angrepet i det hele tatt. 
+	const bool b{ OtherInterface->GetCanBeSmackAttacked() };
+
+	if (b)
+	{
+		FVector Direction{ OtherActor->GetActorLocation() - GetActorLocation() };
+		Direction = Direction.GetSafeNormal2D();
+		float angle = FMath::DegreesToRadians(45.f);
+		Direction = (cosf(angle) * Direction) + (sinf(angle) * FVector::UpVector);
+		OtherInterface->Receive_SmackAttack_Pure(Direction, 1000.f);
+	}
+}
+
+void ASteikemannCharacter::Receive_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength)
 {
 }
 
-void ASteikemannCharacter::Recieve_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength)
+void ASteikemannCharacter::Click_GroundPound()
 {
+	PRINTLONG("Click GroundPound");
+	if (!bGroundPoundPress && MovementComponent->IsFalling() && !bIsGroundPounding)
+	{
+		bGroundPoundPress = true;
+
+		Start_GroundPound();
+	}
 }
 
+void ASteikemannCharacter::UnClick_GroundPound()
+{
+	bGroundPoundPress = false;
+}
+
+
+void ASteikemannCharacter::Launch_GroundPound()
+{
+	PRINTLONG("LAUNCH GroundPound");
+	MovementComponent->GP_Launch();
+}
+
+void ASteikemannCharacter::Start_GroundPound()
+{
+	bCanGroundPound = false;
+	bIsGroundPounding = true;
+
+	MovementComponent->GP_PreLaunch();
+
+	GetWorldTimerManager().SetTimer(THandle_GPHangTime, this, &ASteikemannCharacter::Launch_GroundPound, GP_PrePoundAirtime);
+}
+
+void ASteikemannCharacter::Deactivate_GroundPound()
+{
+	/* Re-attaches GroundPoundCollider to the rootcomponent */
+	USceneComponent* RootComp = GetRootComponent();
+	if (GroundPoundCollider->GetAttachParent() != RootComp)
+	{
+		GroundPoundCollider->AttachToComponent(RootComp, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	}
+
+	GroundPoundCollider->SetGenerateOverlapEvents(false);
+	GroundPoundCollider->SetSphereRadius(0.1f);
+	GroundPoundCollider->SetHiddenInGame(false);
+
+	bIsGroundPounding = false;
+	bCanGroundPound = true;
+}
+
+
+void ASteikemannCharacter::GroundPoundLand(const FHitResult& Hit)
+{
+	PRINTLONG("GroundPound LAND");
+
+	// Detach GP collider on Hit.ImpactLocation
+	USceneComponent* RootComp = GetRootComponent();
+	if (GroundPoundCollider->GetAttachParent() == RootComp)
+	{
+		GroundPoundCollider->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+	}
+
+	GroundPoundCollider->SetWorldLocation(Hit.ImpactPoint, false, nullptr, ETeleportType::TeleportPhysics);
+	GroundPoundCollider->SetGenerateOverlapEvents(true);
+	GroundPoundCollider->SetHiddenInGame(false);
+
+	GroundPoundCollider->SetSphereRadius(MaxGroundPoundRadius, true);
+
+	GetWorldTimerManager().SetTimer(THandle_GPReset, this, &ASteikemannCharacter::Deactivate_GroundPound, GroundPoundExpandTime);
+}
+
+void ASteikemannCharacter::Do_GroundPound_Pure(IAttackInterface* OtherInterface, AActor* OtherActor)
+{
+	PRINTPARLONG("GroundPound Attack ON: %s", *OtherActor->GetName());
+
+	const float diff = GetActorLocation().Z - OtherActor->GetActorLocation().Z;
+	const float range = 40.f;
+	const bool b = diff < range || diff > -range;
+	PRINTPARLONG("DIFF: %f", diff);
+
+	if (b)
+	{
+		FVector Direction{ OtherActor->GetActorLocation() - GetActorLocation() };
+		Direction = Direction.GetSafeNormal2D();
+		float angle = FMath::DegreesToRadians(45.f);
+		Direction = (cosf(angle) * Direction) + (sinf(angle) * FVector::UpVector);
+
+		float LengthToOtherActor = FVector(GetActorLocation() - OtherActor->GetActorLocation()).Size();
+		float Multiplier = 1.f - (LengthToOtherActor / MaxGroundPoundRadius);
+		PRINTPARLONG("Multiplier: %f", Multiplier);
+
+		OtherInterface->Receive_GroundPound_Pure(Direction, GP_LaunchStrength * Multiplier);
+	}
+}
+
+void ASteikemannCharacter::Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength)
+{
+}
 
 
 void ASteikemannCharacter::GrappleHook_Drag_RotateCamera(float DeltaTime)

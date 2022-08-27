@@ -37,11 +37,11 @@ void ASmallEnemy::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 }
 
-void ASmallEnemy::Do_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength)
+void ASmallEnemy::Do_SmackAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor)
 {
 }
 
-void ASmallEnemy::Recieve_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength)
+void ASmallEnemy::Receive_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength)
 {
 	if (GetCanBeSmackAttacked())
 	{
@@ -56,4 +56,18 @@ void ASmallEnemy::Recieve_SmackAttack_Pure(const FVector& Direction, const float
 		/* Sets a timer before character can be damaged by the same attack */
 		GetWorldTimerManager().SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, 0.5f, false);
 	}
+}
+
+void ASmallEnemy::Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength)
+{
+	PRINTLONG("IM BEING GROUNDPOUNDED");
+	DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (PoundDirection * GP_Strength), FColor::Yellow, false, 2.f, 0, 3.f);
+
+	//bCanBeSmackAttacked = false;
+	SetActorRotation(FVector(PoundDirection.GetSafeNormal2D() * -1.f).Rotation(), ETeleportType::TeleportPhysics);
+	GetCharacterMovement()->Velocity *= 0.f;
+	GetCharacterMovement()->AddImpulse(PoundDirection * GP_Strength, true);
+
+	/* Sets a timer before character can be damaged by the same attack */
+	//GetWorldTimerManager().SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, 0.5f, false);
 }
