@@ -74,9 +74,10 @@ void ASteikemannCharacter::BeginPlay()
 	/* Creating Niagara Compnents */
 	{
 		NiComp_CrouchSlide = CreateNiagaraComponent("Niagara_CrouchSlide", RootComponent, FAttachmentTransformRules::SnapToTargetIncludingScale);
+		if (NiComp_CrouchSlide) {
 			NiComp_CrouchSlide->bAutoActivate = false;
 			if (NS_CrouchSlide) { NiComp_CrouchSlide->SetAsset(NS_CrouchSlide); }
-
+		}
 
 	}
 	
