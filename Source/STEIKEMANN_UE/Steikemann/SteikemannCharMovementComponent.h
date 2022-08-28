@@ -65,15 +65,39 @@ public:
 	void Initiate_CrouchSlide(const FVector& InputDirection);
 	void Do_CrouchSlide(float DeltaTime);
 
+/* -- Crouch Jump -- */
+	bool bCrouchJump{};
+	void StartCrouchJump()	{ bCrouchJump = true;  }
+	void EndCrouchJump()	{ bCrouchJump = false; }
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Jump|CrouchSlideJump")
+		float CrouchJumpSpeed{ 1000.f };
+
+/* -- CrouchSlide Jump -- */
+	bool bCrouchSlideJump{};
+	FVector CrouchSlideJump_Vector{};
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Jump|CrouchSlideJump")
+		float CrouchSlideJumpAngle	UMETA(DisplayName = "Jump Angle") { 30.f };
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Jump|CrouchSlideJump")
+		float CSJ_MaxInputAngleAdjustment UMETA(DisplayName = "Max Input Angle Adjustment") { 30.f };
+
+
+	/*	* Initiates the CrouchSlideJump. The SlideDirection vector is the current direction the character is crouchsliding in 
+		* The player can use their input to slightly alter the direction of the CrouchSlideJump 
+		* Function assumes the vectors are normalized */
+	bool CrouchSlideJump(const FVector& SlideDirection, const FVector& Input);
+	void EndCrouchSlideJump() { bCrouchSlideJump = false; }
+
 #pragma endregion //Crouch
 
 #pragma region Jump
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Jump")
-		bool bJumping{};
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Jump")
-		float JumpInterpSpeed{ 2.f };
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Jump")
+		//bool bJumping{};
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Jump")
+		//float JumpInterpSpeed{ 2.f };
 
 	bool DoJump(bool bReplayingMoves) override;
+
 
 #pragma endregion //Jump
 

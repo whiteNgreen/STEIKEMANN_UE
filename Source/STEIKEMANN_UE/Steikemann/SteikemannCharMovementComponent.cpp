@@ -64,21 +64,26 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 	PRINTPAR("Velocity: %f", Velocity.Size());
 
 	/* Jump velocity */
-	if (CharacterOwner_Steikemann->IsJumping() /*CharacterOwner_Steikemann->bAddJumpVelocity*/)
+	if (CharacterOwner_Steikemann->IsJumping())
 	{
 		if (bWallJump) {
 			Velocity = WallJump_VelocityDirection;
-			SetMovementMode(MOVE_Falling);
 		}
 		else if (bLedgeJump) {
 			Velocity.Z = FMath::Max(Velocity.Z, JumpZVelocity * (1.f + LedgeJumpBoost_Multiplier));
 			//Velocity = LedgeJumpDirection;
-			SetMovementMode(MOVE_Falling);
+		}
+		else if (bCrouchJump) {
+			Velocity.Z = FMath::Max(Velocity.Z, CrouchJumpSpeed);
+		}
+		else if (bCrouchSlideJump) {
+			Velocity = CrouchSlideJump_Vector;
 		}
 		else {
 			Velocity.Z = FMath::Max(Velocity.Z, JumpZVelocity);
-			SetMovementMode(MOVE_Falling);
 		}
+
+		SetMovementMode(MOVE_Falling);
 	}
 	
 
@@ -130,6 +135,51 @@ void USteikemannCharMovementComponent::Do_CrouchSlide(float DeltaTime)
 		Velocity.X = Slide.X;
 		Velocity.Y = Slide.Y;
 	}
+}
+
+bool USteikemannCharMovementComponent::CrouchSlideJump(const FVector& SlideDirection, const FVector& Input)
+{
+	bCrouchSlideJump = true;
+
+	FVector FinalSlideDirection{ SlideDirection };
+
+	/* Check Input direction relative to the SlideDirection in 2D space 
+	*  If there is no Input, the jump will simply move forward along the SlideDirection */
+	if (Input.Size() > 0.f)
+	{
+		FVector SlideDirection2D	{ FVector(FVector2D(SlideDirection), 0.f) };
+		//float AngleBetween = acosf(SlideDirection.CosineAngle2D(Input));
+		float AngleBetween = acosf(FVector::DotProduct(SlideDirection, Input));
+		
+		/* Find the left/right direction of the input relative to the SlideDirection */
+		FVector RightOrtho			{ FVector::CrossProduct(SlideDirection2D, FVector::CrossProduct(GetOwner()->GetActorRightVector(), SlideDirection2D)) };
+			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (RightOrtho * 300.f), FColor::Green, false, 1.f, 0, 4.f);
+			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (GetOwner()->GetActorForwardVector() * 300.f), FColor::Red, false, 1.f, 0, 4.f);
+
+		float AngleDirection { FVector::DotProduct(RightOrtho, Input) };
+		if (AngleDirection < 0.f) { AngleBetween *= -1.f; }
+
+		PRINTPARLONG("-- anglebetween -------: %f", FMath::RadiansToDegrees(AngleBetween));
+
+		float JumpAngle = FMath::ClampAngle(FMath::RadiansToDegrees(AngleBetween), -CSJ_MaxInputAngleAdjustment, CSJ_MaxInputAngleAdjustment);
+		//float JumpAngle = FMath::Clamp(AngleBetween, -CSJ_MaxInputAngleAdjustment, CSJ_MaxInputAngleAdjustment);
+
+		PRINTPARLONG("-- anglebetween CLAMPED: %f", JumpAngle);
+
+		FinalSlideDirection = SlideDirection2D.RotateAngleAxis(JumpAngle, FVector::UpVector);
+		//FinalSlideDirection = SlideDirection2D.RotateAngleAxis(JumpAngle, FVector::UpVector);
+			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (FinalSlideDirection * 300.f), FColor::Orange, false, 1.f, 0, 5.f);
+	}
+	/* Rotate the direction upwards toward the engines UpVector CrouchSlideJumpAngle amount of degrees */
+	FVector OrthoUp		{ FVector::CrossProduct(FinalSlideDirection, FVector::CrossProduct(FVector::UpVector, FinalSlideDirection)) };
+		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (OrthoUp * 300.f), FColor::Blue, false, 1.f, 0, 4.f);
+
+	FinalSlideDirection = (FinalSlideDirection * cosf(FMath::DegreesToRadians(CrouchSlideJumpAngle))) + (OrthoUp * sinf(FMath::DegreesToRadians(CrouchSlideJumpAngle)));
+		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (FinalSlideDirection * CrouchJumpSpeed), FColor::Orange, false, 1.f, 0, 5.f);
+
+	CrouchSlideJump_Vector = FinalSlideDirection * CrouchJumpSpeed;
+	CharacterOwner_Steikemann->Stop_CrouchSliding();
+	return bCrouchSlideJump;
 }
 
 bool USteikemannCharMovementComponent::DoJump(bool bReplayingMoves)
@@ -218,7 +268,8 @@ bool USteikemannCharMovementComponent::WallJump(const FVector& ImpactNormal)
 	FVector OrthoVector = FVector::CrossProduct(ImpactNormal, FVector::CrossProduct(FVector::UpVector, ImpactNormal));
 	OrthoVector.Normalize();
 
-	float radians = WallJump_JumpAngle * (PI / 180);
+	//float radians = WallJump_JumpAngle * (PI / 180);
+	float radians = FMath::DegreesToRadians(WallJump_JumpAngle);
 	WallJump_VelocityDirection = (cosf(radians) * ImpactNormal) + (sinf(radians) * OrthoVector);
 	WallJump_VelocityDirection.Normalize();
 	

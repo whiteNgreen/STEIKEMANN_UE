@@ -40,6 +40,8 @@ public:
 
 
 	TWeakObjectPtr<class USteikemannCharMovementComponent> MovementComponent;
+	/* Returns the custom MovementComponent. A TWeakPtr<class USteikemannCharMovementComponent> */
+	TWeakObjectPtr<class USteikemannCharMovementComponent> GetMoveComponent() const { return MovementComponent; }
 
 	USteikeAnimInstance* SteikeAnimInstance{ nullptr };
 
@@ -176,9 +178,9 @@ public:/* ------------------- Basic Movement ------------------- */
 	void StopJumping() override;
 	void CheckJumpInput(float DeltaTime) override;
 
-	/* Animation activation */
 	UFUNCTION(BlueprintImplementableEvent)
-		void Activate_Jump();
+		/* Animation activation */
+		void Anim_Activate_Jump();
 
 	bool CanDoubleJump() const;
 	bool IsJumping() const;
@@ -195,6 +197,7 @@ public:/* ------------------- Basic Movement ------------------- */
 	bool bPressedCrouch{};
 	bool bIsCrouchWalking{};
 	bool IsCrouchWalking() const { return bIsCrouchWalking; }
+	bool IsCrouching() const { return bIsCrouched; }
 
 	/* Regular Crouch */
 	/* Crouch slide will only start if the player is walking with a speed above this */
@@ -227,6 +230,10 @@ public:/* ------------------- Basic Movement ------------------- */
 	void Start_CrouchSliding();
 	void Stop_CrouchSliding();
 	void Reset_CrouchSliding();
+
+	/* CrouchJump && CrouchSlideJump */
+	bool CanCrouchJump()		const { return IsCrouching() && IsCrouchWalking(); }
+	bool CanCrouchSlideJump()	const { return IsCrouching() && IsCrouchSliding(); }
 
 #pragma endregion //Crouch	
 
