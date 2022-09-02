@@ -193,7 +193,7 @@ public:/* ------------------- Basic Movement ------------------- */
 	
 	/* Includes all actions related to the crouch button */
 #pragma region Crouch		
-
+	
 	bool bPressedCrouch{};
 	bool bIsCrouchWalking{};
 	bool IsCrouchWalking() const { return bIsCrouchWalking; }
