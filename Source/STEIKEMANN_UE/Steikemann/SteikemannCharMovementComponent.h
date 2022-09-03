@@ -117,6 +117,11 @@ public:
 
 	void Start_Dash(float preDashTime, float dashTime, float dashLength, FVector dashdirection);
 	void Update_Dash(float deltaTime);
+
+	/**	Dash During Grapplehook_Swing - Boost
+	*/
+	//void Grapplehook_Dash(float DashStrength, FVector DashDirection);
+
 #pragma endregion //Dash
 
 #pragma region Wall Jump

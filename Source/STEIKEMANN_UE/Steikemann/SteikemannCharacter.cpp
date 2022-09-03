@@ -247,6 +247,11 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	/*		Grapplehook			*/
 	if ((bGrapple_Swing && !bGrappleEnd) || (bGrapple_PreLaunch && !bGrappleEnd)) 
 	{
+		if (GrappledActor.IsValid())
+		{
+			GrappleRope = GrappledActor->GetActorLocation() - GetActorLocation();
+		}
+
 		if (!bGrapple_PreLaunch) {
 			//GrappleHook_Swing_RotateCamera(DeltaTime);
 			Update_GrappleHook_Swing(DeltaTime);
@@ -338,7 +343,7 @@ void ASteikemannCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	PlayerInputComponent->BindAction("GrappleHook_Swing", IE_Pressed, this,	  &ASteikemannCharacter::Start_Grapple_Swing);
 	PlayerInputComponent->BindAction("GrappleHook_Swing", IE_Released, this,  &ASteikemannCharacter::Stop_Grapple_Swing);
 		/* Grapplehook DRAG */
-	PlayerInputComponent->BindAction("GrappleHook_Drag", IE_Pressed, this,	  &ASteikemannCharacter::Start_Grapple_Drag);
+	PlayerInputComponent->BindAction("GrappleHook_Drag", IE_Pressed, this,	  &ASteikemannCharacter::Start_Grapple_Drag);	// Forandre funksjonen / navnet på den, som spilles av og hva input actione heter
 	PlayerInputComponent->BindAction("GrappleHook_Drag", IE_Released, this,	  &ASteikemannCharacter::Stop_Grapple_Drag);
 
 	/* Attack - SmackAttack */
@@ -362,6 +367,9 @@ void ASteikemannCharacter::Start_Grapple_Swing()
 		}
 
 		if (JumpCurrentCount == 2) { JumpCurrentCount--; }
+		
+		/* Resetter grappleswing boosten */
+		ResetGrappleSwingBoost();
 	}
 }
 
@@ -377,6 +385,17 @@ void ASteikemannCharacter::Stop_Grapple_Swing()
 
 void ASteikemannCharacter::Start_Grapple_Drag()
 {
+	/* Adjusting rope instead of doing the grappledrag */
+	if (bShouldAdjustRope)
+	{
+		if (IsGrappleSwinging() && GetMoveComponent()->IsFalling())
+		{
+			//AdjustRopeLength(GrappleRope);
+			bIsAdjustingRopeLength = true;
+
+		}
+		return;
+	}
 	if (GrappledActor.IsValid())
 	{
 		bGrapple_PreLaunch = true;
@@ -387,6 +406,12 @@ void ASteikemannCharacter::Start_Grapple_Drag()
 
 void ASteikemannCharacter::Stop_Grapple_Drag()
 {
+	if (bShouldAdjustRope)
+	{ 
+		bIsAdjustingRopeLength = false;
+		return;
+	}
+
 	bGrapple_PreLaunch = false;
 	bGrapple_Launch = false;
 	bGrapple_Swing = false;
@@ -395,6 +420,7 @@ void ASteikemannCharacter::Stop_Grapple_Drag()
 	{
 		IGrappleTargetInterface::Execute_UnTargeted(GrappledActor.Get());
 	}
+
 }
 
 void ASteikemannCharacter::DetectPhysMaterial()
@@ -443,6 +469,7 @@ void ASteikemannCharacter::MoveForward(float value)
 	if (IsStickingToWall()) { return; }
 	if (IsLedgeGrabbing()) { return; }
 	if (IsCrouchSliding()) { return; }
+	if (IsAdjustingRopeLength()) { return; }
 
 	float movement = value;
 	if (bSlipping)
@@ -469,6 +496,7 @@ void ASteikemannCharacter::MoveRight(float value)
 	if (IsStickingToWall()) { return; }
 	if (IsLedgeGrabbing())	{ return; }
 	if (IsCrouchSliding()) { return; }
+	if (IsAdjustingRopeLength()) { return; }
 
 	float movement = value;
 	if (bSlipping)
@@ -1083,14 +1111,41 @@ void ASteikemannCharacter::Stop_Bounce()
 
 void ASteikemannCharacter::Dash()
 {
-	if (!bDashClick && !bDash && DashCounter == 1)
+	if (!bDashClick)
 	{
-		bDash = true;
-		DashCounter--;
-		Activate_Dash();
-		GetMoveComponent()->Start_Dash(Pre_DashTime, DashTime, DashLength, DashDirection);
+		bDashClick = true;
+	
+		/* If character is swinging then the dash is not executed */
+		if (IsGrappleSwinging())
+		{
+			/* Do the grapplehook swing boost, if they can */
+			if (bCanGrappleSwingBoost && DashCounter == 1)
+			{
+				PRINTLONG("GrappleHook BOOST----");
+				/* The Boost */	// Should be function? 
+				{
+					DashCounter--;
+					bCanGrappleSwingBoost = false;
+
+					FVector BoostDirection = GetMoveComponent()->Velocity;
+					BoostDirection.Normalize();
+					GetMoveComponent()->AddImpulse(BoostDirection * GrappleSwingBoostStrength, true);
+				}
+				GetWorldTimerManager().SetTimer(TH_ResetGrappleSwingBoost, this, &ASteikemannCharacter::ResetGrappleSwingBoost, TimeBetweenGrappleSwingBoosts);
+
+				return;
+			}
+		}
+
+		else if (!bDash && DashCounter == 1)
+		{
+			PRINTLONG("----DASH----");
+			bDash = true;
+			DashCounter--;
+			Activate_Dash();
+			GetMoveComponent()->Start_Dash(Pre_DashTime, DashTime, DashLength, DashDirection);
+		}
 	}
-	bDashClick = true;
 }
 
 void ASteikemannCharacter::Stop_Dash()
@@ -1101,6 +1156,12 @@ void ASteikemannCharacter::Stop_Dash()
 bool ASteikemannCharacter::IsDashing() const
 {
 	return bDash;
+}
+
+void ASteikemannCharacter::ResetGrappleSwingBoost()
+{
+	DashCounter = 1;
+	bCanGrappleSwingBoost = true;
 }
 
 void ASteikemannCharacter::Do_OnWallMechanics(float DeltaTime)
@@ -1374,7 +1435,28 @@ void ASteikemannCharacter::Initial_GrappleHook_Swing()
 	if (!GrappledActor.IsValid()) { return; }
 
 	FVector radius = GrappledActor->GetActorLocation() - GetActorLocation();
-	GrappleRadiusLength = radius.Size();
+	Initial_GrappleRopeLength = radius.Size();
+	/* If the rope is shorter then the minimum, set it to the minimum length */
+	if (Initial_GrappleRopeLength < Min_GrappleRopeLength) { 
+		
+		/* If player is too close to the grappled actor/object. Adjust playerposition to be at the minimum rope length */
+		if (GetMoveComponent()->IsFalling()) {
+			FVector Adjustment = radius;
+			Adjustment.Normalize();
+			Adjustment *= (Min_GrappleRopeLength - Initial_GrappleRopeLength) * -1.f;
+			//Adjustment *= (Min_GrappleRopeLength / Initial_GrappleRopeLength) - 1.f;
+
+			PRINTPARLONG("GrappleRope INITIAL Adjustment = %f", Adjustment.Size());
+				DrawDebugBox(GetWorld(), GetActorLocation(), FVector(10), FQuat(GetActorRotation()), FColor::Blue, false, 4.f, 0, 5.f);
+			SetActorRelativeLocation(GetActorLocation() + Adjustment, false, nullptr, ETeleportType::TeleportPhysics);
+				DrawDebugBox(GetWorld(), GetActorLocation(), FVector(10), FQuat(GetActorRotation()), FColor::Red, false, 4.f, 0, 5.f);
+		}
+
+		Initial_GrappleRopeLength = Min_GrappleRopeLength; 
+	}
+	GrappleRopeLength = Initial_GrappleRopeLength;
+
+
 
 	FVector currentVelocity = GetCharacterMovement()->Velocity;
 	if (currentVelocity.Size() > 0)
@@ -1383,7 +1465,7 @@ void ASteikemannCharacter::Initial_GrappleHook_Swing()
 		newVelocity.Normalize();
 
 		/* Using Clamp as temporary solution to the max speed */
-		float V = (PI * GrappleRadiusLength) / GrappleHook_SwingTime;
+		float V = (PI * GrappleRopeLength) / GrappleHook_SwingTime;
 		V = FMath::Clamp(V, 0.f, GrappleHook_Swing_MaxSpeed);
 		newVelocity *= V;
 
@@ -1394,7 +1476,7 @@ void ASteikemannCharacter::Initial_GrappleHook_Swing()
 void ASteikemannCharacter::Update_GrappleHook_Swing(float DeltaTime)
 {
 	if (!GrappledActor.IsValid()) { return; }
-	PRINTPAR("GrappleRadiusLength: %f", GrappleRadiusLength);
+	PRINTPAR("GrappleRadiusLength: %f", GrappleRopeLength);
 
 	FVector currentVelocity = GetCharacterMovement()->Velocity;
 
@@ -1402,13 +1484,16 @@ void ASteikemannCharacter::Update_GrappleHook_Swing(float DeltaTime)
 		FVector radius = GrappledActor->GetActorLocation() - GetActorLocation();
 		float fRadius = radius.Size();
 		if (GetCharacterMovement()->IsWalking() || IsJumping()) {
-			GrappleRadiusLength = radius.Size();
+			GrappleRopeLength = radius.Size();
+			//Initial_GrappleRopeLength = radius.Size();
 		}
 		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + radius, FColor::Green, false, -1, 0, 4.f);
 
 		/* Adjust actor location to match the initial length from the grappled object */
-		if (fRadius > GrappleRadiusLength) {
-			float L = (fRadius / GrappleRadiusLength) - 1;
+		if (fRadius > GrappleRopeLength) 
+		//if (fRadius > Initial_GrappleRopeLength) 
+		{
+			float L = (fRadius / GrappleRopeLength) - 1.f;
 			FVector adjustment = radius * L;
 			/* Only adjust location if character IsFalling */
 			if (GetMovementComponent()->IsFalling()) {
@@ -1419,10 +1504,6 @@ void ASteikemannCharacter::Update_GrappleHook_Swing(float DeltaTime)
 		/* New Velocity */
 		FVector newVelocity = FVector::CrossProduct(radius, (FVector::CrossProduct(currentVelocity, radius)));
 			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + newVelocity, FColor::Purple, false, -1, 0, 4.f);
-
-		/* New Velocity in relation to the downward axis */	// NOT IN USE
-		//FVector backWards = FVector::CrossProduct(radius, (FVector::CrossProduct(FVector::DownVector, radius)));
-			//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + backWards, FColor::Blue, false, -1, 0, 4.f);
 
 		newVelocity = (currentVelocity.Size() / newVelocity.Size()) * newVelocity;
 
@@ -1444,6 +1525,10 @@ void ASteikemannCharacter::Update_GrappleHook_Swing(float DeltaTime)
 			Timer = 0.f;
 		//}
 		PRINTPAR("CS Timer: %f", Timer);
+	}
+	
+	if (IsAdjustingRopeLength()) {
+		AdjustRopeLength(GrappleRope);
 	}
 }
 
@@ -1510,6 +1595,38 @@ void ASteikemannCharacter::Update_GrappleHook_Drag(float DeltaTime)
 bool ASteikemannCharacter::IsGrappling() const
 {
 	return bGrapple_Swing || bGrapple_PreLaunch || bGrapple_Launch;
+}
+
+void ASteikemannCharacter::AdjustRopeLength(FVector Rope)
+{
+	//if (Rope.Size() > Min_GrappleRopeLength)
+	{
+		//float X_Input = InputVectorRaw.X;
+
+		/* Adjustment of rope in air */
+		if (GetMoveComponent()->IsFalling()) 
+		{
+			float Adjustment = RopeAdjustmentSpeed * InputVectorRaw.X;
+			FVector AdjustmentVector = Rope;
+			AdjustmentVector.Normalize();
+
+			if (GrappleRopeLength < Min_GrappleRopeLength)
+			{
+				Adjustment = GrappleRopeLength - Min_GrappleRopeLength;
+				GrappleRopeLength = Min_GrappleRopeLength;
+			}
+			
+			AdjustmentVector *= Adjustment;
+			SetActorRelativeLocation(GetActorLocation() + AdjustmentVector, false, nullptr, ETeleportType::TeleportPhysics);
+
+			GrappleRopeLength -= Adjustment;
+			
+			PRINT("-- ADJUSTING ROPE LENGTH IN AIR --");
+			PRINTPAR("Adjusting rope = %f", Adjustment);
+
+			//bIsAdjustingRopeLength = true;
+		}
+	}
 }
 
 void ASteikemannCharacter::Click_Attack()

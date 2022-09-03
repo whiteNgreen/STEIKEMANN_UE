@@ -397,6 +397,20 @@ public:/* ------------------- Basic Movement ------------------- */
 
 	bool IsDashing() const;
 
+	
+	/** Dash During Grapplehook Swing - GrappleSwingBoost
+	*/
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing")
+		float GrappleSwingBoostStrength{ 1000.f };
+	/* How long the internal timer is between each boost */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing")
+		float TimeBetweenGrappleSwingBoosts{ 1.f };
+
+	bool bCanGrappleSwingBoost{};
+	bool bGrappleSwingBoost{};
+	FTimerHandle TH_ResetGrappleSwingBoost;
+	void ResetGrappleSwingBoost();
+
 #pragma endregion //Dash
 
 
@@ -419,7 +433,8 @@ public: /* ------------------------ Grapplehook --------------------- */
 	/*                    Native Variables and functions             */
 	UPROPERTY(BlueprintReadOnly)
 		TWeakObjectPtr<AActor> GrappledActor{ nullptr };
-
+	/* The 'rope' that goes from the player character to the grappled actor/object */
+	FVector GrappleRope{};
 
 	UPROPERTY(BlueprintReadOnly)
 		bool bGrapple_Available{};
@@ -465,8 +480,14 @@ public: /* ------------------------ Grapplehook --------------------- */
 		float GrappleHook_SwingTime{ 1.f };
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing")
 		float GrappleHook_Swing_MaxSpeed{ 2000.f };
-	/* Initial length between actor and grappled object */
-	float GrappleRadiusLength{};
+
+	/* The minimum length of the grappleswing rope */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing")
+		float Min_GrappleRopeLength{ 100.f };
+	/* Initial length of the rope between the actor and grappled object/actor */
+	float Initial_GrappleRopeLength{};
+	/* The updated length of the rope between the actor and grappled object/actor */
+	float GrappleRopeLength{};
 
 	/* Grapplehook swing */
 	UFUNCTION(BlueprintCallable)
@@ -515,6 +536,26 @@ public: /* ------------------------ Grapplehook --------------------- */
 
 	UFUNCTION(BlueprintCallable)
 	bool IsGrappling() const;
+	bool IsGrappleSwinging() const { return bGrapple_Swing; }
+
+
+	/**	Adjusting rope length
+	*/
+	void AdjustRopeLength(FVector Rope);
+	
+	/* Can turn this feature on or off. Off will turn grapplehook_drag activation back to the way it was */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing|RopeAdjustment")
+		bool bShouldAdjustRope{ true };
+
+	/* Is the player currently adjusting the ropes length? */
+	bool bIsAdjustingRopeLength{};
+	bool IsAdjustingRopeLength() const { return bIsAdjustingRopeLength; }
+
+	/* How fast the rope is adjusted during AdjustRopeLength() */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing|RopeAdjustment")
+		float RopeAdjustmentSpeed{ 10.f };
+	
+
 #pragma endregion //GrappleHook
 
 #pragma region Attacks
