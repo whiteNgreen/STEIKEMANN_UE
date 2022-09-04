@@ -245,7 +245,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		GrappleHookMesh->SetVisibility(false);
 	}
 	/*		Grapplehook			*/
-	if ((bGrapple_Swing && !bGrappleEnd) || (bGrapple_PreLaunch && !bGrappleEnd)) 
+	if ((bGrapple_Swing/* && !bGrappleEnd*/) || (bGrapple_PreLaunch/* && !bGrappleEnd*/)) 
 	{
 		if (GrappledActor.IsValid())
 		{
@@ -343,8 +343,10 @@ void ASteikemannCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	PlayerInputComponent->BindAction("GrappleHook_Swing", IE_Pressed, this,	  &ASteikemannCharacter::Start_Grapple_Swing);
 	PlayerInputComponent->BindAction("GrappleHook_Swing", IE_Released, this,  &ASteikemannCharacter::Stop_Grapple_Swing);
 		/* Grapplehook DRAG */
-	PlayerInputComponent->BindAction("GrappleHook_Drag", IE_Pressed, this,	  &ASteikemannCharacter::Start_Grapple_Drag);	// Forandre funksjonen / navnet på den, som spilles av og hva input actione heter
-	PlayerInputComponent->BindAction("GrappleHook_Drag", IE_Released, this,	  &ASteikemannCharacter::Stop_Grapple_Drag);
+	//PlayerInputComponent->BindAction("GrappleHook_Drag", IE_Pressed, this,	  &ASteikemannCharacter::Start_Grapple_Drag);	// Forandre funksjonen / navnet på den, som spilles av og hva input actione heter
+	//PlayerInputComponent->BindAction("GrappleHook_Drag", IE_Released, this,	  &ASteikemannCharacter::Stop_Grapple_Drag);
+	PlayerInputComponent->BindAction("GrappleHook_Drag", IE_Pressed, this,	  &ASteikemannCharacter::RightTriggerClick);
+	PlayerInputComponent->BindAction("GrappleHook_Drag", IE_Released, this,	  &ASteikemannCharacter::RightTriggerUn_Click);
 
 	/* Attack - SmackAttack */
 	PlayerInputComponent->BindAction("SmackAttack", IE_Pressed, this, &ASteikemannCharacter::Click_Attack);
@@ -386,16 +388,16 @@ void ASteikemannCharacter::Stop_Grapple_Swing()
 void ASteikemannCharacter::Start_Grapple_Drag()
 {
 	/* Adjusting rope instead of doing the grappledrag */
-	if (bShouldAdjustRope)
-	{
-		if (IsGrappleSwinging() && GetMoveComponent()->IsFalling())
-		{
-			//AdjustRopeLength(GrappleRope);
-			bIsAdjustingRopeLength = true;
+	//if (bShouldAdjustRope)
+	//{
+	//	if (IsGrappleSwinging() && GetMoveComponent()->IsFalling())
+	//	{
+	//		//AdjustRopeLength(GrappleRope);
+	//		bIsAdjustingRopeLength = true;
 
-		}
-		return;
-	}
+	//	}
+	//	return;
+	//}
 	if (GrappledActor.IsValid())
 	{
 		bGrapple_PreLaunch = true;
@@ -406,11 +408,11 @@ void ASteikemannCharacter::Start_Grapple_Drag()
 
 void ASteikemannCharacter::Stop_Grapple_Drag()
 {
-	if (bShouldAdjustRope)
-	{ 
-		bIsAdjustingRopeLength = false;
-		return;
-	}
+	//if (bShouldAdjustRope)
+	//{ 
+	//	bIsAdjustingRopeLength = false;
+	//	return;
+	//}
 
 	bGrapple_PreLaunch = false;
 	bGrapple_Launch = false;
@@ -1118,6 +1120,12 @@ void ASteikemannCharacter::Dash()
 		/* If character is swinging then the dash is not executed */
 		if (IsGrappleSwinging())
 		{
+			/* If LT + RT is held, then launch the character with Grapplehook_Drag */
+			if (IsAdjustingRopeLength())
+			{
+				Start_Grapple_Drag();
+			}
+
 			/* Do the grapplehook swing boost, if they can */
 			if (bCanGrappleSwingBoost && DashCounter == 1)
 			{
@@ -1133,7 +1141,7 @@ void ASteikemannCharacter::Dash()
 				}
 				GetWorldTimerManager().SetTimer(TH_ResetGrappleSwingBoost, this, &ASteikemannCharacter::ResetGrappleSwingBoost, TimeBetweenGrappleSwingBoosts);
 
-				return;
+				//return;
 			}
 		}
 
@@ -1164,15 +1172,44 @@ void ASteikemannCharacter::ResetGrappleSwingBoost()
 	bCanGrappleSwingBoost = true;
 }
 
+void ASteikemannCharacter::RightTriggerClick()
+{
+	/* Adjusting rope instead of doing the grappledrag */
+	if (bShouldAdjustRope)
+	{
+		if (IsGrappleSwinging() && GetMoveComponent()->IsFalling())
+		{
+			//AdjustRopeLength(GrappleRope);
+			bIsAdjustingRopeLength = true;
+		}
+		//return;
+	}
+}
+
+void ASteikemannCharacter::RightTriggerUn_Click()
+{
+	if (bShouldAdjustRope)
+	{
+		bIsAdjustingRopeLength = false;
+		return;
+	}
+}
+
 void ASteikemannCharacter::Do_OnWallMechanics(float DeltaTime)
 {
+	if (GetMoveComponent()->IsWalking())
+	{
+		ResetWallJumpAndLedgeGrab();
+		return;
+	}
+
 	/*		Detect Wall		 */
 	static float PostWallJumpTimer{};	//	Post WallJump Timer		 
 	if (GetMoveComponent()->bWallJump || GetMoveComponent()->bLedgeJump)
 	{
 		static float TimerLength{};
-		if (GetMoveComponent()->bWallJump)	TimerLength = 0.25;
-		if (GetMoveComponent()->bLedgeJump)	TimerLength = 0.75;
+		if (GetMoveComponent()->bWallJump)	TimerLength = 0.25f;
+		if (GetMoveComponent()->bLedgeJump)	TimerLength = 0.75f;
 		PostWallJumpTimer += DeltaTime;
 		if (PostWallJumpTimer > TimerLength) // Venter 0.25 sekunder før den skal kunne fortsette med å søke etter nære vegger 
 		{
@@ -1188,6 +1225,7 @@ void ASteikemannCharacter::Do_OnWallMechanics(float DeltaTime)
 	if (!bFoundWall) {
 		bFoundLedge = false; bIsLedgeGrabbing = false;	// Ledgegrab bools
 		bFoundStickableWall = false;					// Wall-Jump/Slide bool
+		//GetMoveComponent()->bWallSlowDown = false;
 	}
 	(ActorToWall_Length < WallJump_ActivationRange) ? bFoundStickableWall = true : bFoundStickableWall = false;	// If the detected wall is within range for wall-jump/slide
 
@@ -1588,7 +1626,8 @@ void ASteikemannCharacter::Update_GrappleHook_Drag(float DeltaTime)
 	}
 	else {
 		bGrapple_Launch = false;
-		bGrappleEnd = true;
+		//bGrappleEnd = true;
+		Stop_Grapple_Drag();
 	}
 }
 

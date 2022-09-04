@@ -431,6 +431,11 @@ public: /* ------------------------ Grapplehook --------------------- */
 
 
 	/*                    Native Variables and functions             */
+	void RightTriggerClick();
+	void RightTriggerUn_Click();
+	void LeftTriggerClick();
+	void LeftTriggerUn_Click();
+
 	UPROPERTY(BlueprintReadOnly)
 		TWeakObjectPtr<AActor> GrappledActor{ nullptr };
 	/* The 'rope' that goes from the player character to the grappled actor/object */
@@ -459,6 +464,7 @@ public: /* ------------------------ Grapplehook --------------------- */
 	float GrappleAimYChange{};
 
 	bool LineTraceToGrappleableObject();
+
 	UFUNCTION()
 	void Start_Grapple_Swing();
 	void Stop_Grapple_Swing();

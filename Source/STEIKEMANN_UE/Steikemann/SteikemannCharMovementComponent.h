@@ -32,6 +32,7 @@ public:
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 	class ASteikemannCharacter* CharacterOwner_Steikemann{ nullptr };
+	ASteikemannCharacter* GetCharOwner() { return CharacterOwner_Steikemann; }
 	
 	TEnumAsByte<enum ECustomMovementMode> CustomMovementMode;
 
