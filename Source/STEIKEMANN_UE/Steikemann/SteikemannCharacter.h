@@ -597,10 +597,15 @@ public: /* ------------------------ Grapplehook --------------------- */
 	/* The speed of the drag towards the target */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing|OnGround")
 		float GrappleHook_OnGroundDragSpeed{ 1000.f };
+	/* The multiplier applied to the OnGroundSpeed when player is in the air */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing|OnGround")
+		float GrappleHook_OnGroundDragSpeed_InAirMultiplier{ 3.f };
 
 	/* How much the player should be moved towards the grappletarget, when they are being launched into swinging in the air */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing|OnGround")
 		float GrappleHook_OnGroundMoveTowardsTarget{ 100.f };
+
+		
 
 #pragma endregion //GrappleHook
 

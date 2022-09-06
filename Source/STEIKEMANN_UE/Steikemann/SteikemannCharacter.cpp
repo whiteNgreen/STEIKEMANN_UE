@@ -1580,7 +1580,13 @@ void ASteikemannCharacter::Update_GrappleHook_Swing(float DeltaTime)
 	if (GetCharacterMovement()->IsWalking() || IsJumping()) 
 	{
 		GrappleRopeLength = ToGrappledActor.Size();
+	}
 
+	/*
+	* Find length from grappletarget to the ground beneath
+	* If the rope is shorter than that distance move the player towards the grappletarget in 2D space
+	*/
+	{
 		/* Find the length from the grappled actor to the ground beneath it. */
 		FVector FromGrappledToGround{};
 		float LengthFromGrappledToGround{};
@@ -1592,34 +1598,49 @@ void ASteikemannCharacter::Update_GrappleHook_Swing(float DeltaTime)
 			FromGrappledToGround = Hit.ImpactPoint - GrappledActor->GetActorLocation();
 			LengthFromGrappledToGround = FromGrappledToGround.Size();
 
+			/* Drag player towards grappletarget in 2D space */
+			FVector ToGrappledActor2D{ FVector(ToGrappledActor.X, ToGrappledActor.Y, 0.f) };
+			ToGrappledActor2D.Normalize();
+
+			if (fRadius + GrappleHook_OnGroundMoveTowardsTarget > LengthFromGrappledToGround)
+			{
+				/* Move the actor towards the grappled target in 2D space */	/* Currently only moves player a flat amount towards the target */
+				if (GetMoveComponent()->IsFalling())
+				{
+					SetActorRelativeLocation(GetActorLocation() + (ToGrappledActor2D * (GrappleHook_OnGroundDragSpeed * DeltaTime * GrappleHook_OnGroundDragSpeed_InAirMultiplier /* BP Value */)), false, nullptr, ETeleportType::TeleportPhysics);
+					GrappleRopeLength -= GrappleHook_OnGroundDragSpeed * DeltaTime * GrappleHook_OnGroundDragSpeed_InAirMultiplier/* BP Value */;
+				}
+				else
+				{
+					SetActorRelativeLocation(GetActorLocation() + (ToGrappledActor2D * (GrappleHook_OnGroundDragSpeed * DeltaTime)), false, nullptr, ETeleportType::TeleportPhysics);
+					GrappleRopeLength -= GrappleHook_OnGroundDragSpeed * DeltaTime;
+				}
+
+			}
+			if (fRadius < LengthFromGrappledToGround)/* This is the transition between on ground and to in air, with Grapplehook Swing */
+			{
+				if (GetCharacterMovement()->IsWalking())
+				{
+					FVector Move = ToGrappledActor; Move.Normalize();
+					SetActorRelativeLocation(GetActorLocation() + (Move * (GrappleHook_OnGroundMoveTowardsTarget * DeltaTime)), false, nullptr, ETeleportType::TeleportPhysics);
+					GrappleRopeLength -= GrappleHook_OnGroundMoveTowardsTarget;
+					GetMoveComponent()->SetMovementMode(MOVE_Falling);
+				}
+			}
+
+
 			/* Debug stuff */
 			DrawDebugLine(GetWorld(), GrappledActor->GetActorLocation(), GrappledActor->GetActorLocation() + FVector::DownVector * GrappleHookRange, FColor::Black, false, -1, 0, 6.f);
 			PRINTPAR("Length To Ground From GrappleTarget: %f", LengthFromGrappledToGround);
 			PRINTPAR("Length Between Player And GrappleTarget: %f", fRadius);
-		}
 
 
-		/* Drag player towards grappletarget in 2D space */
-		FVector ToGrappledActor2D{ FVector(ToGrappledActor.X, ToGrappledActor.Y, 0.f) };
-		ToGrappledActor2D.Normalize();
-
-		if (fRadius > LengthFromGrappledToGround)
-		{
-			/* Move the actor towards the grappled target in 2D space */	/* Currently only moves player a flat amount towards the target */
-			SetActorRelativeLocation(GetActorLocation() + (ToGrappledActor2D * (GrappleHook_OnGroundDragSpeed * DeltaTime)), false, nullptr, ETeleportType::TeleportPhysics);
-		}
-		else /* This is the transition between on ground and to in air, with Grapplehook Swing */
-		{
-			FVector Move = ToGrappledActor; Move.Normalize();
-			//float LengthToMove{ 100.f };/* Should be a BP length the player should jump towards the grappled target */
-			SetActorRelativeLocation(GetActorLocation() + (Move * (GrappleHook_OnGroundMoveTowardsTarget * DeltaTime)), false, nullptr, ETeleportType::TeleportPhysics);
-			GrappleRopeLength -= GrappleHook_OnGroundMoveTowardsTarget;
-			GetMoveComponent()->SetMovementMode(MOVE_Falling);
 		}
 	}
 
 	/* GrappleSwing IN AIR */
-	if (currentVelocity.SizeSquared() > 0 && GetMoveComponent()->IsFalling()) {
+	if (currentVelocity.SizeSquared() > 0 && GetMoveComponent()->IsFalling()) 
+	{
 		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + ToGrappledActor, FColor::Green, false, -1, 0, 4.f);
 
 		/* Adjust actor location to match the initial length from the grappled object */
