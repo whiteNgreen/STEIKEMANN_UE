@@ -9,10 +9,12 @@
 #include "../DebugMacros.h"
 #include "Camera/CameraShakeBase.h"
 #include "SteikeAnimInstance.h"
+#include "GameplayTagAssetInterface.h"
 
 #include "SteikemannCharacter.generated.h"
 
 #define GRAPPLE_HOOK ECC_GameTraceChannel1
+#define ECC_PogoCollision ECC_GameTraceChannel2
 
 class UNiagaraSystem;
 class UNiagaraComponent;
@@ -22,7 +24,8 @@ class USoundBase;
 UCLASS()
 class STEIKEMANN_UE_API ASteikemannCharacter : public ACharacter, 
 	public IGrappleTargetInterface,
-	public IAttackInterface
+	public IAttackInterface,
+	public IGameplayTagAssetInterface
 {
 	GENERATED_BODY()
 
@@ -47,6 +50,18 @@ public:
 
 	void AssignAnimInstance(USteikeAnimInstance* AnimInstance) { SteikeAnimInstance = AnimInstance; }
 	USteikeAnimInstance* GetAnimInstance() const { return SteikeAnimInstance; }
+
+
+	/*
+		GameplayTags
+	*/
+	
+	FGameplayTagContainer GameplayTags;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GameplayTags")
+		FGameplayTag Player;
+
+	UFUNCTION(BlueprintCallable, Category = GameplayTags)
+		virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override { TagContainer = GameplayTags; return; }
 
 #pragma region Audio
 	UPROPERTY(EditAnywhere, Category = "Audio")
@@ -188,6 +203,19 @@ public:/* ------------------- Basic Movement ------------------- */
 	bool IsFalling() const;
 	bool IsOnGround() const;
 
+	/*
+	* Player Pogo Jumping on enemy
+	*/
+	/* Extra contingency length checked between the player and the enemy they are falling towards, before the PogoBounce is called */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce")
+		float PogoContingency{ 50.f };
+
+	UFUNCTION(BlueprintImplementableEvent)
+		void CheckIfEnemyBeneath(const FHitResult& Hit);
+	UFUNCTION(BlueprintCallable)
+		bool CheckDistanceToEnemy(const FHitResult& Hit);
+	UFUNCTION(BlueprintCallable)
+		void PogoBounce(const FVector& EnemyLocation);
 
 #pragma endregion //Basic_Movement
 	
@@ -561,6 +589,18 @@ public: /* ------------------------ Grapplehook --------------------- */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing|RopeAdjustment")
 		float RopeAdjustmentSpeed{ 10.f };
 	
+
+	/* 
+	* Being dragged while on the Ground with Swing Active 
+	*/
+
+	/* The speed of the drag towards the target */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing|OnGround")
+		float GrappleHook_OnGroundDragSpeed{ 1000.f };
+
+	/* How much the player should be moved towards the grappletarget, when they are being launched into swinging in the air */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing|OnGround")
+		float GrappleHook_OnGroundMoveTowardsTarget{ 100.f };
 
 #pragma endregion //GrappleHook
 

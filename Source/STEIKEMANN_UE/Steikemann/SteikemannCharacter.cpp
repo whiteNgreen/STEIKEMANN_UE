@@ -106,6 +106,11 @@ void ASteikemannCharacter::BeginPlay()
 		//GroundPoundColliderScale = GroundPoundCollider->GetRelativeScale3D();
 
 	}
+
+	/*
+	* Adding GameplayTags to the GameplayTagsContainer
+	*/
+	GameplayTags.AddTag(Player);
 }
 
 UNiagaraComponent* ASteikemannCharacter::CreateNiagaraComponent(FName Name, USceneComponent* Parent, FAttachmentTransformRules AttachmentRule, bool bTemp /*= false*/)
@@ -298,6 +303,24 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	//PRINTPAR("Capsule Radius   (Scaled): %f", GetCapsuleComponent()->GetScaledCapsuleRadius());
 	//PRINTPAR("Capsule Height (Unscaled): %f", GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight());
 	//PRINTPAR("Capsule Height   (Scaled): %f", GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
+
+
+	/*	
+	*	POGO BOUNCE
+	* 
+	* Raytrace under player to see if they hit an enemy
+	*/
+	if ((GetMoveComponent()->IsFalling() || IsJumping()) && GetMoveComponent()->Velocity.Z < 0.f)
+	{
+		FHitResult Hit{};
+		FCollisionQueryParams Params{ "", false, this };
+		const bool b = GetWorld()->LineTraceSingleByChannel(Hit, GetActorLocation(), GetActorLocation() + FVector::DownVector * 500.f, ECC_PogoCollision, Params);
+		if (b)
+		{
+			CheckIfEnemyBeneath(Hit);
+		}
+		//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + FVector::DownVector * 200.f, FColor::Black, false, 0.f, 0, 4.f);
+	}
 }
 
 // Called to bind functionality to input
@@ -700,6 +723,36 @@ bool ASteikemannCharacter::IsOnGround() const
 {
 	if (!GetMoveComponent().IsValid()) { return false; }
 	return GetMoveComponent()->MovementMode == MOVE_Walking;
+}
+
+bool ASteikemannCharacter::CheckDistanceToEnemy(const FHitResult& Hit)
+{
+	float LengthToEnemy = GetActorLocation().Z - Hit.GetActor()->GetActorLocation().Z;
+
+	float Difference = (GetCapsuleComponent()->GetScaledCapsuleHalfHeight()) + (PogoContingency);
+
+	/* If Player is close to the enemy */
+	if (LengthToEnemy - Difference < 0.f)
+	{
+		return true;
+	}
+
+	return false;
+}
+
+void ASteikemannCharacter::PogoBounce(const FVector& EnemyLocation)
+{
+	PRINTLONG("POGO BOUNCE");
+
+	/* Pogo bounce 
+	* The direction of the bounce should be based on: 
+	*	Enemy location
+	*	Input Direction
+	*/
+	JumpCurrentCount = 1;	// Resets double jump
+	GetMoveComponent()->Velocity.Z = 0.f;
+	GetMoveComponent()->AddImpulse(FVector::UpVector * 2000.f, true);	// Simple method of bouncing player atm
+	Anim_Activate_Jump();
 }
 
 void ASteikemannCharacter::Start_Crouch()
@@ -1518,29 +1571,71 @@ void ASteikemannCharacter::Update_GrappleHook_Swing(float DeltaTime)
 
 	FVector currentVelocity = GetCharacterMovement()->Velocity;
 
-	if (currentVelocity.SizeSquared() > 0) {
-		FVector radius = GrappledActor->GetActorLocation() - GetActorLocation();
-		float fRadius = radius.Size();
-		if (GetCharacterMovement()->IsWalking() || IsJumping()) {
-			GrappleRopeLength = radius.Size();
-			//Initial_GrappleRopeLength = radius.Size();
+	/* Vector from Character -> GrappledActor */
+	FVector ToGrappledActor = GrappledActor->GetActorLocation() - GetActorLocation();
+	float fRadius = ToGrappledActor.Size();
+	PRINTPAR("fRadius: %f", fRadius);
+
+	/* On Ground */
+	if (GetCharacterMovement()->IsWalking() || IsJumping()) 
+	{
+		GrappleRopeLength = ToGrappledActor.Size();
+
+		/* Find the length from the grappled actor to the ground beneath it. */
+		FVector FromGrappledToGround{};
+		float LengthFromGrappledToGround{};
+		FHitResult Hit{};
+		FCollisionQueryParams Params{ "", false, this };
+		const bool b = GetWorld()->LineTraceSingleByChannel(Hit, GrappledActor->GetActorLocation(), GrappledActor->GetActorLocation() + FVector::DownVector * GrappleHookRange, ECC_Visibility, Params);
+		if (b)
+		{
+			FromGrappledToGround = Hit.ImpactPoint - GrappledActor->GetActorLocation();
+			LengthFromGrappledToGround = FromGrappledToGround.Size();
+
+			/* Debug stuff */
+			DrawDebugLine(GetWorld(), GrappledActor->GetActorLocation(), GrappledActor->GetActorLocation() + FVector::DownVector * GrappleHookRange, FColor::Black, false, -1, 0, 6.f);
+			PRINTPAR("Length To Ground From GrappleTarget: %f", LengthFromGrappledToGround);
+			PRINTPAR("Length Between Player And GrappleTarget: %f", fRadius);
 		}
-		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + radius, FColor::Green, false, -1, 0, 4.f);
+
+
+		/* Drag player towards grappletarget in 2D space */
+		FVector ToGrappledActor2D{ FVector(ToGrappledActor.X, ToGrappledActor.Y, 0.f) };
+		ToGrappledActor2D.Normalize();
+
+		if (fRadius > LengthFromGrappledToGround)
+		{
+			/* Move the actor towards the grappled target in 2D space */	/* Currently only moves player a flat amount towards the target */
+			SetActorRelativeLocation(GetActorLocation() + (ToGrappledActor2D * (GrappleHook_OnGroundDragSpeed * DeltaTime)), false, nullptr, ETeleportType::TeleportPhysics);
+		}
+		else /* This is the transition between on ground and to in air, with Grapplehook Swing */
+		{
+			FVector Move = ToGrappledActor; Move.Normalize();
+			//float LengthToMove{ 100.f };/* Should be a BP length the player should jump towards the grappled target */
+			SetActorRelativeLocation(GetActorLocation() + (Move * (GrappleHook_OnGroundMoveTowardsTarget * DeltaTime)), false, nullptr, ETeleportType::TeleportPhysics);
+			GrappleRopeLength -= GrappleHook_OnGroundMoveTowardsTarget;
+			GetMoveComponent()->SetMovementMode(MOVE_Falling);
+		}
+	}
+
+	/* GrappleSwing IN AIR */
+	if (currentVelocity.SizeSquared() > 0 && GetMoveComponent()->IsFalling()) {
+		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + ToGrappledActor, FColor::Green, false, -1, 0, 4.f);
 
 		/* Adjust actor location to match the initial length from the grappled object */
 		if (fRadius > GrappleRopeLength) 
-		//if (fRadius > Initial_GrappleRopeLength) 
 		{
 			float L = (fRadius / GrappleRopeLength) - 1.f;
-			FVector adjustment = radius * L;
+			FVector adjustment = ToGrappledActor * L;
 			/* Only adjust location if character IsFalling */
-			if (GetMovementComponent()->IsFalling()) {
+			//if (GetMovementComponent()->IsFalling()) 
+			{
 				SetActorRelativeLocation(GetActorLocation() + adjustment, false, nullptr, ETeleportType::TeleportPhysics);
 			}
 		}
 
-		/* New Velocity */
-		FVector newVelocity = FVector::CrossProduct(radius, (FVector::CrossProduct(currentVelocity, radius)));
+		/* New Velocity */	// Is missing: normalizing the vectors before crossproduct or finding the length of the velocity. So that it doesn't exponentially scale
+		FVector newVelocity = FVector::CrossProduct(ToGrappledActor, (FVector::CrossProduct(currentVelocity, ToGrappledActor)));
 			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + newVelocity, FColor::Purple, false, -1, 0, 4.f);
 
 		newVelocity = (currentVelocity.Size() / newVelocity.Size()) * newVelocity;

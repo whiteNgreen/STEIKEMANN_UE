@@ -21,6 +21,10 @@ void ASmallEnemy::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	/*
+	* Adding GameplayTags to the GameplayTagsContainer
+	*/
+	GameplayTags.AddTag(Enemy);
 }
 
 // Called every frame

@@ -6,18 +6,31 @@
 #include "GameFramework/Character.h"
 #include "../Interfaces/AttackInterface.h"
 #include "../DebugMacros.h"
+#include "GameplayTagAssetInterface.h"
 
 #include "SmallEnemy.generated.h"
 
 UCLASS()
 class STEIKEMANN_UE_API ASmallEnemy : public ACharacter,
-	public IAttackInterface
+	public IAttackInterface,
+	public IGameplayTagAssetInterface
 {
 	GENERATED_BODY()
 
 public:
 	// Sets default values for this character's properties
 	ASmallEnemy();
+
+	/*
+	GameplayTags
+	*/
+
+	UPROPERTY(BlueprintReadOnly, Category = "GameplayTags")
+		FGameplayTagContainer GameplayTags;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GameplayTags")
+		FGameplayTag Enemy;
+
+	virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override { TagContainer = GameplayTags; return; }
 
 protected:
 	// Called when the game starts or when spawned
