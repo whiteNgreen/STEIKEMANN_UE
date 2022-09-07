@@ -162,10 +162,16 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	/* Rotate Inputvector to match the playercontroller */
 	{
 		InputVector = InputVectorRaw;
-		InputVector.Normalize();
 		FRotator Rot = GetControlRotation();
 		InputVector = InputVector.RotateAngleAxis(Rot.Yaw, FVector::UpVector);
+
+		if (InputVectorRaw.Size() > 1.f || InputVector.Size() > 1.f)
+		{
+			InputVector.Normalize();
+		}
 	}
+	PRINTPAR("InputVector: %s", *InputVector.ToString());
+	PRINTPAR("InputVectorRaw: %s", *InputVectorRaw.ToString());
 
 
 	/*		Resets Rotation Pitch and Roll		*/
@@ -751,7 +757,9 @@ void ASteikemannCharacter::PogoBounce(const FVector& EnemyLocation)
 	*/
 	JumpCurrentCount = 1;	// Resets double jump
 	GetMoveComponent()->Velocity.Z = 0.f;
-	GetMoveComponent()->AddImpulse(FVector::UpVector * 2000.f, true);	// Simple method of bouncing player atm
+
+	FVector Direction = FVector::UpVector + (InputVector * PogoInputDirectionMultiplier); Direction.Normalize();
+	GetMoveComponent()->AddImpulse(Direction * PogoBounceStrength, true);	// Simple method of bouncing player atm
 	Anim_Activate_Jump();
 }
 

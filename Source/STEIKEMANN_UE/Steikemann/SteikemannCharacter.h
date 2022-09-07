@@ -206,6 +206,9 @@ public:/* ------------------- Basic Movement ------------------- */
 	/*
 	* Player Pogo Jumping on enemy
 	*/
+	/* The strength of the pogo bounce */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce")
+		float PogoBounceStrength{ 2000.f };
 	/* Extra contingency length checked between the player and the enemy they are falling towards, before the PogoBounce is called */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce")
 		float PogoContingency{ 50.f };
@@ -214,6 +217,11 @@ public:/* ------------------- Basic Movement ------------------- */
 		void CheckIfEnemyBeneath(const FHitResult& Hit);
 	UFUNCTION(BlueprintCallable)
 		bool CheckDistanceToEnemy(const FHitResult& Hit);
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce")
+		float PogoInputDirectionMultiplier{ 0.1f };
+
 	UFUNCTION(BlueprintCallable)
 		void PogoBounce(const FVector& EnemyLocation);
 
@@ -591,8 +599,8 @@ public: /* ------------------------ Grapplehook --------------------- */
 	
 
 	/* 
-	* Being dragged while on the Ground with Swing Active 
-	*/
+	* Being dragged while on the Ground with Grapplehook Active 
+	*/ 
 
 	/* The speed of the drag towards the target */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing|OnGround")
