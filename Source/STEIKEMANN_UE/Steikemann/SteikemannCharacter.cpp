@@ -647,7 +647,7 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 			/* If player is sticking to a wall */
 			if ((GetMoveComponent()->bStickingToWall || bFoundStickableWall ) && GetMoveComponent()->IsFalling())
 			{
-				JumpCurrentCount = 1;
+				JumpCurrentCount = 2;
 				//bAddJumpVelocity = true;
 				bAddJumpVelocity = GetMoveComponent()->WallJump(Wall_Normal);
 				Anim_Activate_Jump();	//	Anim_Activate_WallJump
