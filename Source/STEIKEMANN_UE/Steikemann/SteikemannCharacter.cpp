@@ -61,7 +61,7 @@ ASteikemannCharacter::ASteikemannCharacter(const FObjectInitializer& ObjectIniti
 
 
 		AttackCollider = CreateDefaultSubobject<UBoxComponent>(TEXT("AttackCollider"));
-		AttackCollider->SetupAttachment(RootComponent);
+		AttackCollider->SetupAttachment(GetMesh(), "Stav_CollisionSocket");
 		AttackCollider->SetGenerateOverlapEvents(false);
 
 		GroundPoundCollider = CreateDefaultSubobject<USphereComponent>(TEXT("GroundPoundCollider"));
@@ -1792,6 +1792,10 @@ void ASteikemannCharacter::AdjustRopeLength(FVector Rope)
 	}
 }
 
+void ASteikemannCharacter::CanBeAttacked()
+{
+}
+
 void ASteikemannCharacter::Click_Attack()
 {
 	if (!bAttackPress && bCanAttack) 
@@ -1802,17 +1806,7 @@ void ASteikemannCharacter::Click_Attack()
 		{
 			bAttacking = true;
 
-			/* Starter SmackAttack */
-			{
-				PRINTLONG("Attacking");
-				bCanAttack = false;
-					AttackCollider->SetHiddenInGame(false);	// For Debugging
-				AttackCollider->SetGenerateOverlapEvents(true);
-				AttackCollider->SetRelativeScale3D(AttackColliderScale);
-
-				GetWorldTimerManager().SetTimer(THandle_AttackDuration, this, &ASteikemannCharacter::Deactivate_Attack, TimeAttackIsActive, false);
-				GetWorldTimerManager().SetTimer(THandle_AttackReset,	this, &ASteikemannCharacter::Stop_Attack,		TimeBetweenAttacks, false);
-			}
+			Start_Attack();
 		}
 	}
 }
@@ -1826,6 +1820,15 @@ void ASteikemannCharacter::Stop_Attack()
 {
 	PRINTLONG("Can attack again");
 	bCanAttack = true;
+	bIsScoopAttacking = false;
+	bIsSmackAttacking = false;
+}
+
+void ASteikemannCharacter::Activate_Attack()
+{
+			AttackCollider->SetHiddenInGame(false);	// For Debugging
+	AttackCollider->SetGenerateOverlapEvents(true);
+	AttackCollider->SetRelativeScale3D(AttackColliderScale);
 }
 
 void ASteikemannCharacter::Deactivate_Attack()
@@ -1837,6 +1840,21 @@ void ASteikemannCharacter::Deactivate_Attack()
 	AttackCollider->SetRelativeScale3D(FVector(0, 0, 0));
 }
 
+bool ASteikemannCharacter::DecideAttackType()
+{
+	/* Do Scoop attack if attack button is still held */
+	if (bAttackPress)
+	{
+		bIsScoopAttacking = true;
+		return true;
+	}
+
+	/* If AttackButton is Not pressed to SmackAttack */
+	bIsSmackAttacking = true;
+	return false;
+}
+
+
 void ASteikemannCharacter::OnAttackColliderBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	if (OtherActor != this)
@@ -1846,7 +1864,14 @@ void ASteikemannCharacter::OnAttackColliderBeginOverlap(UPrimitiveComponent* Ove
 		{
 			IAttackInterface* Interface = Cast<IAttackInterface>(OtherActor);
 			if (Interface) {
-				Do_SmackAttack_Pure(Interface, OtherActor);
+				if (bIsSmackAttacking)
+				{
+					Do_SmackAttack_Pure(Interface, OtherActor);
+				}
+				else if (bIsScoopAttacking)
+				{
+					Do_ScoopAttack_Pure(Interface, OtherActor);
+				}
 			}
 		}
 
@@ -1873,11 +1898,29 @@ void ASteikemannCharacter::Do_SmackAttack_Pure(IAttackInterface* OtherInterface,
 		Direction = Direction.GetSafeNormal2D();
 		float angle = FMath::DegreesToRadians(45.f);
 		Direction = (cosf(angle) * Direction) + (sinf(angle) * FVector::UpVector);
-		OtherInterface->Receive_SmackAttack_Pure(Direction, 1000.f);
+		OtherInterface->Receive_SmackAttack_Pure(Direction, SmackAttackStrength);
 	}
 }
 
-void ASteikemannCharacter::Receive_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength)
+void ASteikemannCharacter::Receive_SmackAttack_Pure(const FVector& Direction, const float& Strength)
+{
+}
+
+void ASteikemannCharacter::Do_ScoopAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor)
+{
+	const bool b{ OtherInterface->GetCanBeSmackAttacked() };
+
+	if (b)
+	{
+		FVector Direction{ OtherActor->GetActorLocation() - GetActorLocation() };
+		Direction = Direction.GetSafeNormal2D();
+		float angle = FMath::DegreesToRadians(85.f);
+		Direction = (cosf(angle) * Direction) + (sinf(angle) * FVector::UpVector);
+		OtherInterface->Receive_ScoopAttack_Pure(Direction, ScoopStrength);
+	}
+}
+
+void ASteikemannCharacter::Receive_ScoopAttack_Pure(const FVector& Direction, const float& Strength)
 {
 }
 

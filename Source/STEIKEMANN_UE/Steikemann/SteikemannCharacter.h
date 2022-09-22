@@ -618,28 +618,47 @@ public: /* ------------------------ Grapplehook --------------------- */
 #pragma endregion //GrappleHook
 
 #pragma region Attacks
+
+	void CanBeAttacked() override;
+
 	#pragma region SmackAttack
 
 	bool bAttackPress{};
+	UFUNCTION(BlueprintCallable)
+		bool GetAttackPress() const { return bAttackPress; }
 	bool bCanAttack{ true };
 	bool bAttacking{};
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
+		float SmackAttackStrength{ 1500.f };
+
+	bool bIsSmackAttacking{};
 
 	bool bCanBeSmackAttacked{ true };
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|SmackAttack")
-		float TimeAttackIsActive{ 0.2f };
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|SmackAttack")
-		float TimeBetweenAttacks{ 0.5f };
-
-	FTimerHandle THandle_AttackDuration{};
-	FTimerHandle THandle_AttackReset{};
 
 	FVector AttackColliderScale{};
 
 	void Click_Attack();
 	void UnClick_Attack();
-	void Stop_Attack();
-	void Deactivate_Attack();
+	
+	UFUNCTION(BlueprintImplementableEvent)
+		void Start_Attack();
+
+	UFUNCTION(BlueprintCallable)
+		void Stop_Attack();
+	
+
+	UFUNCTION(BlueprintCallable)
+		void Activate_Attack();
+
+	UFUNCTION(BlueprintCallable)
+		void Deactivate_Attack();
+
+	UFUNCTION(BlueprintPure)
+		bool DecideAttackType();
+
+
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Attack")
 		class UBoxComponent* AttackCollider{ nullptr };
@@ -655,6 +674,18 @@ public: /* ------------------------ Grapplehook --------------------- */
 	void ResetCanBeSmackAttacked() override { bCanBeSmackAttacked = true; }
 
 	#pragma endregion //SmackAttack
+
+	#pragma region ScoopAttack
+	/* Scooping enemies */
+	bool bIsScoopAttacking{};
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
+		float ScoopStrength{ 5000.f };
+
+	void Do_ScoopAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override;
+	void Receive_ScoopAttack_Pure(const FVector& Direction, const float& Strength) override;
+
+	#pragma endregion //ScoopAttack
 
 	#pragma region GroundPound
 

@@ -23,14 +23,20 @@ class STEIKEMANN_UE_API IAttackInterface
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
 
+	virtual void CanBeAttacked() = 0;
+
 	UFUNCTION(BlueprintNativeEvent, Category = "Attack|SmackAttack")
 		void SmackAttack();
 	//virtual void Do_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength) = 0;
 	virtual void Do_SmackAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) = 0;
-	virtual void Receive_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength) = 0;
+	virtual void Receive_SmackAttack_Pure(const FVector& Direction, const float& Strength) = 0;
 	virtual bool GetCanBeSmackAttacked() const = 0;
 	virtual void ResetCanBeSmackAttacked() = 0;
 
+	UFUNCTION(BlueprintNativeEvent, Category = "Attack|ScoopAttack")
+		void ScoopAttack();
+	virtual void Do_ScoopAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) = 0;
+	virtual void Receive_ScoopAttack_Pure(const FVector& Direction, const float& Strength) = 0;
 
 	UFUNCTION(BlueprintNativeEvent, Category = "Attack|GroundPound")
 		void GroundPound();

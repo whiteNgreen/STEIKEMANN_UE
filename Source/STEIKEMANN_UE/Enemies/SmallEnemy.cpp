@@ -41,21 +41,46 @@ void ASmallEnemy::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 }
 
+void ASmallEnemy::CanBeAttacked()
+{
+}
+
 void ASmallEnemy::Do_SmackAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor)
 {
 }
 
-void ASmallEnemy::Receive_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength)
+void ASmallEnemy::Receive_SmackAttack_Pure(const FVector& Direction, const float& Strength)
 {
 	if (GetCanBeSmackAttacked())
 	{
 		PRINTLONG("IM BEING ATTACKED");
-		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (Direction * AttackStrength), FColor::Yellow, false, 2.f, 0, 3.f);
+		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (Direction * Strength), FColor::Yellow, false, 2.f, 0, 3.f);
 
 		bCanBeSmackAttacked = false;
 		SetActorRotation(FVector(Direction.GetSafeNormal2D() * -1.f).Rotation(), ETeleportType::TeleportPhysics);
 		GetCharacterMovement()->Velocity *= 0.f;
-		GetCharacterMovement()->AddImpulse(Direction * AttackStrength, true);
+		GetCharacterMovement()->AddImpulse(Direction * Strength, true);
+
+		/* Sets a timer before character can be damaged by the same attack */
+		GetWorldTimerManager().SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, 0.5f, false);
+	}
+}
+
+void ASmallEnemy::Do_ScoopAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor)
+{
+}
+
+void ASmallEnemy::Receive_ScoopAttack_Pure(const FVector& Direction, const float& Strength)
+{
+	if (GetCanBeSmackAttacked())
+	{
+		PRINTLONG("IM BEING ATTACKED");
+		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (Direction * Strength), FColor::Yellow, false, 2.f, 0, 3.f);
+
+		bCanBeSmackAttacked = false;
+		SetActorRotation(FVector(Direction.GetSafeNormal2D() * -1.f).Rotation(), ETeleportType::TeleportPhysics);
+		GetCharacterMovement()->Velocity *= 0.f;
+		GetCharacterMovement()->AddImpulse(Direction * Strength, true);
 
 		/* Sets a timer before character can be damaged by the same attack */
 		GetWorldTimerManager().SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, 0.5f, false);
