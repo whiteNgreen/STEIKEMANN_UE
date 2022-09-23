@@ -110,7 +110,10 @@ void ASteikemannCharacter::BeginPlay()
 	/*
 	* Adding GameplayTags to the GameplayTagsContainer
 	*/
+	//Player = FGameplayTag::RequestGameplayTag("Pottit");
+	Player = Tag_Player;
 	GameplayTags.AddTag(Player);
+	PRINTPARLONG("%s", *Player.GetTagName().ToString());
 }
 
 UNiagaraComponent* ASteikemannCharacter::CreateNiagaraComponent(FName Name, USceneComponent* Parent, FAttachmentTransformRules AttachmentRule, bool bTemp /*= false*/)
@@ -325,7 +328,6 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		{
 			CheckIfEnemyBeneath(Hit);
 		}
-		//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + FVector::DownVector * 200.f, FColor::Black, false, 0.f, 0, 4.f);
 	}
 }
 
@@ -648,7 +650,6 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 			if ((GetMoveComponent()->bStickingToWall || bFoundStickableWall ) && GetMoveComponent()->IsFalling())
 			{
 				JumpCurrentCount = 2;
-				//bAddJumpVelocity = true;
 				bAddJumpVelocity = GetMoveComponent()->WallJump(Wall_Normal);
 				Anim_Activate_Jump();	//	Anim_Activate_WallJump
 				return;
@@ -729,6 +730,25 @@ bool ASteikemannCharacter::IsOnGround() const
 {
 	if (!GetMoveComponent().IsValid()) { return false; }
 	return GetMoveComponent()->MovementMode == MOVE_Walking;
+}
+
+void ASteikemannCharacter::CheckIfEnemyBeneath(const FHitResult& Hit)
+{
+	IGameplayTagAssetInterface* Interface = Cast<IGameplayTagAssetInterface>(Hit.GetActor());
+
+	if (Interface)
+	{
+		FGameplayTagContainer Container;
+		Interface->GetOwnedGameplayTags(Container);
+		
+		if (Container.HasTagExact(Tag_EnemyAubergineDoggo))
+		{
+			if (CheckDistanceToEnemy(Hit))
+			{
+				PogoBounce(Hit.GetActor()->GetActorLocation());
+			}
+		}
+	}
 }
 
 bool ASteikemannCharacter::CheckDistanceToEnemy(const FHitResult& Hit)
@@ -1843,9 +1863,10 @@ void ASteikemannCharacter::Deactivate_Attack()
 bool ASteikemannCharacter::DecideAttackType()
 {
 	/* Do Scoop attack if attack button is still held */
-	if (bAttackPress)
+	if (bAttackPress && !GetMoveComponent()->IsFalling())
 	{
-		bIsScoopAttacking = true;
+		//bIsScoopAttacking = true;
+		bIsSmackAttacking = false;
 		return true;
 	}
 
@@ -1868,7 +1889,7 @@ void ASteikemannCharacter::OnAttackColliderBeginOverlap(UPrimitiveComponent* Ove
 				{
 					Do_SmackAttack_Pure(Interface, OtherActor);
 				}
-				else if (bIsScoopAttacking)
+				else /*if (bIsScoopAttacking)*/
 				{
 					Do_ScoopAttack_Pure(Interface, OtherActor);
 				}
@@ -1899,6 +1920,8 @@ void ASteikemannCharacter::Do_SmackAttack_Pure(IAttackInterface* OtherInterface,
 		float angle = FMath::DegreesToRadians(45.f);
 		Direction = (cosf(angle) * Direction) + (sinf(angle) * FVector::UpVector);
 		OtherInterface->Receive_SmackAttack_Pure(Direction, SmackAttackStrength);
+
+
 	}
 }
 
@@ -1917,6 +1940,12 @@ void ASteikemannCharacter::Do_ScoopAttack_Pure(IAttackInterface* OtherInterface,
 		float angle = FMath::DegreesToRadians(85.f);
 		Direction = (cosf(angle) * Direction) + (sinf(angle) * FVector::UpVector);
 		OtherInterface->Receive_ScoopAttack_Pure(Direction, ScoopStrength);
+
+		/* Launch player in air together with enemy when doing a Scoop Attack */
+		if (!bStayOnGroundDuringScoop)
+		{
+			GetMoveComponent()->AddImpulse(FVector::UpVector * ScoopStrength * 0.9f, true);
+		}
 	}
 }
 

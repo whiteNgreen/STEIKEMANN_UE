@@ -10,6 +10,7 @@
 #include "Camera/CameraShakeBase.h"
 #include "SteikeAnimInstance.h"
 #include "GameplayTagAssetInterface.h"
+#include "../GameplayTags.h"
 
 #include "SteikemannCharacter.generated.h"
 
@@ -213,8 +214,7 @@ public:/* ------------------- Basic Movement ------------------- */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce")
 		float PogoContingency{ 50.f };
 
-	UFUNCTION(BlueprintImplementableEvent)
-		void CheckIfEnemyBeneath(const FHitResult& Hit);
+	void CheckIfEnemyBeneath(const FHitResult& Hit);
 	UFUNCTION(BlueprintCallable)
 		bool CheckDistanceToEnemy(const FHitResult& Hit);
 
@@ -620,7 +620,9 @@ public: /* ------------------------ Grapplehook --------------------- */
 #pragma region Attacks
 
 	void CanBeAttacked() override;
-
+	/* -------------------------------------------------------------
+	 * Smack Attack
+	 */
 	#pragma region SmackAttack
 
 	bool bAttackPress{};
@@ -675,9 +677,16 @@ public: /* ------------------------ Grapplehook --------------------- */
 
 	#pragma endregion //SmackAttack
 
+	/* ----------------------------------------------------------
+	 * Scooping Attack 
+	 */
 	#pragma region ScoopAttack
-	/* Scooping enemies */
 	bool bIsScoopAttacking{};
+
+	/* Whether or not the player character stay on the ground and only launch the enemy in the air during scoop		(true)  (Checked) 
+	 * OR the player character will be launched in to the air with the enemy when using scoop attack				(false) (Un-checked) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
+		bool bStayOnGroundDuringScoop{ true }; 
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
 		float ScoopStrength{ 5000.f };

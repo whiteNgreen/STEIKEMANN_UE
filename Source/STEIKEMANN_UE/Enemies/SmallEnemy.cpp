@@ -24,6 +24,7 @@ void ASmallEnemy::BeginPlay()
 	/*
 	* Adding GameplayTags to the GameplayTagsContainer
 	*/
+	Enemy = Tag_EnemyAubergineDoggo;
 	GameplayTags.AddTag(Enemy);
 }
 
@@ -39,6 +40,26 @@ void ASmallEnemy::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
+}
+
+void ASmallEnemy::TargetedPure()
+{
+	Targeted();
+}
+
+void ASmallEnemy::UnTargetedPure()
+{
+	UnTargeted();
+}
+
+void ASmallEnemy::HookedPure()
+{
+	Hooked();
+}
+
+void ASmallEnemy::UnHookedPure()
+{
+	UnHooked();
 }
 
 void ASmallEnemy::CanBeAttacked()

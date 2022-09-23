@@ -5,15 +5,18 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "../Interfaces/AttackInterface.h"
+#include "../Interfaces/GrappleTargetInterface.h"
 #include "../DebugMacros.h"
 #include "GameplayTagAssetInterface.h"
+#include "../GameplayTags.h"
 
 #include "SmallEnemy.generated.h"
 
 UCLASS()
 class STEIKEMANN_UE_API ASmallEnemy : public ACharacter,
 	public IAttackInterface,
-	public IGameplayTagAssetInterface
+	public IGameplayTagAssetInterface,
+	public IGrappleTargetInterface
 {
 	GENERATED_BODY()
 
@@ -43,6 +46,15 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+
+public: /* Grapple targeting */
+	virtual void TargetedPure() override;
+
+	virtual void UnTargetedPure() override;
+
+	virtual void HookedPure() override;
+
+	virtual void UnHookedPure() override;
 
 public:
 	bool bCanBeSmackAttacked{ true };
