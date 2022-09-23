@@ -214,6 +214,7 @@ public:/* ------------------- Basic Movement ------------------- */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce")
 		float PogoContingency{ 50.f };
 
+
 	void CheckIfEnemyBeneath(const FHitResult& Hit);
 	UFUNCTION(BlueprintCallable)
 		bool CheckDistanceToEnemy(const FHitResult& Hit);
@@ -465,6 +466,7 @@ public: /* ------------------------ Grapplehook --------------------- */
 	void UnHooked() {}
 	virtual void UnHookedPure() override {}
 
+	virtual FGameplayTag GetGrappledGameplayTag_Pure() const override { return Player; }
 
 	/*                    Native Variables and functions             */
 	void RightTriggerClick();
@@ -474,6 +476,9 @@ public: /* ------------------------ Grapplehook --------------------- */
 
 	UPROPERTY(BlueprintReadOnly)
 		TWeakObjectPtr<AActor> GrappledActor{ nullptr };
+	UPROPERTY(BlueprintReadOnly)
+		FGameplayTag GpT_GrappledActorTag;
+
 	/* The 'rope' that goes from the player character to the grappled actor/object */
 	FVector GrappleRope{};
 

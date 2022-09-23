@@ -329,6 +329,10 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 			CheckIfEnemyBeneath(Hit);
 		}
 	}
+
+
+	/* Check Jump Count */
+	PRINTPAR("Jump Count: %i", JumpCurrentCount);
 }
 
 // Called to bind functionality to input
@@ -371,8 +375,8 @@ void ASteikemannCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 
 	/* GrappleHook */
 		/* Grapplehook SWING */
-	PlayerInputComponent->BindAction("GrappleHook_Swing", IE_Pressed, this,	  &ASteikemannCharacter::Start_Grapple_Swing);
-	PlayerInputComponent->BindAction("GrappleHook_Swing", IE_Released, this,  &ASteikemannCharacter::Stop_Grapple_Swing);
+	//PlayerInputComponent->BindAction("GrappleHook_Swing", IE_Pressed, this,	  &ASteikemannCharacter::Start_Grapple_Swing);
+	//PlayerInputComponent->BindAction("GrappleHook_Swing", IE_Released, this,  &ASteikemannCharacter::Stop_Grapple_Swing);
 		/* Grapplehook DRAG */
 	//PlayerInputComponent->BindAction("GrappleHook_Drag", IE_Pressed, this,	  &ASteikemannCharacter::Start_Grapple_Drag);	// Forandre funksjonen / navnet på den, som spilles av og hva input actione heter
 	//PlayerInputComponent->BindAction("GrappleHook_Drag", IE_Released, this,	  &ASteikemannCharacter::Stop_Grapple_Drag);
@@ -648,8 +652,13 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 
 			/* If player is sticking to a wall */
 			if ((GetMoveComponent()->bStickingToWall || bFoundStickableWall ) && GetMoveComponent()->IsFalling())
-			{
-				JumpCurrentCount = 2;
+			{	
+				if (JumpCurrentCount == 2)
+				{
+					//JumpCurrentCount++;
+				}
+				//JumpCurrentCount++;
+				//JumpCurrentCount = 2;
 				bAddJumpVelocity = GetMoveComponent()->WallJump(Wall_Normal);
 				Anim_Activate_Jump();	//	Anim_Activate_WallJump
 				return;
@@ -1149,21 +1158,38 @@ bool ASteikemannCharacter::LineTraceToGrappleableObject()
 	if (Grappled.IsValid()) { 
 		bGrapple_Available = true; 
 
-		/* Interface functions to the actor that is aimed at */
-		if (!IsGrappling()) {
-			IGrappleTargetInterface::Execute_Targeted(Grappled.Get());
-		}
-
-		/* Interface function to un_target the actor we aimed at */
-		if (Grappled != GrappledActor && GrappledActor.IsValid())
+		/* Fører til kræsj når en ser på fienden */
+		//IGrappleTargetInterface* Interface = Cast<IGrappleTargetInterface>(Grappled.Get());
+		//if (Interface)
+		//{
+		//	Interface->TargetedPure();
+		//	GpT_GrappledActorTag = Interface->GetGrappledGameplayTag_Pure();
+		//	PRINTPAR("Grappled Tag: %s", *GpT_GrappledActorTag.GetTagName().ToString());
+		//}
+		/* If the interface does not exist, we TEMPORARILY directly call the Blueprint Functions */
+		//else
 		{
-			IGrappleTargetInterface::Execute_UnTargeted(GrappledActor.Get());
+			/* Interface functions to the actor that is aimed at */
+			if (!IsGrappling()) {
+				IGrappleTargetInterface::Execute_Targeted(Grappled.Get());
+
+				FGameplayTag tag = IGrappleTargetInterface::Execute_GetGrappledGameplayTag(Grappled.Get());
+				PRINTPAR("Grappled Tag: %s", *tag.GetTagName().ToString());
+			}
+
+			/* Interface function to un_target the actor we aimed at */
+			if (Grappled != GrappledActor && GrappledActor.IsValid())
+			{
+				IGrappleTargetInterface::Execute_UnTargeted(GrappledActor.Get());
+			}
 		}
 	}
 	else {		/* Untarget if Grappled returned NULL */
-		if (GrappledActor.IsValid()){
-			IGrappleTargetInterface::Execute_UnTargeted(GrappledActor.Get());
+		if (GrappledActor.IsValid()){	
+			IGrappleTargetInterface::Execute_UnTargeted(GrappledActor.Get());	// Call BP Interface Function
 		}
+
+		GpT_GrappledActorTag = FGameplayTag::EmptyTag;
 	}
 
 	GrappledActor = Grappled;
@@ -1255,25 +1281,13 @@ void ASteikemannCharacter::ResetGrappleSwingBoost()
 
 void ASteikemannCharacter::RightTriggerClick()
 {
-	/* Adjusting rope instead of doing the grappledrag */
-	if (bShouldAdjustRope)
-	{
-		if (IsGrappleSwinging() && GetMoveComponent()->IsFalling())
-		{
-			//AdjustRopeLength(GrappleRope);
-			bIsAdjustingRopeLength = true;
-		}
-		//return;
-	}
+	Start_Grapple_Drag();
 }
 
 void ASteikemannCharacter::RightTriggerUn_Click()
 {
-	if (bShouldAdjustRope)
-	{
-		bIsAdjustingRopeLength = false;
-		return;
-	}
+	/* Skal spilleren faktisk få lov til å kansellere GrappleDrag? */
+	//Stop_Grapple_Drag();
 }
 
 void ASteikemannCharacter::Do_OnWallMechanics(float DeltaTime)
@@ -1354,7 +1368,7 @@ void ASteikemannCharacter::Do_OnWallMechanics(float DeltaTime)
 	{
 		if (GetMoveComponent()->bStickingToWall)
 		{
-			if (JumpCurrentCount == 2) { JumpCurrentCount = 1; }	// Resets DoubleJump
+			//if (JumpCurrentCount == 2) { JumpCurrentCount = 1; }	// Resets DoubleJump
 			WallJump_StickTimer += DeltaTime;
 			if (WallJump_StickTimer > WallJump_MaxStickTimer)
 			{

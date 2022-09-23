@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
+#include "../GameplayTags.h"
+
 #include "GrappleTargetInterface.generated.h"
 
 // This class does not need to be modified.
@@ -22,6 +24,10 @@ class STEIKEMANN_UE_API IGrappleTargetInterface
 
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
+
+	UFUNCTION(BlueprintNativeEvent, Category = "GrappleHook Targeting")
+		FGameplayTag GetGrappledGameplayTag() const;
+	virtual FGameplayTag GetGrappledGameplayTag_Pure() const = 0;
 
 	UFUNCTION(BlueprintNativeEvent, Category = "GrappleHook Targeting")
 		void Targeted();

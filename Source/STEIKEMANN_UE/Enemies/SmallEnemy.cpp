@@ -44,6 +44,7 @@ void ASmallEnemy::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 void ASmallEnemy::TargetedPure()
 {
+	PRINTPAR("I; %s, am grapple targeted", *GetName());
 	Targeted();
 }
 

@@ -56,6 +56,8 @@ public: /* Grapple targeting */
 
 	virtual void UnHookedPure() override;
 
+	virtual FGameplayTag GetGrappledGameplayTag_Pure() const override { return Enemy; }
+
 public:
 	bool bCanBeSmackAttacked{ true };
 
