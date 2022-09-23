@@ -192,6 +192,7 @@ public:/* ------------------- Basic Movement ------------------- */
 
 	void Jump() override;
 	void StopJumping() override;
+	void JumpRelease();
 	void CheckJumpInput(float DeltaTime) override;
 
 	UFUNCTION(BlueprintImplementableEvent)
@@ -203,6 +204,28 @@ public:/* ------------------- Basic Movement ------------------- */
 
 	bool IsFalling() const;
 	bool IsOnGround() const;
+
+	/* 
+	 * --- New Jump : Cartoony --- 
+	*/
+	FTimerHandle JumpTimer{};
+
+
+	bool bJumpClick{};
+	/* How high should the character jump? in cm */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump|NewJump")
+		float JumpHeight UMETA(DisplayName = "Jump Height in cm") { 300.f };
+	/* The initial Jump Velocity. Needed to calculate the acceleration to ensure the 
+	 * character ends up at the specified height within the time */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump|NewJump")
+		float InitialJumpVelocity{ 1000.f };
+	/* Time it takes to reach max height */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump|NewJump")
+		float Jump_TimeToTop{ 0.5f };
+
+	///* How long should the character stay at max height? */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump|NewJump")
+		float Jump_TopFloatTime{ 1.f };
 
 	/*
 	* Player Pogo Jumping on enemy

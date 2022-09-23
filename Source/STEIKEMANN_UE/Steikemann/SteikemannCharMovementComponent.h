@@ -99,6 +99,16 @@ public:
 
 	bool DoJump(bool bReplayingMoves) override;
 
+	/* --- New Jump --- */
+	bool bIsJumping{};
+	float JumpStartVelocity;
+	float JumpGravityMultiplier{};
+
+
+	float JumpDownAcceleration{};
+	void Jump(float Height, float InitialVelocity, float Time, float FloatTime);
+
+	void StopJump();
 
 #pragma endregion //Jump
 

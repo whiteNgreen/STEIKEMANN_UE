@@ -173,8 +173,8 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 			InputVector.Normalize();
 		}
 	}
-	PRINTPAR("InputVector: %s", *InputVector.ToString());
-	PRINTPAR("InputVectorRaw: %s", *InputVectorRaw.ToString());
+	//PRINTPAR("InputVector: %s", *InputVector.ToString());
+	//PRINTPAR("InputVectorRaw: %s", *InputVectorRaw.ToString());
 
 
 	/*		Resets Rotation Pitch and Roll		*/
@@ -357,7 +357,8 @@ void ASteikemannCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 
 		/* Jump */
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ASteikemannCharacter::Jump).bConsumeInput = true;
-	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ASteikemannCharacter::StopJumping).bConsumeInput = true;
+	//PlayerInputComponent->BindAction("Jump", IE_Released, this, &ASteikemannCharacter::StopJumping).bConsumeInput = true;
+	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ASteikemannCharacter::JumpRelease).bConsumeInput = true;
 
 
 		/* Crouch*/
@@ -577,31 +578,54 @@ void ASteikemannCharacter::Jump()
 	/* Don't Jump if player is Grappling */
 	if (IsGrappling() && GetMoveComponent()->IsFalling()) { return; }
 
-	bPressedJump = true;
-	bJumping = true;	
-	bAddJumpVelocity = (CanJump() || CanDoubleJump());
+	if (!bJumpClick)
+	{
+		bJumpClick = true;
+
+		if (CanJump())
+		{
+			JumpCurrentCount++;
+			GetMoveComponent()->Jump(JumpHeight, InitialJumpVelocity, Jump_TimeToTop, Jump_TopFloatTime);
+
+			GetWorldTimerManager().SetTimer(JumpTimer, this, &ASteikemannCharacter::StopJumping, Jump_TimeToTop);
+		}
+	}
+
+	//bPressedJump = true;
+	//bJumping = true;	
+	//bAddJumpVelocity = (CanJump() || CanDoubleJump());
 	
 }
 
 
 void ASteikemannCharacter::StopJumping()
 {
-	bPressedJump = false;
-	bActivateJump = false;
-	bJumping = false;
-	bAddJumpVelocity = false;
-	bCanEdgeJump = false;
-	bCanPostEdgeJump = false;
-	
-	if (GetMoveComponent().IsValid())
-	{
-		GetMoveComponent()->bWallJump = false;
-		GetMoveComponent()->bLedgeJump = false;
-		GetMoveComponent()->EndCrouchJump();
-		GetMoveComponent()->EndCrouchSlideJump();	// Kan KANSKJE sette inn at CrouchSlide Jump må kjøre x antall frames før det kan stoppes, og at det ikke tvangsstoppes når man slepper jump knappen. En TIMER basically
-	}
+	PRINTLONG("STOP JUMP");
+	GetMoveComponent()->StopJump();
+	//bJumpClick = false;
 
-	ResetJumpState();
+	//bPressedJump = false;
+	//bActivateJump = false;
+	//bJumping = false;
+	//bAddJumpVelocity = false;
+	//bCanEdgeJump = false;
+	//bCanPostEdgeJump = false;
+	//
+	//if (GetMoveComponent().IsValid())
+	//{
+	//	GetMoveComponent()->bWallJump = false;
+	//	GetMoveComponent()->bLedgeJump = false;
+	//	GetMoveComponent()->EndCrouchJump();
+	//	GetMoveComponent()->EndCrouchSlideJump();	// Kan KANSKJE sette inn at CrouchSlide Jump må kjøre x antall frames før det kan stoppes, og at det ikke tvangsstoppes når man slepper jump knappen. En TIMER basically
+	//}
+
+	//ResetJumpState();
+}
+
+void ASteikemannCharacter::JumpRelease()
+{
+	bJumpClick = false;
+	//GetMoveComponent()->StopJump();
 }
 
 void ASteikemannCharacter::CheckJumpInput(float DeltaTime)

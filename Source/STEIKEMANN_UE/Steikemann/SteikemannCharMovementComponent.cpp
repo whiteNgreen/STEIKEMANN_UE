@@ -36,7 +36,7 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 		GravityScale = FMath::FInterpTo(GravityScale, GravityScaleOverride, DeltaTime, GravityScaleOverride_InterpSpeed);
 	}
 
-	else if (GetCharOwner()->IsDashing()) 
+	else if (GetCharOwner()->IsDashing() || bIsJumping)
 	{
 		GravityScale = 0.f;
 	}
@@ -47,7 +47,7 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 	}
 	else if (bStickingToWall || bWallSlowDown)
 	{
-		GravityScale = FMath::FInterpTo(GravityScale, 1.f, GetWorld()->GetDeltaSeconds(), GravityScaleOverride_InterpSpeed);
+		GravityScale = FMath::FInterpTo(GravityScale, 0.f, GetWorld()->GetDeltaSeconds(), GravityScaleOverride_InterpSpeed);
 	}
 
 	else{
@@ -64,28 +64,46 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 	PRINTPAR("Velocity: %f", Velocity.Size());
 
 	/* Jump velocity */
-	if (GetCharOwner()->IsJumping())
+	//if (GetCharOwner()->IsJumping())
+	if (bIsJumping)
 	{
-		if (bWallJump) {
-			Velocity = WallJump_VelocityDirection;
-		}
-		else if (bLedgeJump) {
-			Velocity.Z = FMath::Max(Velocity.Z, JumpZVelocity * (1.f + LedgeJumpBoost_Multiplier));
-			//Velocity = LedgeJumpDirection;
-		}
-		else if (bCrouchJump) {
-			Velocity.Z = FMath::Max(Velocity.Z, CrouchJumpSpeed);
-		}
-		else if (bCrouchSlideJump) {
-			Velocity = CrouchSlideJump_Vector;
-		}
-		else {
-			Velocity.Z = FMath::Max(Velocity.Z, JumpZVelocity);
-		}
+		//Velocity.Z = FMath::Max(Velocity.Z, JumpZVelocity);
+		Velocity.Z = JumpZVelocity;
+		
+		JumpZVelocity -= JumpDownAcceleration * DeltaTime;
 
-		SetMovementMode(MOVE_Falling);
+		/* Calculate Velocity Over Time */
+		//JumpZVelocity += (GetGravityZ() * JumpGravityMultiplier * DeltaTime);
+		//JumpZVelocity += (GetGravityZ() * DeltaTime);
+		//PRINTPAR("JumpZVelocity: %f", JumpZVelocity);
+
+
+		//if (bWallJump) {
+		//	Velocity = WallJump_VelocityDirection;
+		//}
+		//else if (bLedgeJump) {
+		//	Velocity.Z = FMath::Max(Velocity.Z, JumpZVelocity * (1.f + LedgeJumpBoost_Multiplier));
+		//	//Velocity = LedgeJumpDirection;
+		//}
+		//else if (bCrouchJump) {
+		//	Velocity.Z = FMath::Max(Velocity.Z, CrouchJumpSpeed);
+		//}
+		//else if (bCrouchSlideJump) {
+		//	Velocity = CrouchSlideJump_Vector;
+		//}
+		//else {
+		//	Velocity.Z = FMath::Max(Velocity.Z, JumpZVelocity);
+		//}
+
+
+
 	}
+	//if (Velocity.Z <= 0 && IsFalling())
+	//{
+	//	PRINTPARLONG("Z == %f", GetOwner()->GetActorLocation().Z - (170/2));
+	//}
 	
+	PRINTPAR("Gravity Strenght: %f", GetGravityZ());
 
 	/* Dash */
 	if (GetCharOwner()->IsDashing())
@@ -205,6 +223,28 @@ bool USteikemannCharMovementComponent::DoJump(bool bReplayingMoves)
 	}
 
 	return false;
+}
+
+void USteikemannCharMovementComponent::Jump(float Height, float InitialVelocity, float Time, float FloatTime)
+{
+	bIsJumping = true;
+
+	//JumpDownAcceleration = (2 * (InitialVelocity * Time + Height)) / (Time * Time);
+	JumpDownAcceleration = (2 * (Height - InitialVelocity * Time)) / (Time * Time);
+	JumpZVelocity = InitialVelocity;
+
+	SetMovementMode(MOVE_Falling);
+
+	PRINTPARLONG("JumpDownAcceleration: %f", JumpDownAcceleration);
+	PRINTPARLONG("Time: %f", Time);
+	PRINTPARLONG("Height: %f", Height);
+}
+
+void USteikemannCharMovementComponent::StopJump()
+{
+	bIsJumping = false;
+
+	//Velocity.Z *= 0.f;
 }
 
 void USteikemannCharMovementComponent::Bounce(FVector surfacenormal)
