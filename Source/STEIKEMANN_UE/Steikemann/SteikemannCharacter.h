@@ -323,8 +323,8 @@ public:/* ------------------- Basic Movement ------------------- */
 #pragma endregion //Crouch	
 
 
+/* ---------------------------------- ON WALL ----------------------------------- */
 #pragma region OnWall
-	/* ---------------------- ON WALL ----------------------- */
 
 	/* How far from the player walls will be detected */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall")
@@ -439,15 +439,15 @@ public:/* ------------------- Basic Movement ------------------- */
 
 #pragma endregion //OnWall
 
-	/* --------------- Actor Rotation Functions ---------------------- */
 
 
 
+	/* ----------------------- Actor Rotation Functions ---------------------------------- */
 	void ResetActorRotationPitchAndRoll(float DeltaTime);
-	void RotateActorYawToVector(float DeltaTime, FVector AimVector);
-	void RotateActorPitchToVector(float DeltaTime, FVector AimVector);
-		void RotateActorYawPitchToVector(float DeltaTime, FVector AimVector);	//Old
-	void RollActorTowardsLocation(float DeltaTime, FVector Point);
+	void RotateActorYawToVector(FVector AimVector, float DeltaTime = 0);
+	void RotateActorPitchToVector(FVector AimVector, float DeltaTime = 0);
+		void RotateActorYawPitchToVector(FVector AimVector, float DeltaTime = 0);	//Old
+	void RollActorTowardsLocation(FVector Point, float DeltaTime = 0);
 
 	/* Returns the angle and direction*/
 	//float AngleBetweenVectors(const FVector& FirstVec, const FVector& SecondVec);
@@ -682,47 +682,32 @@ public: /* ------------------------ Grapplehook --------------------- */
 
 #pragma endregion //GrappleHook
 
+/* ----------------------------------------- ATTACKS ----------------------------------------------- */
 #pragma region Attacks
 
 	void CanBeAttacked() override;
-	/* -------------------------------------------------------------
-	 * Smack Attack
-	 */
-	#pragma region SmackAttack
 
-	bool bAttackPress{};
-	UFUNCTION(BlueprintCallable)
-		bool GetAttackPress() const { return bAttackPress; }
-	bool bCanAttack{ true };
-	bool bAttacking{};
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
-		float SmackUpwardAngle{ 30.f };
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
-		float SmackAttackStrength{ 1500.f };
-
-	bool bIsSmackAttacking{};
-
-	bool bCanBeSmackAttacked{ true };
-
+	FVector AttackDirection{};
 
 	FVector AttackColliderScale{};
 
 	void Click_Attack();
 	void UnClick_Attack();
-	
+
 	UFUNCTION(BlueprintImplementableEvent)
 		void Start_Attack();
+	UFUNCTION(BlueprintCallable)
+		void Start_Attack_Pure();
+
 
 	UFUNCTION(BlueprintCallable)
 		void Stop_Attack();
-	
 
 	UFUNCTION(BlueprintCallable)
-		void Activate_Attack();
+		void Activate_AttackCollider();
 
 	UFUNCTION(BlueprintCallable)
-		void Deactivate_Attack();
+		void Deactivate_AttackCollider();
 
 	UFUNCTION(BlueprintPure)
 		bool DecideAttackType();
@@ -735,6 +720,84 @@ public: /* ------------------------ Grapplehook --------------------- */
 	UFUNCTION()
 		void OnAttackColliderBeginOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
+
+
+	/* ---- Moving Character During Shared Basic Attack Anticipation ---- */
+	/* How far the character will move forward during the Shared Basic Attack Anticipation. Before the attack type is decided */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
+		float PreBasicAttackMovementLength{ 50.f };
+	bool bPreBasicAttackMoveCharacter{};
+	void PreBasicAttackMoveCharacter(float DeltaTime);
+
+
+	/* -------- Animation Variables -------- */
+	/* The speed of the anticipation to the regular attack. Which is shared between SmackAttack and ScoopAttack.
+	 * At the end of this anticipation, 
+	 * If the player still holds the attack button, the character will perform the scoop attack. 
+	 *  Else if the button is not held at this time, the character will perform the regular SmackAttack */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks")
+		float BasicAttack_CommonAnticipation_Rate{ 4.5f };
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks")
+		float SmackAttack_Action_Rate{ 5.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks")
+		float SmackAttack_Reaction_Rate{ 2.f };
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks")
+		float ScoopAttack_Anticipation_Rate{ 10.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks")
+		float ScoopAttack_Action_Rate{ 7.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks")
+		float ScoopAttack_Reaction_Rate{ 2.f };
+
+
+
+
+	/* --------------------------------- SMACK ATTACK ----------------------------- */
+	#pragma region SmackAttack
+
+
+	bool bAttackPress{};
+	UFUNCTION(BlueprintCallable)
+		bool GetAttackPress() const { return bAttackPress; }
+	bool bCanAttack{ true };
+	bool bAttacking{};
+	bool IsAttacking() const { return bAttacking; }
+	
+	/* When TRUE the characters rotation is decided by the players input direction 
+	 * When FALSE the characters rotation is decided by the direction of the camera */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
+		bool bSmackDirectionDecidedByInput{ true };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
+		bool bDisableMovementDuringAttack{ true };
+
+	/* The angle from the ground the enemy will be smacked. 0 degrees: Is parallel to the ground. 90 degrees: Is directly upwards */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
+		float SmackUpwardAngle{ 30.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
+		float SmackAttackStrength{ 1500.f };
+
+	/* ---- Moving Character During SmackAttack ---- */
+	/* How far the character will move forward during Smack Attack. Happens during The Action when the collider is active */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
+		float SmackAttackMovementLength{ 100.f };
+
+	bool bSmackAttackMoveCharacter{};
+	void SmackAttackMoveCharacter(float DeltaTime);
+
+
+
+	UFUNCTION(BlueprintCallable)
+		void Activate_SmackAttack();
+	UFUNCTION(BlueprintCallable)
+		void Deactivate_SmackAttack();
+
+	bool bIsSmackAttacking{};
+
+	bool bCanBeSmackAttacked{ true };
+
+
+
 	//void Do_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength) override;
 	void Do_SmackAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override;
 	void Receive_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength) override;
@@ -744,11 +807,23 @@ public: /* ------------------------ Grapplehook --------------------- */
 
 	#pragma endregion //SmackAttack
 
-	/* ----------------------------------------------------------
-	 * Scooping Attack 
-	 */
+	/* ---------------------------- SCOOP ATTACK ---------------------- */
 	#pragma region ScoopAttack
 	bool bIsScoopAttacking{};
+	bool bHasbeenScoopLaunched{};
+
+	/* ---- Moving Character During ScoopAttack ---- */
+	/* How far the character will move forward during Scoop Attack. During Scoop Anticipation and Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
+		float ScoopAttackMovementLength{ 75.f };
+
+	bool bScoopAttackMoveCharacter{};
+	void ScoopAttackMoveCharacter(float DeltaTime);
+
+	UFUNCTION(BlueprintCallable)
+		void Activate_ScoopAttack();
+	UFUNCTION(BlueprintCallable)
+		void Deactivate_ScoopAttack();
 
 	/* Whether or not the player character stay on the ground and only launch the enemy in the air during scoop		(true)  (Checked) 
 	 * OR the player character will be launched in to the air with the enemy when using scoop attack				(false) (Un-checked) */
@@ -763,6 +838,7 @@ public: /* ------------------------ Grapplehook --------------------- */
 
 	#pragma endregion //ScoopAttack
 
+	/* --------------------------- GROUND POUND -------------------------- */
 	#pragma region GroundPound
 
 	bool bGroundPoundPress{};

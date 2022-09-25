@@ -105,7 +105,7 @@ void ASmallEnemy::Receive_ScoopAttack_Pure(const FVector& Direction, const float
 		GetCharacterMovement()->AddImpulse(Direction * Strength, true);
 
 		/* Sets a timer before character can be damaged by the same attack */
-		GetWorldTimerManager().SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, 0.5f, false);
+		GetWorldTimerManager().SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, 0.2f, false);
 	}
 }
 

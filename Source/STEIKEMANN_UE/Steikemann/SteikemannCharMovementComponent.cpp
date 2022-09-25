@@ -32,7 +32,7 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 	}
 
 	/* Gravity */
-	if (GetCharOwner()->IsJumping() || MovementMode == MOVE_Walking || bWallJump/* || bIsJumping*/)
+	if (GetCharOwner()->IsJumping() || MovementMode == MOVE_Walking /* || bWallJump*//* || bIsJumping*/)
 	{
 		GravityScale = FMath::FInterpTo(GravityScale, GravityScaleOverride, DeltaTime, GravityScaleOverride_InterpSpeed);
 	}
@@ -354,13 +354,14 @@ bool USteikemannCharMovementComponent::WallJump(const FVector& ImpactNormal, flo
 	AddImpulse(WallJump_VelocityDirection * JumpStrength, true);
 
 		DrawDebugLine(GetWorld(), GetCharOwner()->GetActorLocation(), GetCharOwner()->GetActorLocation() + (ImpactNormal * 300.f), FColor::Blue, false, 2.f, 0, 4.f);
-		DrawDebugLine(GetWorld(), GetCharOwner()->GetActorLocation(), GetCharOwner()->GetActorLocation() + WallJump_VelocityDirection, FColor::Yellow, false, 2.f, 0, 4.f);
+		DrawDebugLine(GetWorld(), GetCharOwner()->GetActorLocation(), GetCharOwner()->GetActorLocation() + (WallJump_VelocityDirection * 300.f), FColor::Yellow, false, 2.f, 0, 4.f);
 
-	bWallJump = true;
-	bStickingToWall = false;
-	bWallSlowDown = false;
+	//bWallJump = true;
+	//bStickingToWall = false;
+	//bWallSlowDown = false;
 	//GetCharOwner()->bCanStickToWall = true;
 	GetCharOwner()->WallJump_NonStickTimer = 0.f;
+	GetCharOwner()->ResetWallJumpAndLedgeGrab();
 	return true;
 }
 
