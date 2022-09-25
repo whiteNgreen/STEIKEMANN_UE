@@ -186,7 +186,8 @@ public:/* ------------------- Basic Movement ------------------- */
 	UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump")
 		float PostEdge_JumpTimer_Length{ 0.3f };
 	float PostEdge_JumpTimer{};
-	bool bCanPostEdgeJump{};
+	bool bCanPostEdgeRegularJump{};
+
 
 	void Landed(const FHitResult& Hit) override;
 
@@ -205,34 +206,55 @@ public:/* ------------------- Basic Movement ------------------- */
 	bool IsFalling() const;
 	bool IsOnGround() const;
 
+	//bool CanJump() const override;
+
 	/* 
-	 * --- New Jump : Cartoony --- 
+	 * -------------------- New Jump : Cartoony --------------------------- 
 	*/
-	FTimerHandle JumpTimer{};
+	//FTimerHandle JumpTimer{};
 
 
-	bool bJumpClick{};
 	/* How high should the character jump? in cm */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump|NewJump")
-		float JumpHeight UMETA(DisplayName = "Jump Height in cm") { 300.f };
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump|NewJump")
+		//float JumpHeight UMETA(DisplayName = "Jump Height in cm") { 300.f };
 	/* The initial Jump Velocity. Needed to calculate the acceleration to ensure the 
 	 * character ends up at the specified height within the time */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump|NewJump")
-		float InitialJumpVelocity{ 1000.f };
-	/* Time it takes to reach max height */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump|NewJump")
-		float Jump_TimeToTop{ 0.5f };
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump|NewJump")
+		//float InitialJumpVelocity{ 1000.f };
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump|NewJump")
+	//	float JumpDownwardAcceleration{ 5500.f };
 
-	///* How long should the character stay at max height? */
+	/* Time it takes to reach max height */
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump|NewJump")
+		//float Jump_TimeToTop{ 0.5f };
+
+	bool bJumpClick{};
+
+	/* The strength of the Jump */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump|NewJump")
-		float Jump_TopFloatTime{ 1.f };
+		float JumpStrength{ 2500.f };
+
+	/* If the jump button is released, how fast will the character slow down? */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump|NewJump")
+		float JumpPrematureSlowDownTime{ 0.2f };
+
+	/* How far through the jump, percentage wise, can the player go. Before releasing the button and still get the full jump height? */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump|NewJump")
+		float JumpFullPercentage{ 0.8f };
+
+	/* How long should the character stay at max height? */
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump|NewJump")
+		//float Jump_TopFloatTime{ 1.f };
+
+
 
 	/*
-	* Player Pogo Jumping on enemy
+	* -------------------- Player Pogo Jumping on enemy --------------------------
 	*/
 	/* The strength of the pogo bounce */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce")
 		float PogoBounceStrength{ 2000.f };
+
 	/* Extra contingency length checked between the player and the enemy they are falling towards, before the PogoBounce is called */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce")
 		float PogoContingency{ 50.f };
@@ -270,12 +292,15 @@ public:/* ------------------- Basic Movement ------------------- */
 	/* How long will the crouch slide last */
 	UPROPERTY(EditAnywhere, Category = "Movement|Crouch")
 		float CrouchSlide_Time  UMETA(DisplayName = "Crouch Slide Time") { 0.5f };
+
 	/* How long before a new crouchslide can begin */
 	UPROPERTY(EditAnywhere, Category = "Movement|Crouch")
 		float Post_CrouchSlide_Time  UMETA(DisplayName = "Crouch Slide Wait Time") { 0.5f };
+
 	/* Initial CrouchSlide Speed */
 	UPROPERTY(EditAnywhere, Category = "Movement|Crouch")
 		float CrouchSlideSpeed{ 1000.f };
+
 	/* The End CrouchSlide Speed will be multiplied by this value */
 	UPROPERTY(EditAnywhere, Category = "Movement|Crouch")
 		float EndCrouchSlideSpeedMultiplier{ 0.5f };
@@ -299,15 +324,24 @@ public:/* ------------------- Basic Movement ------------------- */
 
 
 #pragma region OnWall
+	/* ---------------------- ON WALL ----------------------- */
+
 	/* How far from the player walls will be detected */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall")
 		float WallDetectionRange		UMETA(DisplayName = "Wall Detection Range") { 200.f };
-	/* If the player is within this length from the wall, WallJump / WallSlide mechanics are enabled. Should NOT be lower then Wall Detection Range */
+	
+	/* If the player is within this length from the wall, WallJump / WallSlide mechanics are enabled. Should NOT be higher than Wall Detection Range */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall")
 		float WallJump_ActivationRange	UMETA(DisplayName = "Wall-Jump/Slide Activation Length") { 80.f };
+	
 	/* Activate ledgegrab if a wall + ledge is detected and the player is within this range */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall")
 		float LedgeGrab_ActivationRange		UMETA(DisplayName = " Ledgegrab Activation Length") { 120.f };
+
+	/* How far, including the capsule radius, should the character be from the wall during OnWall mechanics 
+	 * Functions more as a contingency */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall")
+		float OnWall_ExtraCharacterLengthFromWall UMETA(DisplayName = "Length from wall") { 10.f };
 
 	void Do_OnWallMechanics(float DeltaTime);
 
@@ -326,6 +360,8 @@ public:/* ------------------- Basic Movement ------------------- */
 	float InputDotProdToForward{};
 
 	void CalcAngleFromActorForwardToInput();
+
+	void ResetWallJumpAndLedgeGrab();
 
 	#pragma region Wall Jump
 		/* ------------------------ Wall Jump --------------------- */
@@ -403,8 +439,9 @@ public:/* ------------------- Basic Movement ------------------- */
 
 #pragma endregion //OnWall
 
+	/* --------------- Actor Rotation Functions ---------------------- */
 
-	void ResetWallJumpAndLedgeGrab();
+
 
 	void ResetActorRotationPitchAndRoll(float DeltaTime);
 	void RotateActorYawToVector(float DeltaTime, FVector AimVector);
@@ -659,6 +696,8 @@ public: /* ------------------------ Grapplehook --------------------- */
 	bool bCanAttack{ true };
 	bool bAttacking{};
 	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
+		float SmackUpwardAngle{ 30.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
 		float SmackAttackStrength{ 1500.f };
 

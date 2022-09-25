@@ -101,6 +101,7 @@ void ASteikemannCharacter::BeginPlay()
 		AttackCollider->OnComponentBeginOverlap.AddDynamic(this, &ASteikemannCharacter::OnAttackColliderBeginOverlap);
 		AttackColliderScale = AttackCollider->GetRelativeScale3D();
 		AttackCollider->SetRelativeScale3D(FVector(0));
+		
 
 		GroundPoundCollider->OnComponentBeginOverlap.AddDynamic(this, &ASteikemannCharacter::OnAttackColliderBeginOverlap);
 		//GroundPoundColliderScale = GroundPoundCollider->GetRelativeScale3D();
@@ -113,7 +114,7 @@ void ASteikemannCharacter::BeginPlay()
 	//Player = FGameplayTag::RequestGameplayTag("Pottit");
 	Player = Tag_Player;
 	GameplayTags.AddTag(Player);
-	PRINTPARLONG("%s", *Player.GetTagName().ToString());
+	//PRINTPARLONG("%s", *Player.GetTagName().ToString());
 }
 
 UNiagaraComponent* ASteikemannCharacter::CreateNiagaraComponent(FName Name, USceneComponent* Parent, FAttachmentTransformRules AttachmentRule, bool bTemp /*= false*/)
@@ -197,6 +198,14 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		}
 	}
 	PostEdge_JumpTimer += DeltaTime;
+	if (GetMoveComponent()->IsFalling() && (PostEdge_JumpTimer < PostEdge_JumpTimer_Length))
+	{
+		bCanPostEdgeRegularJump = true;
+	}
+	else if (GetMoveComponent()->IsFalling() && (PostEdge_JumpTimer > PostEdge_JumpTimer_Length))
+	{
+		bCanPostEdgeRegularJump = false;
+	}
 	if (GetCharacterMovement()->IsWalking()) { PostEdge_JumpTimer = 0.f; }
 
 
@@ -234,13 +243,17 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 
 
 	/*		Wall Jump & LedgeGrab		*/
-	if ((GetMoveComponent()->IsFalling()) && !IsGrappling() && bOnWallActive) 
+	//if (GetMoveComponent()->IsFalling())
+	//if ((GetMoveComponent()->IsFalling()) && !IsGrappling() && bOnWallActive) 
+	if (GetMoveComponent()->IsFalling() && bOnWallActive)
 	{
+		PRINT("Do OnWallMechanics");
 		Do_OnWallMechanics(DeltaTime);
 	}
 	else if (!bOnWallActive)
 	{
-		if (WallJump_NonStickTimer < WallJump_MaxNonStickTimer)	{
+		if (WallJump_NonStickTimer < WallJump_MaxNonStickTimer)	
+		{
 			WallJump_NonStickTimer += DeltaTime;
 
 			ResetWallJumpAndLedgeGrab();
@@ -249,6 +262,8 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 			bOnWallActive = true;
 		}
 	}
+	PRINTPAR("WallJump NonstickTimer: %f", WallJump_NonStickTimer);
+	bOnWallActive ? PRINT("bOnWallActive = TRUE") : PRINT("bOnWallActive = FALSE");
 
 
 	/*		Activate grapple targeting		*/
@@ -298,7 +313,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		{
 			if (TempNiagaraComponents[i]->IsComplete())
 			{
-				PRINTLONG("Removing completed TempNiagaraComponent");
+				//PRINTLONG("Removing completed TempNiagaraComponent");
 				TempNiagaraComponents[i]->DestroyComponent();
 				TempNiagaraComponents.RemoveAt(i);
 				i--;
@@ -581,13 +596,97 @@ void ASteikemannCharacter::Jump()
 	if (!bJumpClick)
 	{
 		bJumpClick = true;
+		bJumping = true;
+		/* ------ Doing the various types of jumps ------- */
 
+		/* Crouch- and Slide- Jump */
+		if (IsCrouching() && GetMoveComponent()->IsWalking())
+		{
+			/* Crouch Jump */
+			if (IsCrouchWalking())
+			{
+				PRINTLONG("--CrouchJump--");
+				JumpCurrentCount++;
+				bAddJumpVelocity = CanCrouchJump();
+				GetMoveComponent()->StartCrouchJump();
+				Anim_Activate_Jump();	// Anim_Activate_CrouchJump()
+				return;
+			}
+
+			/* CrouchSlide Jump */
+			if (IsCrouchSliding())
+			{
+				JumpCurrentCount++;
+				{
+					FVector CrouchSlideDirection = GetVelocity();
+					CrouchSlideDirection.Normalize();
+					bAddJumpVelocity = GetMoveComponent()->CrouchSlideJump(CrouchSlideDirection, InputVector);
+				}
+				Anim_Activate_Jump();	// Anim_Activate_CrouchSlideJump()
+				return;
+			}
+		}
+
+		/* If player is LedgeGrabbing */	// FUNKER IKKE NÅ
+		//if ((GetMoveComponent()->bLedgeGrab) && GetMoveComponent()->IsFalling())
+		if (IsLedgeGrabbing() && GetMoveComponent()->IsFalling())
+		{
+			PRINTLONG("LEDGE JUMP");
+			JumpCurrentCount = 1;
+
+			ResetWallJumpAndLedgeGrab();
+			bOnWallActive = false;
+			WallJump_NonStickTimer = 0.f;
+
+			/*bAddJumpVelocity = */GetMoveComponent()->LedgeJump(LedgeLocation, JumpStrength);
+			Anim_Activate_Jump();	//	Anim_Activate_LedgeGrabJump
+			return;
+		}
+
+		/* If player is sticking to a wall */
+		if ((GetMoveComponent()->bStickingToWall || bFoundStickableWall) && GetMoveComponent()->IsFalling())
+		{
+			//bAddJumpVelocity = GetMoveComponent()->WallJump(Wall_Normal);
+			GetMoveComponent()->WallJump(Wall_Normal, JumpStrength);
+			Anim_Activate_Jump();	//	Anim_Activate_WallJump
+			return;
+		}
+
+		/* If player walked off an edge with no jumpcount */
+		if (GetMoveComponent()->IsFalling() && JumpCurrentCount == 0)
+		{
+			/* and the post edge timer is valid */
+			if (bCanPostEdgeRegularJump)
+			{
+				PRINTLONG("POST EDGE JUMP");
+				JumpCurrentCount++;
+			}
+			/* after post edge timer is valid */
+			else 
+			{
+				JumpCurrentCount = 2;
+			}
+			GetMoveComponent()->Jump(JumpStrength);
+			return;
+		}
+
+
+		/* Double Jump */
+		if (CanDoubleJump())
+		{
+			JumpCurrentCount++;
+			GetMoveComponent()->Jump(JumpStrength);
+			Anim_Activate_Jump();	// Anim DoubleJump
+			return;
+		}
+
+		/* Regular Jump */
 		if (CanJump())
 		{
 			JumpCurrentCount++;
-			GetMoveComponent()->Jump(JumpHeight, InitialJumpVelocity, Jump_TimeToTop, Jump_TopFloatTime);
-
-			GetWorldTimerManager().SetTimer(JumpTimer, this, &ASteikemannCharacter::StopJumping, Jump_TimeToTop);
+			GetMoveComponent()->Jump(JumpStrength);
+			Anim_Activate_Jump();
+			return;
 		}
 	}
 
@@ -600,10 +699,12 @@ void ASteikemannCharacter::Jump()
 
 void ASteikemannCharacter::StopJumping()
 {
-	PRINTLONG("STOP JUMP");
-	GetMoveComponent()->StopJump();
+	//PRINTLONG("STOP JUMP");
+	//PRINTPARLONG("JumpHeight: %f", GetActorLocation().Z - GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
+	//GetMoveComponent()->StopJump();
 	//bJumpClick = false;
 
+	/* Old Jump */
 	//bPressedJump = false;
 	//bActivateJump = false;
 	//bJumping = false;
@@ -625,7 +726,8 @@ void ASteikemannCharacter::StopJumping()
 void ASteikemannCharacter::JumpRelease()
 {
 	bJumpClick = false;
-	//GetMoveComponent()->StopJump();
+	bJumping = false;
+	GetMoveComponent()->StopJump();
 }
 
 void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
@@ -668,7 +770,7 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 			if ((GetMoveComponent()->bLedgeGrab) && GetMoveComponent()->IsFalling())
 			{
 				JumpCurrentCount = 1;
-				bAddJumpVelocity = GetMoveComponent()->LedgeJump(LedgeLocation);
+				bAddJumpVelocity = GetMoveComponent()->LedgeJump(LedgeLocation, JumpStrength);
 				ResetWallJumpAndLedgeGrab();
 				Anim_Activate_Jump();	//	Anim_Activate_LedgeGrabJump
 				return;
@@ -683,7 +785,7 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 				}
 				//JumpCurrentCount++;
 				//JumpCurrentCount = 2;
-				bAddJumpVelocity = GetMoveComponent()->WallJump(Wall_Normal);
+				//bAddJumpVelocity = GetMoveComponent()->WallJump(Wall_Normal);
 				Anim_Activate_Jump();	//	Anim_Activate_WallJump
 				return;
 			}
@@ -693,7 +795,7 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 			if (GetCharacterMovement()->IsFalling() && JumpCurrentCount == 0 && PostEdge_JumpTimer < PostEdge_JumpTimer_Length) 
 			{
 				//PRINTLONG("POST EDGE JUMP");
-				bCanPostEdgeJump = true;
+				bCanPostEdgeRegularJump = true;
 				JumpCurrentCount++;
 				Anim_Activate_Jump();
 				bAddJumpVelocity = GetCharacterMovement()->DoJump(bClientUpdating);
@@ -749,7 +851,8 @@ bool ASteikemannCharacter::CanDoubleJump() const
 
 bool ASteikemannCharacter::IsJumping() const
 {
-	return bAddJumpVelocity && bJumping;
+	return bJumping;
+	//return bAddJumpVelocity && bJumping;
 	//return bAddJumpVelocity && bJumping && bActivateJump;
 }
 
@@ -1008,7 +1111,7 @@ void ASteikemannCharacter::DrawDebugArms(const float& InputAngle)
 
 void ASteikemannCharacter::ResetWallJumpAndLedgeGrab()
 {
-	bOnWallActive						= false;
+	//bOnWallActive						= false;
 
 	GetMoveComponent()->bWallSlowDown	= false;
 	GetMoveComponent()->bStickingToWall	= false;
@@ -1198,7 +1301,7 @@ bool ASteikemannCharacter::LineTraceToGrappleableObject()
 				IGrappleTargetInterface::Execute_Targeted(Grappled.Get());
 
 				FGameplayTag tag = IGrappleTargetInterface::Execute_GetGrappledGameplayTag(Grappled.Get());
-				PRINTPAR("Grappled Tag: %s", *tag.GetTagName().ToString());
+				//PRINTPAR("Grappled Tag: %s", *tag.GetTagName().ToString());
 			}
 
 			/* Interface function to un_target the actor we aimed at */
@@ -1260,7 +1363,7 @@ void ASteikemannCharacter::Dash()
 			/* Do the grapplehook swing boost, if they can */
 			if (bCanGrappleSwingBoost && DashCounter == 1)
 			{
-				PRINTLONG("GrappleHook BOOST----");
+				//PRINTLONG("GrappleHook BOOST----");
 				/* The Boost */	// Should be function? 
 				{
 					DashCounter--;
@@ -1364,7 +1467,7 @@ void ASteikemannCharacter::Do_OnWallMechanics(float DeltaTime)
 	{
 		bool b{};
 		/* Only activate LedgeGrab if the actor is below the ledge */
-		if (GetActorLocation().Z < LedgeHit.ImpactPoint.Z)
+		if ((GetActorLocation().Z - GetCapsuleComponent()->GetScaledCapsuleHalfHeight()) < LedgeHit.ImpactPoint.Z)
 		{
 			bIsLedgeGrabbing = true;
 			if (LengthToLedge < GetVelocity().Z)
@@ -1390,9 +1493,12 @@ void ASteikemannCharacter::Do_OnWallMechanics(float DeltaTime)
 	/*			Wall Jump / Wall Slide			 */
 	if (bFoundStickableWall && !bFoundLedge/* && (ActorToWall_Length < WallJump_ActivationRange)*/)
 	{
+		/* If the player is sticking to the wall */
 		if (GetMoveComponent()->bStickingToWall)
 		{
 			//if (JumpCurrentCount == 2) { JumpCurrentCount = 1; }	// Resets DoubleJump
+
+			/* Release from wall if they have stuck to it for the max duration */
 			WallJump_StickTimer += DeltaTime;
 			if (WallJump_StickTimer > WallJump_MaxStickTimer)
 			{
@@ -1521,15 +1627,15 @@ void ASteikemannCharacter::CalcAngleFromActorForwardToInput()
 
 		InputDotProdToForward = FVector::DotProduct(GetActorForwardVector(), InputVector);
 
-		PRINTPAR("INPUT ANGLE FROM ACTOR FORWARD: %f", InputAngleToForward);
-		PRINTPAR("DOT PROD FROM ACTOR FORWARD   : %f", InputDotProdToForward);
+		//PRINTPAR("INPUT ANGLE FROM ACTOR FORWARD: %f", InputAngleToForward);
+		//PRINTPAR("DOT PROD FROM ACTOR FORWARD   : %f", InputDotProdToForward);
 	}
 	else { InputAngleToForward = 0.f; }
 }
 
 void ASteikemannCharacter::SetActorLocation_WallJump(float DeltaTime)
 {
-	float CapsuleRadius = GetCapsuleComponent()->GetScaledCapsuleRadius() + 1.f;
+	float CapsuleRadius = GetCapsuleComponent()->GetScaledCapsuleRadius() + OnWall_ExtraCharacterLengthFromWall;
 	if (ActorToWall_Length > CapsuleRadius) 
 	{
 		float Move{};
@@ -1580,6 +1686,7 @@ bool ASteikemannCharacter::Do_LedgeGrab(float DeltaTime)
 		bOnWallActive = false;
 		WallJump_NonStickTimer = 0.f;
 		GetMoveComponent()->ReleaseFromWall(WallHit.Normal);
+		ResetWallJumpAndLedgeGrab();
 		return false;
 	}
 
@@ -1633,14 +1740,14 @@ void ASteikemannCharacter::Initial_GrappleHook_Swing()
 void ASteikemannCharacter::Update_GrappleHook_Swing(float DeltaTime)
 {
 	if (!GrappledActor.IsValid()) { return; }
-	PRINTPAR("GrappleRadiusLength: %f", GrappleRopeLength);
+	//PRINTPAR("GrappleRadiusLength: %f", GrappleRopeLength);
 
 	FVector currentVelocity = GetCharacterMovement()->Velocity;
 
 	/* Vector from Character -> GrappledActor */
 	FVector ToGrappledActor = GrappledActor->GetActorLocation() - GetActorLocation();
 	float fRadius = ToGrappledActor.Size();
-	PRINTPAR("fRadius: %f", fRadius);
+	//PRINTPAR("fRadius: %f", fRadius);
 
 	/* On Ground */
 	if (GetCharacterMovement()->IsWalking() || IsJumping()) 
@@ -1697,8 +1804,8 @@ void ASteikemannCharacter::Update_GrappleHook_Swing(float DeltaTime)
 
 			/* Debug stuff */
 			DrawDebugLine(GetWorld(), GrappledActor->GetActorLocation(), GrappledActor->GetActorLocation() + FVector::DownVector * GrappleHookRange, FColor::Black, false, -1, 0, 6.f);
-			PRINTPAR("Length To Ground From GrappleTarget: %f", LengthFromGrappledToGround);
-			PRINTPAR("Length Between Player And GrappleTarget: %f", fRadius);
+			//PRINTPAR("Length To Ground From GrappleTarget: %f", LengthFromGrappledToGround);
+			//PRINTPAR("Length Between Player And GrappleTarget: %f", fRadius);
 
 
 		}
@@ -1739,12 +1846,12 @@ void ASteikemannCharacter::Update_GrappleHook_Swing(float DeltaTime)
 			/* Play camera shake */
 			float x =		 FMath::Clamp((newVelocity.Size() / 5000.f),	  0.001f, 1.f);
 			float falloff =	 FMath::Clamp((cosf((x) * (PI / 2)) * 50.f),		0.f, 50.f);
-			PRINTPAR("Speed: %f", newVelocity.Size());
-			PRINTPAR("Camera shake Falloff: %f", falloff);
+			//PRINTPAR("Speed: %f", newVelocity.Size());
+			//PRINTPAR("Camera shake Falloff: %f", falloff);
 			PlayCameraShake(MYShake, falloff);
 			Timer = 0.f;
 		//}
-		PRINTPAR("CS Timer: %f", Timer);
+		//PRINTPAR("CS Timer: %f", Timer);
 	}
 	
 	if (IsAdjustingRopeLength()) {
@@ -1842,8 +1949,8 @@ void ASteikemannCharacter::AdjustRopeLength(FVector Rope)
 
 			GrappleRopeLength -= Adjustment;
 			
-			PRINT("-- ADJUSTING ROPE LENGTH IN AIR --");
-			PRINTPAR("Adjusting rope = %f", Adjustment);
+			//PRINT("-- ADJUSTING ROPE LENGTH IN AIR --");
+			//PRINTPAR("Adjusting rope = %f", Adjustment);
 
 			//bIsAdjustingRopeLength = true;
 		}
@@ -1955,7 +2062,7 @@ void ASteikemannCharacter::Do_SmackAttack_Pure(IAttackInterface* OtherInterface,
 	{
 		FVector Direction{ OtherActor->GetActorLocation() - GetActorLocation() };
 		Direction = Direction.GetSafeNormal2D();
-		float angle = FMath::DegreesToRadians(45.f);
+		float angle = FMath::DegreesToRadians(SmackUpwardAngle);
 		Direction = (cosf(angle) * Direction) + (sinf(angle) * FVector::UpVector);
 		OtherInterface->Receive_SmackAttack_Pure(Direction, SmackAttackStrength);
 
@@ -1982,7 +2089,8 @@ void ASteikemannCharacter::Do_ScoopAttack_Pure(IAttackInterface* OtherInterface,
 		/* Launch player in air together with enemy when doing a Scoop Attack */
 		if (!bStayOnGroundDuringScoop)
 		{
-			GetMoveComponent()->AddImpulse(FVector::UpVector * ScoopStrength * 0.9f, true);
+			//GetMoveComponent()->AddImpulse(FVector::UpVector * ScoopStrength * 0.9f, true);
+			GetMoveComponent()->AddImpulse(Direction * ScoopStrength * 0.9f, true);
 		}
 	}
 }
@@ -2079,10 +2187,11 @@ void ASteikemannCharacter::Do_GroundPound_Pure(IAttackInterface* OtherInterface,
 		Direction = (cosf(angle) * Direction) + (sinf(angle) * FVector::UpVector);
 
 		float LengthToOtherActor = FVector(GetActorLocation() - OtherActor->GetActorLocation()).Size();
-		float Multiplier = 1.f - (LengthToOtherActor / MaxGroundPoundRadius);
+		float Multiplier = /*1.f - */(LengthToOtherActor / MaxGroundPoundRadius);
 		PRINTPARLONG("Multiplier: %f", Multiplier);
 
-		OtherInterface->Receive_GroundPound_Pure(Direction, GP_LaunchStrength * Multiplier);
+		//OtherInterface->Receive_GroundPound_Pure(Direction, GP_LaunchStrength * Multiplier);
+		OtherInterface->Receive_GroundPound_Pure(Direction, GP_LaunchStrength + ((GP_LaunchStrength/2) * Multiplier));
 	}
 }
 

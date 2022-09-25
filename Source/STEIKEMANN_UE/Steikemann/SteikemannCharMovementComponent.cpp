@@ -18,6 +18,7 @@ void USteikemannCharMovementComponent::BeginPlay()
 	CharacterOwner_Steikemann = Cast<ASteikemannCharacter>(GetCharacterOwner());
 
 	GroundFriction = CharacterFriction;
+
 }
 
 void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -31,12 +32,12 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 	}
 
 	/* Gravity */
-	if (GetCharOwner()->IsJumping() || MovementMode == MOVE_Walking || bWallJump)
+	if (GetCharOwner()->IsJumping() || MovementMode == MOVE_Walking || bWallJump/* || bIsJumping*/)
 	{
 		GravityScale = FMath::FInterpTo(GravityScale, GravityScaleOverride, DeltaTime, GravityScaleOverride_InterpSpeed);
 	}
 
-	else if (GetCharOwner()->IsDashing() || bIsJumping)
+	else if (GetCharOwner()->IsDashing())
 	{
 		GravityScale = 0.f;
 	}
@@ -61,49 +62,45 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 		Do_CrouchSlide(DeltaTime);
 		GroundFriction = 0.f;
 	}
-	PRINTPAR("Velocity: %f", Velocity.Size());
 
 	/* Jump velocity */
 	//if (GetCharOwner()->IsJumping())
 	if (bIsJumping)
 	{
-		//Velocity.Z = FMath::Max(Velocity.Z, JumpZVelocity);
-		Velocity.Z = JumpZVelocity;
-		
-		JumpZVelocity -= JumpDownAcceleration * DeltaTime;
-
-		/* Calculate Velocity Over Time */
-		//JumpZVelocity += (GetGravityZ() * JumpGravityMultiplier * DeltaTime);
-		//JumpZVelocity += (GetGravityZ() * DeltaTime);
-		//PRINTPAR("JumpZVelocity: %f", JumpZVelocity);
+		DetermineJump(DeltaTime);
 
 
-		//if (bWallJump) {
-		//	Velocity = WallJump_VelocityDirection;
-		//}
-		//else if (bLedgeJump) {
-		//	Velocity.Z = FMath::Max(Velocity.Z, JumpZVelocity * (1.f + LedgeJumpBoost_Multiplier));
-		//	//Velocity = LedgeJumpDirection;
-		//}
-		//else if (bCrouchJump) {
-		//	Velocity.Z = FMath::Max(Velocity.Z, CrouchJumpSpeed);
-		//}
-		//else if (bCrouchSlideJump) {
-		//	Velocity = CrouchSlideJump_Vector;
-		//}
-		//else {
-		//	Velocity.Z = FMath::Max(Velocity.Z, JumpZVelocity);
-		//}
+	//	/* 
+	//	 *		Old Jumps 
+	//	 * ---------------------- */
+	//	//if (bWallJump) {
+	//	//	Velocity = WallJump_VelocityDirection;
+	//	//}
+	//	//else if (bLedgeJump) {
+	//	//	Velocity.Z = FMath::Max(Velocity.Z, JumpZVelocity * (1.f + LedgeJumpBoost_Multiplier));
+	//	//	//Velocity = LedgeJumpDirection;
+	//	//}
+	//	//else if (bCrouchJump) {
+	//	//	Velocity.Z = FMath::Max(Velocity.Z, CrouchJumpSpeed);
+	//	//}
+	//	//else if (bCrouchSlideJump) {
+	//	//	Velocity = CrouchSlideJump_Vector;
+	//	//}
+	//	//else {
+	//	//	Velocity.Z = FMath::Max(Velocity.Z, JumpZVelocity);
+	//	//}
+	//	//Velocity.Z += GetGravityZ() * DeltaTime;
 
 
-
+		SetMovementMode(MOVE_Falling);
 	}
-	//if (Velocity.Z <= 0 && IsFalling())
-	//{
-	//	PRINTPARLONG("Z == %f", GetOwner()->GetActorLocation().Z - (170/2));
-	//}
+	if (bJumpPrematureSlowdown)
+	{
+		SlowdownJumpSpeed(DeltaTime);
+	}
+	//PRINTPAR("Velocity: %s", *Velocity.ToString());
 	
-	PRINTPAR("Gravity Strenght: %f", GetGravityZ());
+	//PRINTPAR("Gravity Strenght: %f", GetGravityZ());
 
 	/* Dash */
 	if (GetCharOwner()->IsDashing())
@@ -210,7 +207,7 @@ bool USteikemannCharMovementComponent::DoJump(bool bReplayingMoves)
 {
 	if (!GetCharOwner()) { return false; }
 
-	if (GetCharOwner()->bCanPostEdgeJump)	{ return true; }
+	if (GetCharOwner()->bCanPostEdgeRegularJump)	{ return true; }
 	if (GetCharOwner()->bCanEdgeJump)		{ return true; }
 
 	if (GetCharOwner()->CanJump() || GetCharOwner()->CanDoubleJump())
@@ -225,26 +222,48 @@ bool USteikemannCharMovementComponent::DoJump(bool bReplayingMoves)
 	return false;
 }
 
-void USteikemannCharMovementComponent::Jump(float Height, float InitialVelocity, float Time, float FloatTime)
+void USteikemannCharMovementComponent::Jump(float JumpStrength)
 {
+	//PRINTLONG("JUMP : MoveComponent");
 	bIsJumping = true;
 
-	//JumpDownAcceleration = (2 * (InitialVelocity * Time + Height)) / (Time * Time);
-	JumpDownAcceleration = (2 * (Height - InitialVelocity * Time)) / (Time * Time);
-	JumpZVelocity = InitialVelocity;
+	Velocity.Z *= 0.f;
+	AddImpulse(FVector::UpVector * JumpStrength, true);
+	InitialJumpVelocity = JumpStrength;
 
-	SetMovementMode(MOVE_Falling);
+	//PRINTPARLONG("InitialJumpVelocity: %f", InitialJumpVelocity);
+}
 
-	PRINTPARLONG("JumpDownAcceleration: %f", JumpDownAcceleration);
-	PRINTPARLONG("Time: %f", Time);
-	PRINTPARLONG("Height: %f", Height);
+void USteikemannCharMovementComponent::DetermineJump(float DeltaTime)
+{
+	JumpPercentage = Velocity.Z / InitialJumpVelocity;
+	//PRINTPAR("JumpPercentage = %f", JumpPercentage);
+	if (JumpPercentage < (1 - GetCharOwner()->JumpFullPercentage))
+	{
+		StopJump();
+	}
+}
+
+void USteikemannCharMovementComponent::SlowdownJumpSpeed(float DeltaTime)
+{
+	Velocity.Z = FMath::FInterpTo(Velocity.Z, 0.f, DeltaTime, 1 / JumpPrematureSlowDownTime);
+	if (Velocity.Z < 0.f)
+	{
+		bJumpPrematureSlowdown = false;
+	}
 }
 
 void USteikemannCharMovementComponent::StopJump()
 {
+	//PRINTLONG("STOP JUMP : MoveComponent");
 	bIsJumping = false;
+	GetCharOwner()->bJumping = false;
 
-	//Velocity.Z *= 0.f;
+	if (JumpPercentage > (1 - GetCharOwner()->JumpFullPercentage))
+	{
+		bJumpPrematureSlowdown = true;
+	}
+	JumpPercentage = 0.f;
 }
 
 void USteikemannCharMovementComponent::Bounce(FVector surfacenormal)
@@ -299,7 +318,7 @@ void USteikemannCharMovementComponent::Update_Dash(float deltaTime)
 
 
 
-bool USteikemannCharMovementComponent::WallJump(const FVector& ImpactNormal)
+bool USteikemannCharMovementComponent::WallJump(const FVector& ImpactNormal, float JumpStrength)
 {
 	PRINTLONG("WallJump");
 
@@ -331,7 +350,8 @@ bool USteikemannCharMovementComponent::WallJump(const FVector& ImpactNormal)
 		}
 	}
 
-	WallJump_VelocityDirection *= JumpZVelocity;
+	//WallJump_VelocityDirection *= JumpZVelocity;
+	AddImpulse(WallJump_VelocityDirection * JumpStrength, true);
 
 		DrawDebugLine(GetWorld(), GetCharOwner()->GetActorLocation(), GetCharOwner()->GetActorLocation() + (ImpactNormal * 300.f), FColor::Blue, false, 2.f, 0, 4.f);
 		DrawDebugLine(GetWorld(), GetCharOwner()->GetActorLocation(), GetCharOwner()->GetActorLocation() + WallJump_VelocityDirection, FColor::Yellow, false, 2.f, 0, 4.f);
@@ -348,6 +368,9 @@ bool USteikemannCharMovementComponent::StickToWall(float DeltaTime)
 {
 	if (Velocity.Z > 0.f) { bWallSlowDown = false;  return false; }
 
+	/* If the velocity is lower than the speed threshold for sticking to the wall, 
+	 * Set velocity to zero set bStickingToWall = true 
+	 * */
 	if (Velocity.Size() < WallJump_MaxStickingSpeed)
 	{
 		Velocity *= 0;
@@ -355,7 +378,9 @@ bool USteikemannCharMovementComponent::StickToWall(float DeltaTime)
 		bWallSlowDown = false;
 		return true;
 	}
-	else {
+	/* Else, than lower the velocity as the player is on the wall */
+	else 
+	{
 		FVector Vel = Velocity;
 		Vel.Normalize();
 		(Velocity.Size()>1000.f) ? Velocity -= (Vel * (WallJump_WalltouchSlow * Velocity.Size()/1000.f)) : Velocity -= (Vel * WallJump_WalltouchSlow);
@@ -374,6 +399,8 @@ bool USteikemannCharMovementComponent::ReleaseFromWall(const FVector& ImpactNorm
 	bStickingToWall = false;
 	bWallSlowDown = false;
 
+	//bLedgeGrab = false;
+	//bIsLedgeGrabbing = false;
 
 	AddImpulse(ReleaseVector * 200.f, true);
 
@@ -388,12 +415,14 @@ void USteikemannCharMovementComponent::Start_LedgeGrab()
 
 void USteikemannCharMovementComponent::Update_LedgeGrab()
 {
+	//PRINTLONG("UPDATE LEDGE GRAB");
 	Velocity *= 0;
 	GravityScale = 0;
 }
 
-bool USteikemannCharMovementComponent::LedgeJump(const FVector& LedgeLocation)
+bool USteikemannCharMovementComponent::LedgeJump(const FVector& LedgeLocation, float JumpStrength)
 {
+	PRINTLONG("LEDGE JUMP : MovementComponent");
 	float InputAngle = GetCharOwner()->InputAngleToForward;
 	//float Angle = 45.f;
 
@@ -403,9 +432,11 @@ bool USteikemannCharMovementComponent::LedgeJump(const FVector& LedgeLocation)
 	float ClampedAngle = FMath::Clamp(InputAngle, -LedgeJump_AngleClamp, LedgeJump_AngleClamp);
 	LedgeJumpDirection = LedgeJumpDirection.RotateAngleAxis(-ClampedAngle, FVector::UpVector);
 	
-	AddImpulse(LedgeJumpDirection * LedgeJump_ImpulseStrength, true);
+	//AddImpulse(LedgeJumpDirection * LedgeJump_ImpulseStrength, true);
 		DrawDebugLine(GetWorld(), GetCharOwner()->GetActorLocation(), GetCharOwner()->GetActorLocation() + (LedgeJumpDirection * LedgeJump_ImpulseStrength), FColor::Orange, false, 1.f, 0, 4.f);
 
+
+	Jump(JumpStrength * (1.f + LedgeJumpBoost_Multiplier));
 
 	bLedgeJump = true;
 	bLedgeGrab = false;

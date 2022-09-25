@@ -101,13 +101,18 @@ public:
 
 	/* --- New Jump --- */
 	bool bIsJumping{};
-	float JumpStartVelocity;
-	float JumpGravityMultiplier{};
+	
+	float InitialJumpVelocity;
+	void Jump(float JumpStrength);
 
+	/* How far through the jump is the player? Determined by the current velocity */
+	float JumpPercentage{};
+	void DetermineJump(float DeltaTime);
+	
+	float JumpPrematureSlowDownTime{ 0.2f };
+	void SlowdownJumpSpeed(float DeltaTime);
 
-	float JumpDownAcceleration{};
-	void Jump(float Height, float InitialVelocity, float Time, float FloatTime);
-
+	bool bJumpPrematureSlowdown{};
 	void StopJump();
 
 #pragma endregion //Jump
@@ -159,7 +164,7 @@ public:
 
 	bool bWallJump{};
 	FVector WallJump_VelocityDirection{};
-	bool WallJump(const FVector& ImpactNormal);
+	bool WallJump(const FVector& ImpactNormal, float JumpStrength);
 	bool StickToWall(float DeltaTime);
 	bool ReleaseFromWall(const FVector& ImpactNormal);
 
@@ -183,7 +188,7 @@ public:
 	void Start_LedgeGrab();
 	void Update_LedgeGrab();
 
-	bool LedgeJump(const FVector& LedgeLocation);
+	bool LedgeJump(const FVector& LedgeLocation, float JumpStrength);
 
 #pragma endregion //LedgeGrab
 
