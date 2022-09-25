@@ -510,10 +510,10 @@ public:/* ------------------- Basic Movement ------------------- */
 
 #pragma endregion //Dash
 
-
+/* -------------------------------- GRAPPLEHOOK ----------------------------- */
 #pragma region GrappleHook
-public: /* ------------------------ Grapplehook --------------------- */
-		/*                     GrappleTargetInterface                 */
+public: 
+	/* ------- GrappleTargetInterface ------ */
 	void Targeted() {}
 	virtual void TargetedPure() override {}
 
@@ -528,7 +528,7 @@ public: /* ------------------------ Grapplehook --------------------- */
 
 	virtual FGameplayTag GetGrappledGameplayTag_Pure() const override { return Player; }
 
-	/*                    Native Variables and functions             */
+	/* ------- Native Variables and functions -------- */
 	void RightTriggerClick();
 	void RightTriggerUn_Click();
 	void LeftTriggerClick();
