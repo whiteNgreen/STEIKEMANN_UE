@@ -33,10 +33,12 @@ public:
 	virtual bool GetCanBeSmackAttacked() const = 0;
 	virtual void ResetCanBeSmackAttacked() = 0;
 
+
 	UFUNCTION(BlueprintNativeEvent, Category = "Attack|ScoopAttack")
 		void ScoopAttack();
 	virtual void Do_ScoopAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) = 0;
 	virtual void Receive_ScoopAttack_Pure(const FVector& Direction, const float& Strength) = 0;
+
 
 	UFUNCTION(BlueprintNativeEvent, Category = "Attack|GroundPound")
 		void GroundPound();

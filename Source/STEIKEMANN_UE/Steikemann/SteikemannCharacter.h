@@ -522,6 +522,7 @@ public:
 
 	void Hooked() {}
 	virtual void HookedPure() override {}
+	virtual void HookedPure(const FVector InstigatorLocation) override {}
 
 	void UnHooked() {}
 	virtual void UnHookedPure() override {}

@@ -42,6 +42,7 @@ public:
 	UFUNCTION(BlueprintNativeEvent, Category = "GrappleHook Targeting")
 		void Hooked();
 	virtual void HookedPure() = 0;
+	virtual void HookedPure(const FVector InstigatorLocation) = 0;
 
 	UFUNCTION(BlueprintNativeEvent, Category = "GrappleHook Targeting")
 		void UnHooked();

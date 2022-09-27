@@ -1418,7 +1418,34 @@ void ASteikemannCharacter::ResetGrappleSwingBoost()
 
 void ASteikemannCharacter::RightTriggerClick()
 {
-	Start_Grapple_Drag();
+	if (GrappledActor.IsValid())
+	{
+		//FGameplayTag GrappledTag;
+		FGameplayTagContainer GrappledTags;
+		IGameplayTagAssetInterface* TagInterface = Cast<IGameplayTagAssetInterface>(GrappledActor.Get());
+		if (TagInterface)
+		{
+			TagInterface->GetOwnedGameplayTags(GrappledTags);
+
+			//if (GrappledTags.HasTag(Tag_GrappleTarget_Dynamic))	// Burde bruke denne taggen på fiendene
+			if (GrappledTags.HasTag(Tag_EnemyAubergineDoggo))		// Også kanskje spesifisere videre med fiende type
+			{
+				PRINTLONG("Grappled to DYNAMIC TARGET");
+				
+				IGrappleTargetInterface* GrappleInterface = Cast<IGrappleTargetInterface>(GrappledActor.Get());
+				if (GrappleInterface)
+				{
+					GrappleInterface->HookedPure(GetActorLocation());
+				}
+			}
+		}
+		else
+		{
+			Start_Grapple_Drag();
+		}
+
+	}
+	
 }
 
 void ASteikemannCharacter::RightTriggerUn_Click()

@@ -47,12 +47,30 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 
-public: /* Grapple targeting */
+public: 
+	/* Choice between the first and second grapplelaunch method */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook")
+		bool bUseFirstGrappleLaunchMethod{ true };
+
+	/* When grapplehooked by the player, launch towards them with this strength */	// 1st method
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook")
+		float GrappledLaunchStrength{ 1000.f };
+
+	/* When grapplehooked by the player, launch them upwards of this angle */	// 1st method
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook")
+		float GrappledLaunchAngle{ 45.f };
+
+	/* Time it should take to reach the Grappled Instigator */	// 2nd method
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook")
+		float GrappledLaunchTime{ 1.f };
+
+	/* ----- Grapple Interface ------ */
 	virtual void TargetedPure() override;
 
 	virtual void UnTargetedPure() override;
 
 	virtual void HookedPure() override;
+	virtual void HookedPure(const FVector InstigatorLocation) override;
 
 	virtual void UnHookedPure() override;
 

@@ -58,6 +58,38 @@ void ASmallEnemy::HookedPure()
 	Hooked();
 }
 
+void ASmallEnemy::HookedPure(const FVector InstigatorLocation)
+{
+	/* 1st method. Static launch strength and angle */
+	if (bUseFirstGrappleLaunchMethod)
+	{
+		FVector Direction3D = InstigatorLocation - GetActorLocation();
+
+		float angle = FMath::DegreesToRadians(GrappledLaunchAngle);
+		FVector LaunchDirection = (cosf(angle) * Direction3D.GetSafeNormal2D()) + (sinf(angle) * FVector::UpVector);
+		PRINTPARLONG("LaunchDirection LENGTH = %f", LaunchDirection.Size());
+
+		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (LaunchDirection * GrappledLaunchStrength), FColor::Red, false, 1.f, 0, 4.f);
+		GetCharacterMovement()->AddImpulse(LaunchDirection * GrappledLaunchStrength, true);
+	}
+	/* 2nd method */
+	else
+	{
+		PRINTLONG("Second Method Launch");
+		FVector Direction3D = InstigatorLocation - GetActorLocation();
+		FVector Direction2D = Direction3D; 
+		Direction3D.Z = 0.f; 
+		//Direction2D.Normalize();
+
+		FVector Velocity = Direction2D / GrappledLaunchTime;
+
+		Velocity.Z = 0.5f * GetCharacterMovement()->GetGravityZ() * GrappledLaunchTime * -1.f;
+
+		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + Velocity, FColor::Red, false, 1.f, 1, 4.f);
+		GetCharacterMovement()->AddImpulse(Velocity, true);
+	}
+}
+
 void ASmallEnemy::UnHookedPure()
 {
 	UnHooked();
