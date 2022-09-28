@@ -540,13 +540,21 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		FGameplayTag GpT_GrappledActorTag;
 
-	/* The 'rope' that goes from the player character to the grappled actor/object */
+	/* The rope that goes from the player character to the grappled actor */
 	FVector GrappleRope{};
 
 	UPROPERTY(BlueprintReadOnly)
 		bool bGrapple_Available{};
+
+	/* Collision sphere used for detecting nearby grappleable actors */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Grappling Hook")
+		class USphereComponent* GrappleTargetingDetectionSphere{ nullptr };
+
 	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
 		float GrappleHookRange{ 2000.f };
+
+	UFUNCTION()
+		void OnGrappleTargetDetectionBeginOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 	
 	/* The onscreen aiming location */
 	UPROPERTY(BlueprintReadOnly)

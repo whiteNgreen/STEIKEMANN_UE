@@ -53,6 +53,11 @@ ASteikemannCharacter::ASteikemannCharacter(const FObjectInitializer& ObjectIniti
 	GrappleHookMesh = CreateDefaultSubobject<UPoseableMeshComponent>(TEXT("GrappleHook Mesh"));
 	GrappleHookMesh->SetupAttachment(RootComponent);
 
+	GrappleTargetingDetectionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("Grapple Targeting Detection Sphere"));
+	GrappleTargetingDetectionSphere->SetupAttachment(GetCapsuleComponent());
+	GrappleTargetingDetectionSphere->SetGenerateOverlapEvents(false);
+	GrappleTargetingDetectionSphere->SetSphereRadius(0.1f);
+
 	Component_Audio = CreateDefaultSubobject<UAudioComponent>(TEXT("AudioComponent"));
 	Component_Audio->SetupAttachment(RootComponent);
 
@@ -106,6 +111,13 @@ void ASteikemannCharacter::BeginPlay()
 		GroundPoundCollider->OnComponentBeginOverlap.AddDynamic(this, &ASteikemannCharacter::OnAttackColliderBeginOverlap);
 		//GroundPoundColliderScale = GroundPoundCollider->GetRelativeScale3D();
 
+	}
+
+	/* Grapple Targeting Detection Sphere */
+	{
+		GrappleTargetingDetectionSphere->OnComponentBeginOverlap.AddDynamic(this, &ASteikemannCharacter::OnGrappleTargetDetectionBeginOverlap);
+		GrappleTargetingDetectionSphere->SetGenerateOverlapEvents(true);
+		GrappleTargetingDetectionSphere->SetSphereRadius(GrappleHookRange);
 	}
 
 	/*
@@ -1226,6 +1238,23 @@ void ASteikemannCharacter::RollActorTowardsLocation(FVector Location, float Delt
 
 	/*		Add Roll rotation to actor		*/
 	AddActorLocalRotation(FRotator(0, 0, Roll));
+}
+
+void ASteikemannCharacter::OnGrappleTargetDetectionBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (OtherActor != this)
+	{
+		IGameplayTagAssetInterface* TagInterface = Cast<IGameplayTagAssetInterface>(OtherActor);
+		if (TagInterface)
+		{
+
+			PRINTPARLONG("Detecting Actor: %s", *OtherActor->GetName());
+		}
+		else
+		{
+			//IGrappleTargetInterface
+		}
+	}
 }
 
 /* Aiming system for grapplehook */
