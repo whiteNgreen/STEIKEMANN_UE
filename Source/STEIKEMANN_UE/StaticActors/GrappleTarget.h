@@ -24,24 +24,33 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	FGameplayTagContainer TagsContainer;
+
+	//FGameplayTag GrappleType;
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
 	/* --------- Gameplay Tag Interface ------------ */
-	virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override{}
+	virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override { TagContainer = TagsContainer; return; }
 
 
 	/* --------- GrappleTarget Interface --------- */
-	virtual FGameplayTag GetGrappledGameplayTag_Pure() const override { return GrappleTargetType; }
+	//virtual FGameplayTag GetGrappledGameplayTag_Pure() const override { return GrappleTargetType; }
 
-	virtual void TargetedPure() override{}
+	virtual void TargetedPure() override;
 
-	virtual void UnTargetedPure() override{}
+	virtual void UnTargetedPure() override;
 
 
-	virtual void HookedPure() override{}
+	virtual void InReach_Pure() override;
+
+	virtual void OutofReach_Pure() override;
+
+
+	virtual void HookedPure() override;
 	virtual void HookedPure(const FVector InstigatorLocation) override{}
 
-	virtual void UnHookedPure() override{}
+	virtual void UnHookedPure() override;
 };

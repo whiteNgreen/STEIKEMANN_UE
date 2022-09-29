@@ -514,17 +514,17 @@ public:/* ------------------- Basic Movement ------------------- */
 #pragma region GrappleHook
 public: 
 	/* ------- GrappleTargetInterface ------ */
-	void Targeted() {}
+	//void Targeted() {}
 	virtual void TargetedPure() override {}
 
-	void UnTargeted() {}
+	//void UnTargeted() {}
 	virtual void UnTargetedPure() override {}
 
-	void Hooked() {}
+	//void Hooked() {}
 	virtual void HookedPure() override {}
 	virtual void HookedPure(const FVector InstigatorLocation) override {}
 
-	void UnHooked() {}
+	//void UnHooked() {}
 	virtual void UnHookedPure() override {}
 
 	virtual FGameplayTag GetGrappledGameplayTag_Pure() const override { return Player; }
@@ -544,7 +544,7 @@ public:
 	FVector GrappleRope{};
 
 	UPROPERTY(BlueprintReadOnly)
-		bool bGrapple_Available{};
+		bool bGrapple_Available{};	// Brukes bare i swing atm, Kan kastes ut
 
 	/* Collision sphere used for detecting nearby grappleable actors */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Grappling Hook")
@@ -553,8 +553,12 @@ public:
 	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
 		float GrappleHookRange{ 2000.f };
 
+	TArray<AActor*> InReachGrappleTargets;
+
 	UFUNCTION()
 		void OnGrappleTargetDetectionBeginOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	UFUNCTION()
+		void OnGrappleTargetDetectionEndOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 	
 	/* The onscreen aiming location */
 	UPROPERTY(BlueprintReadOnly)
@@ -573,7 +577,8 @@ public:
 		float GrappleAimYChange_Base UMETA(DisplayName = "GrappleAimYDifference") { 4.f };
 	float GrappleAimYChange{};
 
-	bool LineTraceToGrappleableObject();
+	bool LineTraceToGrappleableObject();	// Old version, Used raytracing from the screen onto the world
+	void GetGrappleTarget();
 
 	UFUNCTION()
 	void Start_Grapple_Swing();

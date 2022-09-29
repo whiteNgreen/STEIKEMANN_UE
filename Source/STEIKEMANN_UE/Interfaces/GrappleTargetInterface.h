@@ -28,7 +28,8 @@ public:
 	FGameplayTag GrappleTargetType;
 	UFUNCTION(BlueprintNativeEvent, Category = "GrappleHook Targeting")
 		FGameplayTag GetGrappledGameplayTag() const;
-	virtual FGameplayTag GetGrappledGameplayTag_Pure() const = 0;	// Trenger ikke være Abstrakt. Kan bare returnere { GrappleTargetType }
+	virtual FGameplayTag GetGrappledGameplayTag_Pure() const { return GrappleTargetType; }
+	// Trenger ikke være Abstrakt. Kan bare returnere { GrappleTargetType }
 
 	UFUNCTION(BlueprintNativeEvent, Category = "GrappleHook Targeting")
 		void Targeted();
@@ -38,6 +39,14 @@ public:
 		void UnTargeted();
 	virtual void UnTargetedPure() = 0;
 
+
+	UFUNCTION(BlueprintNativeEvent, Category = "GrappleHook Targeting")
+		void InReach();
+	virtual void InReach_Pure(){}
+
+	UFUNCTION(BlueprintNativeEvent, Category = "GrappleHook Targeting")
+		void OutofReach();
+	virtual void OutofReach_Pure(){}
 
 
 	UFUNCTION(BlueprintNativeEvent, Category = "GrappleHook Targeting")

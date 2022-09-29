@@ -16,6 +16,9 @@ void AGrappleTarget::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	GrappleTargetType = Tag_GrappleTarget_Static;
+
+	TagsContainer.AddTag(GrappleTargetType);
 }
 
 // Called every frame
@@ -23,5 +26,37 @@ void AGrappleTarget::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+}
+
+void AGrappleTarget::TargetedPure()
+{
+	Execute_Targeted(this);
+}
+
+void AGrappleTarget::UnTargetedPure()
+{
+	Execute_UnTargeted(this);
+}
+
+void AGrappleTarget::InReach_Pure()
+{
+	Execute_InReach(this);
+}
+
+void AGrappleTarget::OutofReach_Pure()
+{
+	Execute_OutofReach(this);
+}
+
+
+
+void AGrappleTarget::HookedPure()
+{
+	Execute_Hooked(this);
+}
+
+void AGrappleTarget::UnHookedPure()
+{
+	Execute_UnHooked(this);
 }
 

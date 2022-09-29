@@ -45,54 +45,70 @@ void ASmallEnemy::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 void ASmallEnemy::TargetedPure()
 {
 	PRINTPAR("I; %s, am grapple targeted", *GetName());
-	Targeted();
+	Execute_Targeted(this);
 }
 
 void ASmallEnemy::UnTargetedPure()
 {
-	UnTargeted();
+	Execute_UnTargeted(this);
+}
+
+void ASmallEnemy::InReach_Pure()
+{
+	Execute_InReach(this);
+}
+
+void ASmallEnemy::OutofReach_Pure()
+{
+	Execute_OutofReach(this);
 }
 
 void ASmallEnemy::HookedPure()
 {
-	Hooked();
+	Execute_Hooked(this);
 }
 
 void ASmallEnemy::HookedPure(const FVector InstigatorLocation)
 {
-	/* 1st method. Static launch strength and angle */
-	if (bUseFirstGrappleLaunchMethod)
+	if (bCanBeGrappleHooked)
 	{
-		FVector Direction3D = InstigatorLocation - GetActorLocation();
+		/* 1st method. Static launch strength and angle */
+		if (bUseFirstGrappleLaunchMethod)
+		{
+			FVector Direction3D = InstigatorLocation - GetActorLocation();
 
-		float angle = FMath::DegreesToRadians(GrappledLaunchAngle);
-		FVector LaunchDirection = (cosf(angle) * Direction3D.GetSafeNormal2D()) + (sinf(angle) * FVector::UpVector);
-		PRINTPARLONG("LaunchDirection LENGTH = %f", LaunchDirection.Size());
+			float angle = FMath::DegreesToRadians(GrappledLaunchAngle);
+			FVector LaunchDirection = (cosf(angle) * Direction3D.GetSafeNormal2D()) + (sinf(angle) * FVector::UpVector);
+			PRINTPARLONG("LaunchDirection LENGTH = %f", LaunchDirection.Size());
 
-		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (LaunchDirection * GrappledLaunchStrength), FColor::Red, false, 1.f, 0, 4.f);
-		GetCharacterMovement()->AddImpulse(LaunchDirection * GrappledLaunchStrength, true);
-	}
-	/* 2nd method */
-	else
-	{
-		PRINTLONG("Second Method Launch");
-		FVector Direction3D = InstigatorLocation - GetActorLocation();
-		FVector Direction2D = Direction3D; 
-		Direction3D.Z = 0.f; 
-		//Direction2D.Normalize();
+			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (LaunchDirection * GrappledLaunchStrength), FColor::Red, false, 1.f, 0, 4.f);
+			GetCharacterMovement()->AddImpulse(LaunchDirection * GrappledLaunchStrength, true);
+		}
+		/* 2nd method */
+		else
+		{
+			PRINTLONG("Second Method Launch");
+			FVector Direction3D = InstigatorLocation - GetActorLocation();
+			FVector Direction2D = Direction3D;
+			Direction3D.Z = 0.f;
+			//Direction2D.Normalize();
 
-		FVector Velocity = Direction2D / GrappledLaunchTime;
+			FVector Velocity = Direction2D / GrappledLaunchTime;
 
-		Velocity.Z = 0.5f * GetCharacterMovement()->GetGravityZ() * GrappledLaunchTime * -1.f;
+			Velocity.Z = 0.5f * GetCharacterMovement()->GetGravityZ() * GrappledLaunchTime * -1.f;
 
-		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + Velocity, FColor::Red, false, 1.f, 1, 4.f);
-		GetCharacterMovement()->AddImpulse(Velocity, true);
+			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + Velocity, FColor::Red, false, 1.f, 1, 4.f);
+			GetCharacterMovement()->AddImpulse(Velocity, true);
+		}
+
+		bCanBeGrappleHooked = false;
+		GetWorldTimerManager().SetTimer(Handle_GrappledCooldown, this, &ASmallEnemy::ResetCanBeGrappleHooked, GrappleHookedInternalCooldown);
 	}
 }
 
 void ASmallEnemy::UnHookedPure()
 {
-	UnHooked();
+	Execute_UnHooked(this);
 }
 
 void ASmallEnemy::CanBeAttacked()
@@ -128,7 +144,7 @@ void ASmallEnemy::Receive_ScoopAttack_Pure(const FVector& Direction, const float
 {
 	if (GetCanBeSmackAttacked())
 	{
-		PRINTLONG("IM BEING ATTACKED");
+		PRINTPARLONG("IM(%s) BEING ATTACKED", *GetName());
 		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (Direction * Strength), FColor::Yellow, false, 2.f, 0, 3.f);
 
 		bCanBeSmackAttacked = false;
@@ -143,7 +159,7 @@ void ASmallEnemy::Receive_ScoopAttack_Pure(const FVector& Direction, const float
 
 void ASmallEnemy::Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength)
 {
-	PRINTLONG("IM BEING GROUNDPOUNDED");
+	PRINTPARLONG("IM(%s) BEING GROUNDPOUNDED", *GetName());
 	DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (PoundDirection * GP_Strength), FColor::Yellow, false, 2.f, 0, 3.f);
 
 	//bCanBeSmackAttacked = false;

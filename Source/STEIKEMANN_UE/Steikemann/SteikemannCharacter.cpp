@@ -116,6 +116,8 @@ void ASteikemannCharacter::BeginPlay()
 	/* Grapple Targeting Detection Sphere */
 	{
 		GrappleTargetingDetectionSphere->OnComponentBeginOverlap.AddDynamic(this, &ASteikemannCharacter::OnGrappleTargetDetectionBeginOverlap);
+		GrappleTargetingDetectionSphere->OnComponentEndOverlap.AddDynamic(this, &ASteikemannCharacter::OnGrappleTargetDetectionEndOverlap);
+
 		GrappleTargetingDetectionSphere->SetGenerateOverlapEvents(true);
 		GrappleTargetingDetectionSphere->SetSphereRadius(GrappleHookRange);
 	}
@@ -278,13 +280,16 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	bOnWallActive ? PRINT("bOnWallActive = TRUE") : PRINT("bOnWallActive = FALSE");
 
 
-	/*		Activate grapple targeting		*/
+	/* --------- ACTIVATE GRAPPLE TARGETING -------- */
 	if (!IsGrappling())
 	{
-		LineTraceToGrappleableObject();
+		GetGrappleTarget();
+		//LineTraceToGrappleableObject();		// Erstatt denne med ny funksjon som sjekker Dotproduktet mellom PlayerController.Forward og vektoren til alle AActor's inne i InReachGrappleTargets
 		GrappleDrag_PreLaunch_Timer = GrappleDrag_PreLaunch_Timer_Length;
 		GrappleHookMesh->SetVisibility(false);
 	}
+	PRINTPAR("InReach GrappleTargets : %i", InReachGrappleTargets.Num());
+
 	/*		Grapplehook			*/
 	if ((bGrapple_Swing/* && !bGrappleEnd*/) || (bGrapple_PreLaunch/* && !bGrappleEnd*/)) 
 	{
@@ -1244,15 +1249,39 @@ void ASteikemannCharacter::OnGrappleTargetDetectionBeginOverlap(UPrimitiveCompon
 {
 	if (OtherActor != this)
 	{
-		IGameplayTagAssetInterface* TagInterface = Cast<IGameplayTagAssetInterface>(OtherActor);
-		if (TagInterface)
-		{
+		//IGameplayTagAssetInterface* TagInterface = Cast<IGameplayTagAssetInterface>(OtherActor);
+		//if (TagInterface)
+		//{
 
-			PRINTPARLONG("Detecting Actor: %s", *OtherActor->GetName());
-		}
-		else
+			//PRINTPARLONG("Detecting Actor: %s", *OtherActor->GetName());
+		//}
+		IGrappleTargetInterface* GrappleInterface = Cast<IGrappleTargetInterface>(OtherActor);
+		if (GrappleInterface)
 		{
-			//IGrappleTargetInterface
+			//float LengthToActor = FVector(OtherActor->GetActorLocation() - GetActorLocation()).Size();
+			//if (LengthToActor < GrappleHookRange)
+			{
+				//GrappleInterface->InReach_Pure();
+				InReachGrappleTargets.AddUnique(OtherActor);
+			}
+		}
+	}
+}
+
+void ASteikemannCharacter::OnGrappleTargetDetectionEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	if (OtherActor != this)
+	{
+		IGrappleTargetInterface* GrappleInterface = Cast<IGrappleTargetInterface>(OtherActor);
+		if (GrappleInterface)
+		{
+			GrappleInterface->OutofReach_Pure();
+			InReachGrappleTargets.Remove(OtherActor);
+
+			if (InReachGrappleTargets.Num() == 0)
+			{
+				GrappledActor = nullptr;
+			}
 		}
 	}
 }
@@ -1363,6 +1392,102 @@ bool ASteikemannCharacter::LineTraceToGrappleableObject()
 	return bGrapple_Available;
 }
 
+void ASteikemannCharacter::GetGrappleTarget()
+{
+	//PRINTPAR("Controller Forward: %s", *Forward.ToString());
+	FVector Forward = GetControlRotation().Vector();
+	float TargetDotProd{ -1.f };
+	AActor* Target{ nullptr };
+	
+
+	for (auto it : InReachGrappleTargets)
+	{
+		//FVector ToActor = it->GetActorLocation() - GetActorLocation();
+		FVector ToActor = it->GetActorLocation() - CameraBoom->GetComponentLocation();
+		float DotProd = FVector::DotProduct(Forward, ToActor.GetSafeNormal());
+		if (DotProd > TargetDotProd) 
+		{ 
+			TargetDotProd = DotProd; 
+			Target = it;
+		}
+
+		IGrappleTargetInterface* GrappleInterface = Cast<IGrappleTargetInterface>(it);
+		if (GrappleInterface)
+		{
+			GrappleInterface->InReach_Pure();
+		}
+	}
+
+	/* If the target is behind the player, return and Untarget GrappledActor */
+	if (TargetDotProd < 0)
+	{
+		/* If there is a target already, untarget */
+		if (GrappledActor.IsValid())
+		{
+			IGrappleTargetInterface* GrappleInterface = Cast<IGrappleTargetInterface>(GrappledActor.Get());
+			if (GrappleInterface)
+			{
+				//float LengthToActor = FVector(GrappledActor->GetActorLocation() - GetActorLocation()).Size();
+				/* If still within range, set to InReach */
+				//if (LengthToActor < GrappleHookRange)
+				{
+					GrappleInterface->InReach_Pure();
+				}
+				//else
+				//{
+					//GrappleInterface->UnTargetedPure();
+				//}
+			}
+		}
+
+		GrappledActor = nullptr;
+		return;
+	}
+
+
+	/* Else if target is in front of the player */
+	if (!Target) { return; }
+	//PRINTPAR("TARGET: %s", *Target->GetName());
+
+	/* If target is not GrappledActor. UnTarget GrappledActor */
+	if (Target != GrappledActor)
+	{
+		IGrappleTargetInterface* GrappleInterface = Cast<IGrappleTargetInterface>(GrappledActor.Get());
+		if (GrappleInterface)
+		{
+			//float LengthToActor = FVector(GrappledActor->GetActorLocation() - GetActorLocation()).Size();
+			/* If still within range, set to InReach */
+			//if (LengthToActor < GrappleHookRange)
+			{
+				GrappleInterface->InReach_Pure();
+			}
+			//else
+			//{
+				//GrappleInterface->UnTargetedPure();
+			//}
+		}
+
+		GrappleInterface = Cast<IGrappleTargetInterface>(Target);
+		if (GrappleInterface)
+		{
+			GrappleInterface->TargetedPure();
+		}
+
+		GrappledActor = Target;
+	}
+	else
+	{
+		IGrappleTargetInterface* GrappleInterface = Cast<IGrappleTargetInterface>(GrappledActor.Get());
+		if (GrappleInterface)
+		{
+			GrappleInterface->TargetedPure();
+		}
+		return;
+	}
+
+
+}
+
 void ASteikemannCharacter::Bounce()
 {
 	if (!bBounceClick && GetCharacterMovement()->GetMovementName() == "Falling")
@@ -1452,27 +1577,26 @@ void ASteikemannCharacter::RightTriggerClick()
 		//FGameplayTag GrappledTag;
 		FGameplayTagContainer GrappledTags;
 		IGameplayTagAssetInterface* TagInterface = Cast<IGameplayTagAssetInterface>(GrappledActor.Get());
-		if (TagInterface)
+		IGrappleTargetInterface* GrappleInterface = Cast<IGrappleTargetInterface>(GrappledActor.Get());
+		if (TagInterface && GrappleInterface)
 		{
 			TagInterface->GetOwnedGameplayTags(GrappledTags);
+			
 
+			/* Grappling to enemy */
 			//if (GrappledTags.HasTag(Tag_GrappleTarget_Dynamic))	// Burde bruke denne taggen på fiendene
 			if (GrappledTags.HasTag(Tag_EnemyAubergineDoggo))		// Også kanskje spesifisere videre med fiende type
 			{
 				PRINTLONG("Grappled to DYNAMIC TARGET");
 				
-				IGrappleTargetInterface* GrappleInterface = Cast<IGrappleTargetInterface>(GrappledActor.Get());
-				if (GrappleInterface)
-				{
-					GrappleInterface->HookedPure(GetActorLocation());
-				}
+				GrappleInterface->HookedPure(GetActorLocation());
+			}
+			/* Grappling to Static Target */
+			else if (GrappledTags.HasTag(Tag_GrappleTarget_Static))
+			{
+				Start_Grapple_Drag();
 			}
 		}
-		else
-		{
-			Start_Grapple_Drag();
-		}
-
 	}
 	
 }
@@ -2201,8 +2325,6 @@ void ASteikemannCharacter::Do_SmackAttack_Pure(IAttackInterface* OtherInterface,
 		float angle = FMath::DegreesToRadians(SmackUpwardAngle);
 		Direction = (cosf(angle) * Direction) + (sinf(angle) * FVector::UpVector);
 		OtherInterface->Receive_SmackAttack_Pure(Direction, SmackAttackStrength);
-
-
 	}
 }
 

@@ -48,6 +48,14 @@ public:
 
 
 public: 
+	bool bCanBeGrappleHooked{ true };
+	/* The internal cooldown before enemy can be grapplehooked again */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook")
+		float GrappleHookedInternalCooldown{ 0.5f };
+
+	FTimerHandle Handle_GrappledCooldown;
+	void ResetCanBeGrappleHooked() { bCanBeGrappleHooked = true; }
+
 	/* Choice between the first and second grapplelaunch method */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook")
 		bool bUseFirstGrappleLaunchMethod{ true };
@@ -68,6 +76,10 @@ public:
 	virtual void TargetedPure() override;
 
 	virtual void UnTargetedPure() override;
+
+	virtual void InReach_Pure() override;
+
+	virtual void OutofReach_Pure() override;
 
 	virtual void HookedPure() override;
 	virtual void HookedPure(const FVector InstigatorLocation) override;
