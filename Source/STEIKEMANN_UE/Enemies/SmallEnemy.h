@@ -60,15 +60,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook")
 		bool bUseFirstGrappleLaunchMethod{ true };
 
-	/* When grapplehooked by the player, launch towards them with this strength */	// 1st method
+	/* When grapplehooked by the player, launch towards them with this strength : 1st method */	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook")
 		float GrappledLaunchStrength{ 1000.f };
 
-	/* When grapplehooked by the player, launch them upwards of this angle */	// 1st method
+	/* When grapplehooked by the player, launch them upwards of this angle : 1st method*/	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook")
 		float GrappledLaunchAngle{ 45.f };
 
-	/* Time it should take to reach the Grappled Instigator */	// 2nd method
+	/* Time it should take to reach the Grappled Instigator : 2nd method */	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook")
 		float GrappledLaunchTime{ 1.f };
 

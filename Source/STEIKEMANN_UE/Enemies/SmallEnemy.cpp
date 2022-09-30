@@ -72,6 +72,8 @@ void ASmallEnemy::HookedPure(const FVector InstigatorLocation)
 {
 	if (bCanBeGrappleHooked)
 	{
+		GetCharacterMovement()->Velocity *= 0.f;
+
 		/* 1st method. Static launch strength and angle */
 		if (bUseFirstGrappleLaunchMethod)
 		{
