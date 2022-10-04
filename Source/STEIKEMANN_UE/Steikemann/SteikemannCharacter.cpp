@@ -2215,7 +2215,8 @@ void ASteikemannCharacter::Click_Attack()
 			}
 			if (!bSmackDirectionDecidedByInput || InputVector.IsNearlyZero())
 			{
-				AttackDirection = GetControlRotation().Vector(); 
+				//AttackDirection = GetControlRotation().Vector(); 
+				AttackDirection = GetActorForwardVector();
 				AttackDirection.Z = 0; AttackDirection.Normalize();
 			}
 			RotateActorYawToVector(AttackDirection);
