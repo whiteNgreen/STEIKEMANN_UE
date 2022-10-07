@@ -11,8 +11,8 @@
 /**
  * 
  */
-UCLASS()
-class STEIKEMANN_UE_API USteikeAnimInstance : public UAnimInstance
+UCLASS(transient, Blueprintable, hideCategories = AnimInstance, BlueprintType)
+class USteikeAnimInstance : public UAnimInstance
 {
 	GENERATED_BODY()
 
@@ -23,6 +23,7 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 		TWeakObjectPtr<class ASteikemannCharacter> SteikeOwner{ nullptr };
+		//class ASteikemannCharacter* SteikeOwner{ nullptr };
 
 	/* Walking Speed */
 	UPROPERTY(BlueprintReadOnly)
@@ -42,19 +43,58 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		bool bOnGround{};
 
+#pragma region Crouch
+
+	UPROPERTY(BlueprintReadOnly)
+		bool bCrouch{};
+	
+	UPROPERTY(BlueprintReadOnly)
+		bool bAnimCrouchSliding{};
+
+#pragma endregion //Croucn
+
+#pragma region Jump
 	
 	/* Checks the Character script if Jump button is pressed */
 	UPROPERTY(BlueprintReadOnly)
-		bool bPressedJump{};
+		bool bJumping{};
 	/* The Jump animations anim notify activates this bool to start the jump sequence */
 	UPROPERTY(BlueprintReadWrite)
 		bool bActivateJump{};
 
+
+
+#pragma endregion //Jump
+
+#pragma region WallSticking
+
+	UPROPERTY(BlueprintReadOnly)
+		bool bOnWall{};
+
+	UPROPERTY(BlueprintReadOnly)
+		bool bStickingToWall{};
+
+	UPROPERTY(BlueprintReadOnly)
+		float OnWallRotation{};
+
+#pragma endregion //WallSticking
+
+#pragma region LedgeGrab
+
+	UPROPERTY(BlueprintReadOnly)
+		bool bLedgeGrab{};
+
+
+#pragma endregion //LedgeGrab
+
+#pragma region Grappling
 	UPROPERTY(BlueprintReadWrite)
 		bool bGrappling{};
+#pragma endregion //Grappling
 
+#pragma region Dash
 	/* Checks if character is dashing */
 	UPROPERTY(BlueprintReadOnly)
 		bool bDashing{};
-
+#pragma endregion //Dash
 };

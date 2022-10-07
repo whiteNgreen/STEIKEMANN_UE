@@ -31,13 +31,16 @@ public:
 
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
+	class ASteikemannCharacter* CharacterOwner_Steikemann{ nullptr };
+	
 	TEnumAsByte<enum ECustomMovementMode> CustomMovementMode;
+
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Friction")
 	float CharacterFriction{ 15.f };
 
-	class ASteikemannCharacter* CharacterOwner_Steikemann{ nullptr };
 
+#pragma region Gravity
 
 	/* Gravity over time while character is in the air */
 		/* The Base gravity scale override */
@@ -49,6 +52,20 @@ public:
 		/* Interpolation speed between gravityscale override and freefall gravity */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|GravityOverride")
 		float GravityScaleOverride_InterpSpeed{ 2.f };
+
+#pragma endregion //Gravity
+
+#pragma region Crouch
+
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Crouch|CrouchSlide")
+
+	float CrouchSlideSpeed{};
+	FVector CrouchSlideDirection{};
+
+	void Initiate_CrouchSlide(const FVector& InputDirection);
+	void Do_CrouchSlide(float DeltaTime);
+
+#pragma endregion //Crouch
 
 #pragma region Jump
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Jump")
@@ -92,15 +109,43 @@ public:
 	bool bWallSlowDown{};
 	FVector StickingSpot{};
 
+	/* The angle from the walls normal that the character will jump from */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Wall Jump")
 		float WallJump_JumpAngle UMETA(DisplayName = "Jump Angle") { 45.f };
+	/* The angle the jump vector will be rotated when the character walljumps towards the left or right */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Wall Jump")
+		float WallJump_SidewaysJumpAngle UMETA(DisplayName = "Jump Angle Sideways") { 45.f };
 	
+
 	bool bWallJump{};
 	FVector WallJump_VelocityDirection{};
 	bool WallJump(const FVector& ImpactNormal);
 	bool StickToWall(float DeltaTime);
+	bool ReleaseFromWall(const FVector& ImpactNormal);
 
 #pragma endregion //Wall Jump
+
+#pragma region LedgeGrab
+
+	bool bLedgeGrab{};
+	bool bLedgeJump{};
+
+	FVector LedgeJumpDirection{};
+
+	UPROPERTY(EditAnywhere, Category = "MyVariables|LedgeJump")
+		float LedgeJump_AngleClamp{ 45.f };
+	UPROPERTY(EditAnywhere, Category = "MyVariables|LedgeJump")
+		float LedgeJump_ImpulseStrength{ 300.f };
+	UPROPERTY(EditAnywhere, Category = "MyVariables|LedgeJump")
+		float LedgeJumpBoost_Multiplier{ 0.2f };
+	float LedgeJumpBoost{};
+
+	void Start_LedgeGrab();
+	void Update_LedgeGrab();
+
+	bool LedgeJump(const FVector& LedgeLocation);
+
+#pragma endregion //LedgeGrab
 
 public: // Slipping
 	UPROPERTY(BlueprintReadWrite)

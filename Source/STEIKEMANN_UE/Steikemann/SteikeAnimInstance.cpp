@@ -17,6 +17,8 @@ void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 
 	if (SteikeOwner.IsValid()) {
+	//if (SteikeOwner) {
+
 		/* Set speed variables */
 		Speed = SteikeOwner->GetVelocity().Size();
 		VerticalSpeed = SteikeOwner->GetVelocity().Z;
@@ -26,15 +28,16 @@ void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 			HorizontalSpeed = Vel.Size();
 		}
 
-		/* Is Character freefalling in air or on the ground? */
+		/* In Air or on the Ground? */
 		bFalling = SteikeOwner->IsFalling();
 		bOnGround = SteikeOwner->IsOnGround();
-		bOnGround ? PRINT("On Ground") : PRINT("In Air");
+
+		/* Crouch */
+		bCrouch = SteikeOwner->bIsCrouchWalking;
+		bAnimCrouchSliding = SteikeOwner->bCrouchSliding;
 
 		/* Jump */
-		bActivateJump = SteikeOwner->IsJumping();
-		bPressedJump = SteikeOwner->bPressedJump;
-		bActivateJump ? PRINT("JUMPING") : PRINT("NOT jumping");
+		bJumping = SteikeOwner->IsJumping();
 
 		/* Dash */
 		bDashing = SteikeOwner->IsDashing();
@@ -42,24 +45,16 @@ void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		/* Grappling */
 		bGrappling = SteikeOwner->IsGrappling();
 
-		//bPressedJump = SteikeOwner->bJumping;
-		//bPressedJump = SteikeOwner->bAddJumpVelocity;
-		//bPressedJump = SteikeOwner->bPressedJump && SteikeOwner->IsJumping();
+		/* Wall Sticking */
+		bOnWall = SteikeOwner->IsOnWall();
+		bStickingToWall = SteikeOwner->IsStickingToWall();
+		OnWallRotation = FMath::FInterpTo(OnWallRotation,FMath::Clamp(SteikeOwner->InputAngleToForward * -1.f, -90.f, 90.f), DeltaSeconds, SteikeOwner->OnWall_InterpolationSpeed);
 
-		//if (bActivateJump) {
-		//	SteikeOwner->bActivateJump = true;
-		//	//bActivateJump = false;
-		//	//PRINTLONG("Anim Script: Activate Jump");
-		//	static float Timer{};
-		//	PRINTPAR("Timer: %f", Timer);
-		//	Timer += DeltaSeconds;
-		//	if (Timer >= 0.5f) {
-		//		Timer = 0.f;
-		//		bActivateJump = false;
-		//	}
-		//}
+		/* Ledge Grab */
+		bLedgeGrab = SteikeOwner->IsLedgeGrabbing();
 	}
 	else {
 		SteikeOwner = Cast<ASteikemannCharacter>(TryGetPawnOwner());
 	}
 }
+
