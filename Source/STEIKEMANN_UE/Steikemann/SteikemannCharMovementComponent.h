@@ -32,6 +32,7 @@ public:
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 	class ASteikemannCharacter* CharacterOwner_Steikemann{ nullptr };
+	ASteikemannCharacter* GetCharOwner() { return CharacterOwner_Steikemann; }
 	
 	TEnumAsByte<enum ECustomMovementMode> CustomMovementMode;
 
@@ -65,15 +66,54 @@ public:
 	void Initiate_CrouchSlide(const FVector& InputDirection);
 	void Do_CrouchSlide(float DeltaTime);
 
+/* -- Crouch Jump -- */
+	bool bCrouchJump{};
+	void StartCrouchJump()	{ bCrouchJump = true;  }
+	void EndCrouchJump()	{ bCrouchJump = false; }
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Jump|CrouchSlideJump")
+		float CrouchJumpSpeed{ 1000.f };
+
+/* -- CrouchSlide Jump -- */
+	bool bCrouchSlideJump{};
+	FVector CrouchSlideJump_Vector{};
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Jump|CrouchSlideJump")
+		float CrouchSlideJumpAngle	UMETA(DisplayName = "Jump Angle") { 30.f };
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Jump|CrouchSlideJump")
+		float CSJ_MaxInputAngleAdjustment UMETA(DisplayName = "Max Input Angle Adjustment") { 30.f };
+
+
+	/*	* Initiates the CrouchSlideJump. The SlideDirection vector is the current direction the character is crouchsliding in 
+		* The player can use their input to slightly alter the direction of the CrouchSlideJump 
+		* Function assumes the vectors are normalized */
+	bool CrouchSlideJump(const FVector& SlideDirection, const FVector& Input);
+	void EndCrouchSlideJump() { bCrouchSlideJump = false; }
+
 #pragma endregion //Crouch
 
 #pragma region Jump
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Jump")
-		bool bJumping{};
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Jump")
-		float JumpInterpSpeed{ 2.f };
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Jump")
+		//bool bJumping{};
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Jump")
+		//float JumpInterpSpeed{ 2.f };
 
 	bool DoJump(bool bReplayingMoves) override;
+
+	/* --- New Jump --- */
+	bool bIsJumping{};
+	
+	float InitialJumpVelocity;
+	void Jump(float JumpStrength);
+
+	/* How far through the jump is the player? Determined by the current velocity */
+	float JumpPercentage{};
+	void DetermineJump(float DeltaTime);
+	
+	float JumpPrematureSlowDownTime{ 0.2f };
+	void SlowdownJumpSpeed(float DeltaTime);
+
+	bool bJumpPrematureSlowdown{};
+	void StopJump();
 
 #pragma endregion //Jump
 
@@ -93,6 +133,11 @@ public:
 
 	void Start_Dash(float preDashTime, float dashTime, float dashLength, FVector dashdirection);
 	void Update_Dash(float deltaTime);
+
+	/**	Dash During Grapplehook_Swing - Boost
+	*/
+	//void Grapplehook_Dash(float DashStrength, FVector DashDirection);
+
 #pragma endregion //Dash
 
 #pragma region Wall Jump
@@ -119,7 +164,7 @@ public:
 
 	bool bWallJump{};
 	FVector WallJump_VelocityDirection{};
-	bool WallJump(const FVector& ImpactNormal);
+	bool WallJump(const FVector& ImpactNormal, float JumpStrength);
 	bool StickToWall(float DeltaTime);
 	bool ReleaseFromWall(const FVector& ImpactNormal);
 
@@ -143,9 +188,15 @@ public:
 	void Start_LedgeGrab();
 	void Update_LedgeGrab();
 
-	bool LedgeJump(const FVector& LedgeLocation);
+	bool LedgeJump(const FVector& LedgeLocation, float JumpStrength);
 
 #pragma endregion //LedgeGrab
+
+#pragma region GroundPound
+	bool bGP_PreLaunch{};
+	void GP_PreLaunch();
+	void GP_Launch();
+#pragma endregion //GroundPound
 
 public: // Slipping
 	UPROPERTY(BlueprintReadWrite)
