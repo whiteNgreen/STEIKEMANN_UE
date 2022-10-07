@@ -177,7 +177,7 @@ bool USteikemannCharMovementComponent::CrouchSlideJump(const FVector& SlideDirec
 			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (RightOrtho * 300.f), FColor::Green, false, 1.f, 0, 4.f);
 			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (GetOwner()->GetActorForwardVector() * 300.f), FColor::Red, false, 1.f, 0, 4.f);
 
-		float AngleDirection { FVector::DotProduct(RightOrtho, Input) };
+		float AngleDirection = FVector::DotProduct(RightOrtho, Input);
 		if (AngleDirection < 0.f) { AngleBetween *= -1.f; }
 
 		PRINTPARLONG("-- anglebetween -------: %f", FMath::RadiansToDegrees(AngleBetween));
@@ -327,7 +327,7 @@ bool USteikemannCharMovementComponent::WallJump(const FVector& ImpactNormal, flo
 	if (InputDirection.SizeSquared() > 0.5f)
 	{
 		InputToForwardAngle = FMath::RadiansToDegrees(acosf(FVector::DotProduct(GetCharacterOwner()->GetActorForwardVector(), InputDirection)));
-		float InputAngleDirection{ FVector::DotProduct(GetCharacterOwner()->GetActorRightVector(), InputDirection) };
+		float InputAngleDirection = FVector::DotProduct(GetCharacterOwner()->GetActorRightVector(), InputDirection);
 		if (InputAngleDirection > 0.f) { InputToForwardAngle *= -1.f; }
 		//PRINTPARLONG("ANGLE FROM FORWARD: %f", InputToForwardAngle);
 	}

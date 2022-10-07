@@ -1812,7 +1812,7 @@ void ASteikemannCharacter::CalcAngleFromActorForwardToInput()
 	if (InputVector.SizeSquared() > 0.2f)
 	{
 		InputAngleToForward = FMath::RadiansToDegrees(acosf(FVector::DotProduct(GetActorForwardVector(), InputVector)));
-		float InputAngleDirection{ FVector::DotProduct(GetActorRightVector(), InputVector) };
+		float InputAngleDirection = FVector::DotProduct(GetActorRightVector(), InputVector);
 		if (InputAngleDirection > 0.f) { InputAngleToForward *= -1.f; }
 
 		InputDotProdToForward = FVector::DotProduct(GetActorForwardVector(), InputVector);
