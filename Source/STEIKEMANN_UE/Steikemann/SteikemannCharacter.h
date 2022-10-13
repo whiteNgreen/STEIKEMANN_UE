@@ -708,6 +708,9 @@ public:
 	void Click_Attack();
 	void UnClick_Attack();
 
+	void Click_ScoopAttack();
+	void UnClick_ScoopAttack();
+
 	UFUNCTION(BlueprintImplementableEvent)
 		void Start_Attack();
 	UFUNCTION(BlueprintCallable)
@@ -725,6 +728,8 @@ public:
 
 	UFUNCTION(BlueprintPure)
 		bool DecideAttackType();
+
+	void RotateToAttack();
 
 
 
@@ -823,6 +828,9 @@ public:
 
 	/* ---------------------------- SCOOP ATTACK ---------------------- */
 	#pragma region ScoopAttack
+
+	bool bClickScoopAttack{};
+
 	bool bIsScoopAttacking{};
 	bool bHasbeenScoopLaunched{};
 

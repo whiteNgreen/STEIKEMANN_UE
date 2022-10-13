@@ -407,8 +407,8 @@ void ASteikemannCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 
 
 	/* Bounce */
-	PlayerInputComponent->BindAction("Bounce", IE_Pressed, this, &ASteikemannCharacter::Bounce).bConsumeInput = true;
-	PlayerInputComponent->BindAction("Bounce", IE_Released, this, &ASteikemannCharacter::Stop_Bounce).bConsumeInput = true;
+	//PlayerInputComponent->BindAction("Bounce", IE_Pressed, this, &ASteikemannCharacter::Bounce).bConsumeInput = true;
+	//PlayerInputComponent->BindAction("Bounce", IE_Released, this, &ASteikemannCharacter::Stop_Bounce).bConsumeInput = true;
 
 	//PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &ASteikemannCharacter::Dash).bConsumeInput = true;
 	//PlayerInputComponent->BindAction("Dash", IE_Released, this, &ASteikemannCharacter::Stop_Dash).bConsumeInput = true;
@@ -424,9 +424,13 @@ void ASteikemannCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	PlayerInputComponent->BindAction("GrappleHook_Drag", IE_Pressed, this,	  &ASteikemannCharacter::RightTriggerClick);
 	PlayerInputComponent->BindAction("GrappleHook_Drag", IE_Released, this,	  &ASteikemannCharacter::RightTriggerUn_Click);
 
-	/* Attack - SmackAttack */
+	/* -- SMACK ATTACK -- */
 	PlayerInputComponent->BindAction("SmackAttack", IE_Pressed, this, &ASteikemannCharacter::Click_Attack);
 	PlayerInputComponent->BindAction("SmackAttack", IE_Released, this, &ASteikemannCharacter::UnClick_Attack);
+
+	/* -- SCOOP ATTACK -- */
+	PlayerInputComponent->BindAction("ScoopAttack", IE_Pressed, this, &ASteikemannCharacter::Click_Attack);
+	PlayerInputComponent->BindAction("ScoopAttack", IE_Released, this, &ASteikemannCharacter::Click_Attack);
 
 	/* Attack - GroundPound */
 	PlayerInputComponent->BindAction("GroundPound", IE_Pressed, this, &ASteikemannCharacter::Click_GroundPound);
@@ -2208,18 +2212,7 @@ void ASteikemannCharacter::Click_Attack()
 
 			//SmackAttackMovementLength_Step = (SmackAttackMovementLength) / (1 / SmackAttack_Action_Rate);
 
-
-			if (bSmackDirectionDecidedByInput)
-			{
-				AttackDirection = InputVector;
-			}
-			if (!bSmackDirectionDecidedByInput || InputVector.IsNearlyZero())
-			{
-				//AttackDirection = GetControlRotation().Vector(); 
-				AttackDirection = GetActorForwardVector();
-				AttackDirection.Z = 0; AttackDirection.Normalize();
-			}
-			RotateActorYawToVector(AttackDirection);
+			RotateToAttack();
 
 			Start_Attack();
 		}
@@ -2229,6 +2222,16 @@ void ASteikemannCharacter::Click_Attack()
 void ASteikemannCharacter::UnClick_Attack()
 {
 	bAttackPress = false;
+}
+
+void ASteikemannCharacter::Click_ScoopAttack()
+{
+	if (!bClickScoopAttack)
+	{
+		bClickScoopAttack = true;
+
+
+	}
 }
 
 void ASteikemannCharacter::Start_Attack_Pure()
@@ -2279,6 +2282,20 @@ bool ASteikemannCharacter::DecideAttackType()
 	Activate_SmackAttack();
 	bIsSmackAttacking = true;
 	return false;
+}
+
+void ASteikemannCharacter::RotateToAttack()
+{
+	if (bSmackDirectionDecidedByInput)
+	{
+		AttackDirection = InputVector;
+	}
+	if (!bSmackDirectionDecidedByInput || InputVector.IsNearlyZero())
+	{
+		AttackDirection = GetActorForwardVector();
+		AttackDirection.Z = 0; AttackDirection.Normalize();
+	}
+	RotateActorYawToVector(AttackDirection);
 }
 
 
