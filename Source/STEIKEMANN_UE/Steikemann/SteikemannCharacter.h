@@ -288,7 +288,12 @@ public:/* ------------------- Basic Movement ------------------- */
 	void Start_Crouch();
 	void Stop_Crouch();
 
-	/* Crouch Slide */
+	/* -------------- SLIDE ------------- */
+	bool bPressedSlide{};
+	
+	void Click_Slide();
+	void UnClick_Slide();
+
 	/* How long will the crouch slide last */
 	UPROPERTY(EditAnywhere, Category = "Movement|Crouch")
 		float CrouchSlide_Time  UMETA(DisplayName = "Crouch Slide Time") { 0.5f };
@@ -708,10 +713,12 @@ public:
 	void Click_Attack();
 	void UnClick_Attack();
 
+
 	UFUNCTION(BlueprintImplementableEvent)
 		void Start_Attack();
 	UFUNCTION(BlueprintCallable)
 		void Start_Attack_Pure();
+
 
 
 	UFUNCTION(BlueprintCallable)
@@ -725,6 +732,8 @@ public:
 
 	UFUNCTION(BlueprintPure)
 		bool DecideAttackType();
+
+	void RotateToAttack();
 
 
 
@@ -749,20 +758,24 @@ public:
 	 * At the end of this anticipation, 
 	 * If the player still holds the attack button, the character will perform the scoop attack. 
 	 *  Else if the button is not held at this time, the character will perform the regular SmackAttack */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks")
-		float BasicAttack_CommonAnticipation_Rate{ 4.5f };
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks")
-		float SmackAttack_Action_Rate{ 5.f };
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks")
-		float SmackAttack_Reaction_Rate{ 2.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|SmackAttack")
+		float SmackAttack_Anticipation_Rate		UMETA(DisplayName = "1. Smack Anticipation Rate") { 4.5f };
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks")
-		float ScoopAttack_Anticipation_Rate{ 10.f };
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks")
-		float ScoopAttack_Action_Rate{ 7.f };
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks")
-		float ScoopAttack_Reaction_Rate{ 2.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|SmackAttack")
+		float SmackAttack_Action_Rate			UMETA(DisplayName = "2. Smack Action Rate") { 5.f };
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|SmackAttack")
+		float SmackAttack_Reaction_Rate			UMETA(DisplayName = "3. Smack Reaction Rate") { 2.f };
+	
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|ScoopAttack")
+		float ScoopAttack_Anticipation_Rate		UMETA(DisplayName = "1. Scoop Anticipation Rate") { 10.f };
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|ScoopAttack")
+		float ScoopAttack_Action_Rate			UMETA(DisplayName = "2. Scoop Action Rate") { 7.f };
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|ScoopAttack")
+		float ScoopAttack_Reaction_Rate			UMETA(DisplayName = "3. Scoop Reaction Rate") { 2.f };
 
 
 
@@ -774,7 +787,9 @@ public:
 	bool bAttackPress{};
 	UFUNCTION(BlueprintCallable)
 		bool GetAttackPress() const { return bAttackPress; }
+	/* When the button can be pressed again */
 	bool bCanAttack{ true };
+	/* Related to collider and locking movement */
 	bool bAttacking{};
 	bool IsAttacking() const { return bAttacking; }
 	
@@ -823,6 +838,16 @@ public:
 
 	/* ---------------------------- SCOOP ATTACK ---------------------- */
 	#pragma region ScoopAttack
+
+	bool bClickScoopAttack{};
+
+	UFUNCTION(BlueprintImplementableEvent)
+		void Start_ScoopAttack();
+	UFUNCTION(BlueprintCallable)
+		void Start_ScoopAttack_Pure();
+	void Click_ScoopAttack();
+	void UnClick_ScoopAttack();
+
 	bool bIsScoopAttacking{};
 	bool bHasbeenScoopLaunched{};
 

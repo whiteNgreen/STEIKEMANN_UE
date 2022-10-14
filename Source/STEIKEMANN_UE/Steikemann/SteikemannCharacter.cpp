@@ -400,15 +400,19 @@ void ASteikemannCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	//PlayerInputComponent->BindAction("Jump", IE_Released, this, &ASteikemannCharacter::StopJumping).bConsumeInput = true;
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ASteikemannCharacter::JumpRelease).bConsumeInput = true;
 
+	/* -- SLIDE -- */
+	PlayerInputComponent->BindAction("Slide", IE_Pressed, this, &ASteikemannCharacter::Click_Slide);
+	PlayerInputComponent->BindAction("Slide", IE_Released, this, &ASteikemannCharacter::UnClick_Slide);
+	
 
 		/* Crouch*/
-	PlayerInputComponent->BindAction("Crouch", IE_Pressed, this, &ASteikemannCharacter::Start_Crouch);
-	PlayerInputComponent->BindAction("Crouch", IE_Released, this, &ASteikemannCharacter::Stop_Crouch);
+	//PlayerInputComponent->BindAction("Crouch", IE_Pressed, this, &ASteikemannCharacter::Start_Crouch);
+	//PlayerInputComponent->BindAction("Crouch", IE_Released, this, &ASteikemannCharacter::Stop_Crouch);
 
 
 	/* Bounce */
-	PlayerInputComponent->BindAction("Bounce", IE_Pressed, this, &ASteikemannCharacter::Bounce).bConsumeInput = true;
-	PlayerInputComponent->BindAction("Bounce", IE_Released, this, &ASteikemannCharacter::Stop_Bounce).bConsumeInput = true;
+	//PlayerInputComponent->BindAction("Bounce", IE_Pressed, this, &ASteikemannCharacter::Bounce).bConsumeInput = true;
+	//PlayerInputComponent->BindAction("Bounce", IE_Released, this, &ASteikemannCharacter::Stop_Bounce).bConsumeInput = true;
 
 	//PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &ASteikemannCharacter::Dash).bConsumeInput = true;
 	//PlayerInputComponent->BindAction("Dash", IE_Released, this, &ASteikemannCharacter::Stop_Dash).bConsumeInput = true;
@@ -424,9 +428,13 @@ void ASteikemannCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	PlayerInputComponent->BindAction("GrappleHook_Drag", IE_Pressed, this,	  &ASteikemannCharacter::RightTriggerClick);
 	PlayerInputComponent->BindAction("GrappleHook_Drag", IE_Released, this,	  &ASteikemannCharacter::RightTriggerUn_Click);
 
-	/* Attack - SmackAttack */
+	/* -- SMACK ATTACK -- */
 	PlayerInputComponent->BindAction("SmackAttack", IE_Pressed, this, &ASteikemannCharacter::Click_Attack);
 	PlayerInputComponent->BindAction("SmackAttack", IE_Released, this, &ASteikemannCharacter::UnClick_Attack);
+
+	/* -- SCOOP ATTACK -- */
+	PlayerInputComponent->BindAction("ScoopAttack", IE_Pressed, this, &ASteikemannCharacter::Click_ScoopAttack);
+	PlayerInputComponent->BindAction("ScoopAttack", IE_Released, this, &ASteikemannCharacter::UnClick_ScoopAttack);
 
 	/* Attack - GroundPound */
 	PlayerInputComponent->BindAction("GroundPound", IE_Pressed, this, &ASteikemannCharacter::Click_GroundPound);
@@ -983,17 +991,36 @@ void ASteikemannCharacter::Stop_Crouch()
 	}
 }
 
+void ASteikemannCharacter::Click_Slide()
+{
+	if (bPressedSlide) { return; }
+	if (IsCrouchSliding()) { return; }
+
+	bPressedSlide = true;
+
+	if (GetMoveComponent()->IsWalking())
+	{
+		/* Crouch Slide */
+		if (GetVelocity().Size() > Crouch_WalkToSlideSpeed && bCanCrouchSlide && !IsCrouchSliding() && !IsCrouchWalking())	// Start Crouch Slide
+		{
+			Start_CrouchSliding();
+			return;
+		}
+	}
+}
+
+void ASteikemannCharacter::UnClick_Slide()
+{
+	bPressedSlide = false;
+}
+
 void ASteikemannCharacter::Start_CrouchSliding()
 {
-	if (!bCrouchSliding)
+	if (!IsCrouchSliding())
 	{
-		PRINTLONG("Start CrouchSliding");
-		
 		bCrouchSliding = true;
 
-		GetCapsuleComponent()->SetCapsuleRadius(25.f);	// Temporary solution for cube to crouch
-
-		Crouch();
+		/* Adjust capsule collider */
 
 		NiComp_CrouchSlide->SetNiagaraVariableVec3("User.M_Velocity", GetVelocity() * -1.f);
 		NiComp_CrouchSlide->Activate();
@@ -2155,7 +2182,7 @@ void ASteikemannCharacter::PreBasicAttackMoveCharacter(float DeltaTime)
 {
 	if (bPreBasicAttackMoveCharacter)
 	{
-		AddActorWorldOffset(AttackDirection * ((PreBasicAttackMovementLength / (1 / BasicAttack_CommonAnticipation_Rate)) * DeltaTime), false, nullptr, ETeleportType::None);
+		AddActorWorldOffset(AttackDirection * ((PreBasicAttackMovementLength / (1 / SmackAttack_Anticipation_Rate)) * DeltaTime), false, nullptr, ETeleportType::None);
 	}
 }
 
@@ -2177,53 +2204,51 @@ void ASteikemannCharacter::ScoopAttackMoveCharacter(float DeltaTime)
 
 void ASteikemannCharacter::Activate_ScoopAttack()
 {
+	/* Character movement during attack */
+	bPreBasicAttackMoveCharacter = false;
 	bScoopAttackMoveCharacter = true;
+
+	bIsScoopAttacking = true;
 }
 
 void ASteikemannCharacter::Deactivate_ScoopAttack()
 {
 	bScoopAttackMoveCharacter = false;
 	bHasbeenScoopLaunched = false;
+
+	
 }
 
 void ASteikemannCharacter::Activate_SmackAttack()
 {
+	/* Character movement during attack */
+	bPreBasicAttackMoveCharacter = false;
 	bSmackAttackMoveCharacter = true;
+
+	bIsSmackAttacking = true;
 }
 
 void ASteikemannCharacter::Deactivate_SmackAttack()
 {
 	bSmackAttackMoveCharacter = false;
+	//bCanAttack = true;
 }
 
 void ASteikemannCharacter::Click_Attack()
 {
-	if (!bAttackPress && bCanAttack) 
-	{
-		bAttackPress = true;
+	/* Return conditions */
+	if (bAttackPress) { return; }
+	if (!bCanAttack) { return; }
+	if (bAttacking) { return; }
 		
-		if (!bAttacking)
-		{
-			bAttacking = true;
 
-			//SmackAttackMovementLength_Step = (SmackAttackMovementLength) / (1 / SmackAttack_Action_Rate);
+	bAttackPress = true;
+	
+	bAttacking = true;
+	bCanAttack = false;
 
-
-			if (bSmackDirectionDecidedByInput)
-			{
-				AttackDirection = InputVector;
-			}
-			if (!bSmackDirectionDecidedByInput || InputVector.IsNearlyZero())
-			{
-				//AttackDirection = GetControlRotation().Vector(); 
-				AttackDirection = GetActorForwardVector();
-				AttackDirection.Z = 0; AttackDirection.Normalize();
-			}
-			RotateActorYawToVector(AttackDirection);
-
-			Start_Attack();
-		}
-	}
+	RotateToAttack();
+	Start_Attack();
 }
 
 void ASteikemannCharacter::UnClick_Attack()
@@ -2231,8 +2256,37 @@ void ASteikemannCharacter::UnClick_Attack()
 	bAttackPress = false;
 }
 
+void ASteikemannCharacter::Start_ScoopAttack_Pure()
+{
+	RotateToAttack();
+
+	Start_ScoopAttack();
+}
+
+void ASteikemannCharacter::Click_ScoopAttack()
+{
+	/* Return conditions */
+	if (bClickScoopAttack) { return; }
+	if (GetMoveComponent()->IsFalling()) { return; }
+	if (!bCanAttack) { return; }
+	if (bAttacking) { return; }
+
+	bClickScoopAttack = true;
+	
+	bAttacking = true;
+	bCanAttack = false;
+
+	Start_ScoopAttack_Pure();
+}
+
+void ASteikemannCharacter::UnClick_ScoopAttack()
+{
+	bClickScoopAttack = false;
+}
+
 void ASteikemannCharacter::Start_Attack_Pure()
 {
+	/* Movement during attack */
 	bPreBasicAttackMoveCharacter = true;
 }
 
@@ -2279,6 +2333,20 @@ bool ASteikemannCharacter::DecideAttackType()
 	Activate_SmackAttack();
 	bIsSmackAttacking = true;
 	return false;
+}
+
+void ASteikemannCharacter::RotateToAttack()
+{
+	if (bSmackDirectionDecidedByInput)
+	{
+		AttackDirection = InputVector;
+	}
+	if (!bSmackDirectionDecidedByInput || InputVector.IsNearlyZero())
+	{
+		AttackDirection = GetActorForwardVector();
+		AttackDirection.Z = 0; AttackDirection.Normalize();
+	}
+	RotateActorYawToVector(AttackDirection);
 }
 
 
