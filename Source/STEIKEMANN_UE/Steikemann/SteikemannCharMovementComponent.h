@@ -16,7 +16,7 @@ UENUM(BlueprintType)
 enum ECustomMovementMode
 {
 	MOVECustom_None				UMETA(DisplayName = "None"),
-	MOVECustom_Dash				UMETA(DisplayName = "Dash"),
+	MOVECustom_Slide			UMETA(DisplayName = "Slide"),
 	MOVECustom_WallSticking		UMETA(DisplayName = "Wallsticking"),
 	MOVECustom_Grappling		UMETA(DisplayName = "Grappling"),
 };
@@ -63,7 +63,7 @@ public:
 	float CrouchSlideSpeed{};
 	FVector CrouchSlideDirection{};
 
-	void Initiate_CrouchSlide(const FVector& InputDirection);
+	void Initiate_CrouchSlide(const FVector& SlideDirection);
 	void Do_CrouchSlide(float DeltaTime);
 
 /* -- Crouch Jump -- */

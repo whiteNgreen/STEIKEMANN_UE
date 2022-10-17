@@ -44,7 +44,7 @@ void ASmallEnemy::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 void ASmallEnemy::TargetedPure()
 {
-	PRINTPAR("I; %s, am grapple targeted", *GetName());
+	//PRINTPAR("I; %s, am grapple targeted", *GetName());
 	Execute_Targeted(this);
 }
 
@@ -81,7 +81,7 @@ void ASmallEnemy::HookedPure(const FVector InstigatorLocation)
 
 			float angle = FMath::DegreesToRadians(GrappledLaunchAngle);
 			FVector LaunchDirection = (cosf(angle) * Direction3D.GetSafeNormal2D()) + (sinf(angle) * FVector::UpVector);
-			PRINTPARLONG("LaunchDirection LENGTH = %f", LaunchDirection.Size());
+			//PRINTPARLONG("LaunchDirection LENGTH = %f", LaunchDirection.Size());
 
 			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (LaunchDirection * GrappledLaunchStrength), FColor::Red, false, 1.f, 0, 4.f);
 			GetCharacterMovement()->AddImpulse(LaunchDirection * GrappledLaunchStrength, true);
@@ -89,7 +89,7 @@ void ASmallEnemy::HookedPure(const FVector InstigatorLocation)
 		/* 2nd method */
 		else
 		{
-			PRINTLONG("Second Method Launch");
+			//PRINTLONG("Second Method Launch");
 			FVector Direction3D = InstigatorLocation - GetActorLocation();
 			FVector Direction2D = Direction3D;
 			Direction3D.Z = 0.f;
@@ -125,7 +125,7 @@ void ASmallEnemy::Receive_SmackAttack_Pure(const FVector& Direction, const float
 {
 	if (GetCanBeSmackAttacked())
 	{
-		PRINTLONG("IM BEING ATTACKED");
+		//PRINTLONG("IM BEING ATTACKED");
 		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (Direction * Strength), FColor::Yellow, false, 2.f, 0, 3.f);
 
 		bCanBeSmackAttacked = false;
@@ -146,7 +146,7 @@ void ASmallEnemy::Receive_ScoopAttack_Pure(const FVector& Direction, const float
 {
 	if (GetCanBeSmackAttacked())
 	{
-		PRINTPARLONG("IM(%s) BEING ATTACKED", *GetName());
+		//PRINTPARLONG("IM(%s) BEING ATTACKED", *GetName());
 		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (Direction * Strength), FColor::Yellow, false, 2.f, 0, 3.f);
 
 		bCanBeSmackAttacked = false;
@@ -161,7 +161,7 @@ void ASmallEnemy::Receive_ScoopAttack_Pure(const FVector& Direction, const float
 
 void ASmallEnemy::Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength)
 {
-	PRINTPARLONG("IM(%s) BEING GROUNDPOUNDED", *GetName());
+	//PRINTPARLONG("IM(%s) BEING GROUNDPOUNDED", *GetName());
 	DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (PoundDirection * GP_Strength), FColor::Yellow, false, 2.f, 0, 3.f);
 
 	//bCanBeSmackAttacked = false;

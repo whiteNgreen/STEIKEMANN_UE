@@ -54,7 +54,7 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 	else{
 		GravityScale = FMath::FInterpTo(GravityScale, GravityScaleOverride_Freefall, DeltaTime, GravityScaleOverride_InterpSpeed);
 	}
-	PRINTPAR("GravityScale: %f", GravityScale);
+	//PRINTPAR("GravityScale: %f", GravityScale);
 
 
 	/* Crouch */
@@ -136,9 +136,9 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 }
 
 
-void USteikemannCharMovementComponent::Initiate_CrouchSlide(const FVector& InputDirection)
+void USteikemannCharMovementComponent::Initiate_CrouchSlide(const FVector& SlideDirection)
 {
-	CrouchSlideDirection = InputDirection;
+	CrouchSlideDirection = SlideDirection;
 	CrouchSlideSpeed = GetCharOwner()->CrouchSlideSpeed;
 }
 
@@ -149,7 +149,7 @@ void USteikemannCharMovementComponent::Do_CrouchSlide(float DeltaTime)
 	CrouchSlideSpeed = FMath::FInterpTo(CrouchSlideSpeed, CrouchSlideSpeed * GetCharOwner()->EndCrouchSlideSpeedMultiplier, DeltaTime, InterpSpeed);
 
 	FVector Slide = CrouchSlideDirection * CrouchSlideSpeed;
-	PRINTPAR("CrouchSlideSpeed: %f", CrouchSlideSpeed);
+	//PRINTPAR("CrouchSlideSpeed: %f", CrouchSlideSpeed);
 
 	/* Setting Velocity in only X and Y to still make gravity have an effect */
 	{
@@ -180,12 +180,12 @@ bool USteikemannCharMovementComponent::CrouchSlideJump(const FVector& SlideDirec
 		float AngleDirection = FVector::DotProduct(RightOrtho, Input);
 		if (AngleDirection < 0.f) { AngleBetween *= -1.f; }
 
-		PRINTPARLONG("-- anglebetween -------: %f", FMath::RadiansToDegrees(AngleBetween));
+		//PRINTPARLONG("-- anglebetween -------: %f", FMath::RadiansToDegrees(AngleBetween));
 
 		float JumpAngle = FMath::ClampAngle(FMath::RadiansToDegrees(AngleBetween), -CSJ_MaxInputAngleAdjustment, CSJ_MaxInputAngleAdjustment);
 		//float JumpAngle = FMath::Clamp(AngleBetween, -CSJ_MaxInputAngleAdjustment, CSJ_MaxInputAngleAdjustment);
 
-		PRINTPARLONG("-- anglebetween CLAMPED: %f", JumpAngle);
+		//PRINTPARLONG("-- anglebetween CLAMPED: %f", JumpAngle);
 
 		FinalSlideDirection = SlideDirection2D.RotateAngleAxis(JumpAngle, FVector::UpVector);
 		//FinalSlideDirection = SlideDirection2D.RotateAngleAxis(JumpAngle, FVector::UpVector);
@@ -320,7 +320,7 @@ void USteikemannCharMovementComponent::Update_Dash(float deltaTime)
 
 bool USteikemannCharMovementComponent::WallJump(const FVector& ImpactNormal, float JumpStrength)
 {
-	PRINTLONG("WallJump");
+	//PRINTLONG("WallJump");
 
 	FVector InputDirection{ GetCharOwner()->InputVector };
 	float InputToForwardAngle{ 0.f };
@@ -423,7 +423,7 @@ void USteikemannCharMovementComponent::Update_LedgeGrab()
 
 bool USteikemannCharMovementComponent::LedgeJump(const FVector& LedgeLocation, float JumpStrength)
 {
-	PRINTLONG("LEDGE JUMP : MovementComponent");
+	//PRINTLONG("LEDGE JUMP : MovementComponent");
 	float InputAngle = GetCharOwner()->InputAngleToForward;
 	//float Angle = 45.f;
 

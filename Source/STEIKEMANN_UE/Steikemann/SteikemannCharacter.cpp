@@ -158,7 +158,7 @@ void ASteikemannCharacter::NS_Land_Implementation(const FHitResult& Hit)
 	}
 	else
 	{
-		PRINTLONG("Niagara Component not yet completed with its task. Creating temp Niagara Component.");
+		//PRINTLONG("Niagara Component not yet completed with its task. Creating temp Niagara Component.");
 
 		UNiagaraComponent* TempNiagaraLand = CreateNiagaraComponent("Niagara_Land", RootComponent, FAttachmentTransformRules::SnapToTargetIncludingScale, true);
 		NiagaraPlayer = TempNiagaraLand;
@@ -261,7 +261,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	//if ((GetMoveComponent()->IsFalling()) && !IsGrappling() && bOnWallActive) 
 	if (GetMoveComponent()->IsFalling() && bOnWallActive)
 	{
-		PRINT("Do OnWallMechanics");
+		/*PRINT*/("Do OnWallMechanics");
 		Do_OnWallMechanics(DeltaTime);
 	}
 	else if (!bOnWallActive)
@@ -276,8 +276,8 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 			bOnWallActive = true;
 		}
 	}
-	PRINTPAR("WallJump NonstickTimer: %f", WallJump_NonStickTimer);
-	bOnWallActive ? PRINT("bOnWallActive = TRUE") : PRINT("bOnWallActive = FALSE");
+	//PRINTPAR("WallJump NonstickTimer: %f", WallJump_NonStickTimer);
+	//bOnWallActive ? PRINT("bOnWallActive = TRUE") : PRINT("bOnWallActive = FALSE");
 
 
 	/* --------- ACTIVATE GRAPPLE TARGETING -------- */
@@ -288,7 +288,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		GrappleDrag_PreLaunch_Timer = GrappleDrag_PreLaunch_Timer_Length;
 		GrappleHookMesh->SetVisibility(false);
 	}
-	PRINTPAR("InReach GrappleTargets : %i", InReachGrappleTargets.Num());
+	//PRINTPAR("InReach GrappleTargets : %i", InReachGrappleTargets.Num());
 
 	/*		Grapplehook			*/
 	if ((bGrapple_Swing/* && !bGrappleEnd*/) || (bGrapple_PreLaunch/* && !bGrappleEnd*/)) 
@@ -372,7 +372,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (GetActorForwardVector() * 100.f), FColor::Orange, false, 0.f, 0, 3.f);
 
 	/* Check Jump Count */
-	PRINTPAR("Jump Count: %i", JumpCurrentCount);
+	//PRINTPAR("Jump Count: %i", JumpCurrentCount);
 }
 
 // Called to bind functionality to input
@@ -640,7 +640,7 @@ void ASteikemannCharacter::Jump()
 			/* ---- CROUCH JUMP ---- */
 			if (IsCrouchWalking())
 			{
-				PRINTLONG("--CrouchJump--");
+				//PRINTLONG("--CrouchJump--");
 				JumpCurrentCount++;
 				bAddJumpVelocity = CanCrouchJump();
 				GetMoveComponent()->StartCrouchJump();
@@ -666,7 +666,7 @@ void ASteikemannCharacter::Jump()
 		//if ((GetMoveComponent()->bLedgeGrab) && GetMoveComponent()->IsFalling())
 		if (IsLedgeGrabbing() && GetMoveComponent()->IsFalling())
 		{
-			PRINTLONG("LEDGE JUMP");
+			//PRINTLONG("LEDGE JUMP");
 			JumpCurrentCount = 1;
 
 			ResetWallJumpAndLedgeGrab();
@@ -693,7 +693,7 @@ void ASteikemannCharacter::Jump()
 			/* and the post edge timer is valid */
 			if (bCanPostEdgeRegularJump)
 			{
-				PRINTLONG("POST EDGE JUMP");
+				//PRINTLONG("POST EDGE JUMP");
 				JumpCurrentCount++;
 			}
 			/* after post edge timer is valid */
@@ -779,7 +779,7 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 				/* Crouch Jump */
 				if (IsCrouchWalking())
 				{
-					PRINTLONG("--CrouchJump--");
+					//PRINTLONG("--CrouchJump--");
 					JumpCurrentCount++;
 					bAddJumpVelocity = CanCrouchJump();
 					GetMoveComponent()->StartCrouchJump();
@@ -939,7 +939,7 @@ bool ASteikemannCharacter::CheckDistanceToEnemy(const FHitResult& Hit)
 
 void ASteikemannCharacter::PogoBounce(const FVector& EnemyLocation)
 {
-	PRINTLONG("POGO BOUNCE");
+	//PRINTLONG("POGO BOUNCE");
 
 	/* Pogo bounce 
 	* The direction of the bounce should be based on: 
@@ -968,7 +968,7 @@ void ASteikemannCharacter::Start_Crouch()
 		}
 
 		/* Crouch */
-		PRINTLONG("Crouch");
+		//PRINTLONG("Crouch");
 		
 		bIsCrouchWalking = true;
 		GetCapsuleComponent()->SetCapsuleRadius(25.f);	// Temporary solution for cube to crouch
@@ -983,7 +983,7 @@ void ASteikemannCharacter::Stop_Crouch()
 
 	if (bIsCrouchWalking)
 	{
-		PRINTLONG("UnCrouch");
+		//PRINTLONG("UnCrouch");
 
 		bIsCrouchWalking = false;
 
@@ -1001,7 +1001,7 @@ void ASteikemannCharacter::Click_Slide()
 	if (GetMoveComponent()->IsWalking())
 	{
 		/* Crouch Slide */
-		if (GetVelocity().Size() > Crouch_WalkToSlideSpeed && bCanCrouchSlide && !IsCrouchSliding() && !IsCrouchWalking())	// Start Crouch Slide
+		if (GetVelocity().Size() >= Crouch_WalkToSlideSpeed && bCanCrouchSlide && !IsCrouchSliding() && !IsCrouchWalking())	// Start Crouch Slide
 		{
 			Start_CrouchSliding();
 			return;
@@ -1016,16 +1016,22 @@ void ASteikemannCharacter::UnClick_Slide()
 
 void ASteikemannCharacter::Start_CrouchSliding()
 {
-	if (!IsCrouchSliding())
+	//if (!IsCrouchSliding())
 	{
 		bCrouchSliding = true;
 
 		/* Adjust capsule collider */
+		// code here
 
 		NiComp_CrouchSlide->SetNiagaraVariableVec3("User.M_Velocity", GetVelocity() * -1.f);
 		NiComp_CrouchSlide->Activate();
 
-		GetMoveComponent()->Initiate_CrouchSlide(InputVector);
+		FVector SlideDirection{ InputVector };
+		if (InputVector.IsZero())
+		{
+			SlideDirection = GetActorForwardVector();
+		}
+		GetMoveComponent()->Initiate_CrouchSlide(SlideDirection);
 
 		GetWorldTimerManager().SetTimer(CrouchSlide_TimerHandle, this, &ASteikemannCharacter::Stop_CrouchSliding, CrouchSlide_Time);
 	}
@@ -1033,7 +1039,7 @@ void ASteikemannCharacter::Start_CrouchSliding()
 
 void ASteikemannCharacter::Stop_CrouchSliding()
 {
-	PRINTLONG("STOP CrouchSliding");
+	//PRINTLONG("STOP CrouchSliding");
 
 	bCrouchSliding = false;
 	bCanCrouchSlide = false;
@@ -1213,7 +1219,7 @@ void ASteikemannCharacter::RotateActorPitchToVector(FVector AimVector, float Del
 
 	float Pitch{ FMath::RadiansToDegrees(asinf(Aim.Z)) };
 
-	PRINTPAR("Pitch Angle: %f", Pitch);
+	//PRINTPAR("Pitch Angle: %f", Pitch);
 
 	SetActorRotation( FRotator{ Pitch, GetActorRotation().Yaw, 0.f }, ETeleportType::TeleportPhysics );
 }
@@ -1572,7 +1578,7 @@ void ASteikemannCharacter::Dash()
 
 		else if (!bDash && DashCounter == 1)
 		{
-			PRINTLONG("----DASH----");
+			//PRINTLONG("----DASH----");
 			bDash = true;
 			DashCounter--;
 			Activate_Dash();
@@ -1614,7 +1620,7 @@ void ASteikemannCharacter::RightTriggerClick()
 			//if (GrappledTags.HasTag(Tag_GrappleTarget_Dynamic))	// Burde bruke denne taggen på fiendene
 			if (GrappledTags.HasTag(Tag_EnemyAubergineDoggo))		// Også kanskje spesifisere videre med fiende type
 			{
-				PRINTLONG("Grappled to DYNAMIC TARGET");
+				//PRINTLONG("Grappled to DYNAMIC TARGET");
 				
 				GrappleInterface->HookedPure(GetActorLocation());
 			}
@@ -1822,7 +1828,7 @@ bool ASteikemannCharacter::DetectNearbyWall()
 		if (b)
 		{
 			ActorToWall_Length = FVector(GetActorLocation() - WallHit.ImpactPoint).Size();
-			PRINTPAR("Length To Wall = %f", ActorToWall_Length);
+			//PRINTPAR("Length To Wall = %f", ActorToWall_Length);
 			return b;
 		}
 	}
@@ -1863,7 +1869,7 @@ void ASteikemannCharacter::SetActorLocation_WallJump(float DeltaTime)
 			Move = ActorToWall_Length - CapsuleRadius;
 		}
 		SetActorRelativeLocation(GetActorLocation() + (FromActorToWall * Move), false, nullptr, ETeleportType::TeleportPhysics);
-		PRINTPAR("Move to wall : %f", Move);
+		//PRINTPAR("Move to wall : %f", Move);
 	}
 }
 
@@ -1927,7 +1933,7 @@ void ASteikemannCharacter::Initial_GrappleHook_Swing()
 			Adjustment *= (Min_GrappleRopeLength - Initial_GrappleRopeLength) * -1.f;
 			//Adjustment *= (Min_GrappleRopeLength / Initial_GrappleRopeLength) - 1.f;
 
-			PRINTPARLONG("GrappleRope INITIAL Adjustment = %f", Adjustment.Size());
+			//PRINTPARLONG("GrappleRope INITIAL Adjustment = %f", Adjustment.Size());
 				DrawDebugBox(GetWorld(), GetActorLocation(), FVector(10), FQuat(GetActorRotation()), FColor::Blue, false, 4.f, 0, 5.f);
 			SetActorRelativeLocation(GetActorLocation() + Adjustment, false, nullptr, ETeleportType::TeleportPhysics);
 				DrawDebugBox(GetWorld(), GetActorLocation(), FVector(10), FQuat(GetActorRotation()), FColor::Red, false, 4.f, 0, 5.f);
@@ -2292,7 +2298,7 @@ void ASteikemannCharacter::Start_Attack_Pure()
 
 void ASteikemannCharacter::Stop_Attack()
 {
-	PRINTLONG("Can attack again");
+	//PRINTLONG("Can attack again");
 	bCanAttack = true;
 	bIsScoopAttacking = false;
 	bIsSmackAttacking = false;
@@ -2307,7 +2313,7 @@ void ASteikemannCharacter::Activate_AttackCollider()
 
 void ASteikemannCharacter::Deactivate_AttackCollider()
 {
-	PRINTLONG("Deactivate Attack");
+	//PRINTLONG("Deactivate Attack");
 	bAttacking = false;
 	AttackDirection *= 0;
 
@@ -2430,7 +2436,7 @@ void ASteikemannCharacter::Receive_ScoopAttack_Pure(const FVector& Direction, co
 
 void ASteikemannCharacter::Click_GroundPound()
 {
-	PRINTLONG("Click GroundPound");
+	//PRINTLONG("Click GroundPound");
 	if (!bGroundPoundPress && GetMoveComponent()->IsFalling() && !bIsGroundPounding)
 	{
 		bGroundPoundPress = true;
@@ -2447,7 +2453,7 @@ void ASteikemannCharacter::UnClick_GroundPound()
 
 void ASteikemannCharacter::Launch_GroundPound()
 {
-	PRINTLONG("LAUNCH GroundPound");
+	//PRINTLONG("LAUNCH GroundPound");
 	GetMoveComponent()->GP_Launch();
 }
 
@@ -2481,7 +2487,7 @@ void ASteikemannCharacter::Deactivate_GroundPound()
 
 void ASteikemannCharacter::GroundPoundLand(const FHitResult& Hit)
 {
-	PRINTLONG("GroundPound LAND");
+	//PRINTLONG("GroundPound LAND");
 
 	// Detach GP collider on Hit.ImpactLocation
 	USceneComponent* RootComp = GetRootComponent();
@@ -2501,12 +2507,12 @@ void ASteikemannCharacter::GroundPoundLand(const FHitResult& Hit)
 
 void ASteikemannCharacter::Do_GroundPound_Pure(IAttackInterface* OtherInterface, AActor* OtherActor)
 {
-	PRINTPARLONG("GroundPound Attack ON: %s", *OtherActor->GetName());
+	//PRINTPARLONG("GroundPound Attack ON: %s", *OtherActor->GetName());
 
 	const float diff = GetActorLocation().Z - OtherActor->GetActorLocation().Z;
 	const float range = 40.f;
 	const bool b = diff < range || diff > -range;
-	PRINTPARLONG("DIFF: %f", diff);
+	//PRINTPARLONG("DIFF: %f", diff);
 
 	if (b)
 	{
@@ -2517,7 +2523,7 @@ void ASteikemannCharacter::Do_GroundPound_Pure(IAttackInterface* OtherInterface,
 
 		float LengthToOtherActor = FVector(GetActorLocation() - OtherActor->GetActorLocation()).Size();
 		float Multiplier = /*1.f - */(LengthToOtherActor / MaxGroundPoundRadius);
-		PRINTPARLONG("Multiplier: %f", Multiplier);
+		//PRINTPARLONG("Multiplier: %f", Multiplier);
 
 		//OtherInterface->Receive_GroundPound_Pure(Direction, GP_LaunchStrength * Multiplier);
 		OtherInterface->Receive_GroundPound_Pure(Direction, GP_LaunchStrength + ((GP_LaunchStrength/2) * Multiplier));
