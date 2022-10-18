@@ -174,8 +174,8 @@ bool USteikemannCharMovementComponent::CrouchSlideJump(const FVector& SlideDirec
 		
 		/* Find the left/right direction of the input relative to the SlideDirection */
 		FVector RightOrtho			{ FVector::CrossProduct(SlideDirection2D, FVector::CrossProduct(GetOwner()->GetActorRightVector(), SlideDirection2D)) };
-			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (RightOrtho * 300.f), FColor::Green, false, 1.f, 0, 4.f);
-			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (GetOwner()->GetActorForwardVector() * 300.f), FColor::Red, false, 1.f, 0, 4.f);
+			//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (RightOrtho * 300.f), FColor::Green, false, 1.f, 0, 4.f);
+			//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (GetOwner()->GetActorForwardVector() * 300.f), FColor::Red, false, 1.f, 0, 4.f);
 
 		float AngleDirection = FVector::DotProduct(RightOrtho, Input);
 		if (AngleDirection < 0.f) { AngleBetween *= -1.f; }
@@ -189,14 +189,14 @@ bool USteikemannCharMovementComponent::CrouchSlideJump(const FVector& SlideDirec
 
 		FinalSlideDirection = SlideDirection2D.RotateAngleAxis(JumpAngle, FVector::UpVector);
 		//FinalSlideDirection = SlideDirection2D.RotateAngleAxis(JumpAngle, FVector::UpVector);
-			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (FinalSlideDirection * 300.f), FColor::Orange, false, 1.f, 0, 5.f);
+			//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (FinalSlideDirection * 300.f), FColor::Orange, false, 1.f, 0, 5.f);
 	}
 	/* Rotate the direction upwards toward the engines UpVector CrouchSlideJumpAngle amount of degrees */
 	FVector OrthoUp		{ FVector::CrossProduct(FinalSlideDirection, FVector::CrossProduct(FVector::UpVector, FinalSlideDirection)) };
-		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (OrthoUp * 300.f), FColor::Blue, false, 1.f, 0, 4.f);
+		//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (OrthoUp * 300.f), FColor::Blue, false, 1.f, 0, 4.f);
 
 	FinalSlideDirection = (FinalSlideDirection * cosf(FMath::DegreesToRadians(CrouchSlideJumpAngle))) + (OrthoUp * sinf(FMath::DegreesToRadians(CrouchSlideJumpAngle)));
-		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (FinalSlideDirection * CrouchJumpSpeed), FColor::Orange, false, 1.f, 0, 5.f);
+		//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (FinalSlideDirection * CrouchJumpSpeed), FColor::Orange, false, 1.f, 0, 5.f);
 
 	CrouchSlideJump_Vector = FinalSlideDirection * CrouchJumpSpeed;
 	GetCharOwner()->Stop_CrouchSliding();
@@ -353,8 +353,8 @@ bool USteikemannCharMovementComponent::WallJump(const FVector& ImpactNormal, flo
 	//WallJump_VelocityDirection *= JumpZVelocity;
 	AddImpulse(WallJump_VelocityDirection * JumpStrength, true);
 
-		DrawDebugLine(GetWorld(), GetCharOwner()->GetActorLocation(), GetCharOwner()->GetActorLocation() + (ImpactNormal * 300.f), FColor::Blue, false, 2.f, 0, 4.f);
-		DrawDebugLine(GetWorld(), GetCharOwner()->GetActorLocation(), GetCharOwner()->GetActorLocation() + (WallJump_VelocityDirection * 300.f), FColor::Yellow, false, 2.f, 0, 4.f);
+		//DrawDebugLine(GetWorld(), GetCharOwner()->GetActorLocation(), GetCharOwner()->GetActorLocation() + (ImpactNormal * 300.f), FColor::Blue, false, 2.f, 0, 4.f);
+		//DrawDebugLine(GetWorld(), GetCharOwner()->GetActorLocation(), GetCharOwner()->GetActorLocation() + (WallJump_VelocityDirection * 300.f), FColor::Yellow, false, 2.f, 0, 4.f);
 
 	//bWallJump = true;
 	//bStickingToWall = false;
@@ -362,6 +362,7 @@ bool USteikemannCharMovementComponent::WallJump(const FVector& ImpactNormal, flo
 	//GetCharOwner()->bCanStickToWall = true;
 	GetCharOwner()->WallJump_NonStickTimer = 0.f;
 	GetCharOwner()->ResetWallJumpAndLedgeGrab();
+	GetCharOwner()->RotateActorYawToVector(WallJump_VelocityDirection);
 	return true;
 }
 
@@ -395,7 +396,7 @@ bool USteikemannCharMovementComponent::ReleaseFromWall(const FVector& ImpactNorm
 	float angle = FMath::DegreesToRadians(30.f);
 	FVector ReleaseVector = (cosf(angle) * FVector::DownVector) + (sinf(angle) * ImpactNormal);
 
-		DrawDebugLine(GetWorld(), GetCharOwner()->GetActorLocation(), GetCharOwner()->GetActorLocation() + (ReleaseVector * 300.f), FColor::Green, false, 2.f, 0, 4.f);
+		//DrawDebugLine(GetWorld(), GetCharOwner()->GetActorLocation(), GetCharOwner()->GetActorLocation() + (ReleaseVector * 300.f), FColor::Green, false, 2.f, 0, 4.f);
 
 	bStickingToWall = false;
 	bWallSlowDown = false;
@@ -434,7 +435,7 @@ bool USteikemannCharMovementComponent::LedgeJump(const FVector& LedgeLocation, f
 	LedgeJumpDirection = LedgeJumpDirection.RotateAngleAxis(-ClampedAngle, FVector::UpVector);
 	
 	//AddImpulse(LedgeJumpDirection * LedgeJump_ImpulseStrength, true);
-		DrawDebugLine(GetWorld(), GetCharOwner()->GetActorLocation(), GetCharOwner()->GetActorLocation() + (LedgeJumpDirection * LedgeJump_ImpulseStrength), FColor::Orange, false, 1.f, 0, 4.f);
+		//DrawDebugLine(GetWorld(), GetCharOwner()->GetActorLocation(), GetCharOwner()->GetActorLocation() + (LedgeJumpDirection * LedgeJump_ImpulseStrength), FColor::Orange, false, 1.f, 0, 4.f);
 
 
 	Jump(JumpStrength * (1.f + LedgeJumpBoost_Multiplier));
@@ -453,5 +454,6 @@ void USteikemannCharMovementComponent::GP_Launch()
 {
 	bGP_PreLaunch = false;
 	const float LaunchStrength = GetCharOwner()->GP_LaunchStrength;
-	AddImpulse(FVector(0, 0, -LaunchStrength), true);
+	//AddImpulse(FVector(0, 0, -LaunchStrength), true);
+	AddImpulse(FVector(0, 0, -3500.f), true);
 }

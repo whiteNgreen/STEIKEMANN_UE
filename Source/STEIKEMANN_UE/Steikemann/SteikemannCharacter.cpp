@@ -163,10 +163,10 @@ void ASteikemannCharacter::NS_Land_Implementation(const FHitResult& Hit)
 		UNiagaraComponent* TempNiagaraLand = CreateNiagaraComponent("Niagara_Land", RootComponent, FAttachmentTransformRules::SnapToTargetIncludingScale, true);
 		NiagaraPlayer = TempNiagaraLand;
 	}
-	
+
 	NiagaraPlayer->SetAsset(NS_Land);
 	NiagaraPlayer->SetNiagaraVariableInt("User.SpawnAmount", static_cast<int>(Velocity * NSM_Land_ParticleAmount));
-	NiagaraPlayer->SetNiagaraVariableFloat("User.Velocity", Velocity * NSM_Land_ParticleSpeed);
+	NiagaraPlayer->SetNiagaraVariableFloat("User.Velocity", bIsGroundPounding ? Velocity * 3.f * NSM_Land_ParticleSpeed : Velocity * NSM_Land_ParticleSpeed);	// Change pending on character is groundpounding or not
 	NiagaraPlayer->SetWorldLocationAndRotation(Hit.ImpactPoint, Hit.ImpactNormal.Rotation());
 	NiagaraPlayer->Activate(true);
 }
@@ -1109,8 +1109,8 @@ bool ASteikemannCharacter::DetectLedge(FVector& Out_IntendedPlayerLedgeLocation,
 			
 			/* Draw Permanent DebugLines  */
 			{
-				DrawDebugLine(GetWorld(), FirstTracePoint_Start,	FirstTracePoint_End,	FColor::Red,	false, 1.f, 0, 4.f);
-				DrawDebugLine(GetWorld(), SecondTracePoint_Start,	SecondTracePoint_End,	FColor::Blue,	false, 1.f, 0, 4.f);
+				//DrawDebugLine(GetWorld(), FirstTracePoint_Start,	FirstTracePoint_End,	FColor::Red,	false, 1.f, 0, 4.f);
+				//DrawDebugLine(GetWorld(), SecondTracePoint_Start,	SecondTracePoint_End,	FColor::Blue,	false, 1.f, 0, 4.f);
 			}
 
 			return true;
@@ -1149,7 +1149,7 @@ void ASteikemannCharacter::DrawDebugArms(const float& InputAngle)
 		if (Angle < 0.f)
 		{
 			float Alpha = Angle / -90.f;
-			RightArmLocation = FMath::Lerp(RightArmLocation, RightArmLocation2, Alpha);
+			//RightArmLocation = FMath::Lerp(RightArmLocation, RightArmLocation2, Alpha);
 		}
 		DrawDebugLine(GetWorld(), GetActorLocation(), RightArmLocation, FColor::Emerald, false, 0.f, 0, 6.f);
 		DrawDebugBox(GetWorld(), RightArmLocation, FVector(30, 30, 30), Rot.Quaternion(), FColor::Emerald, false, 0.f, 0, 4.f);
@@ -1161,7 +1161,7 @@ void ASteikemannCharacter::DrawDebugArms(const float& InputAngle)
 		if (Angle > 0.f)
 		{
 			float Alpha = Angle / 90.f;
-			LeftArmLocation = FMath::Lerp(LeftArmLocation, LeftArmLocation2, Alpha);
+			//LeftArmLocation = FMath::Lerp(LeftArmLocation, LeftArmLocation2, Alpha);
 		}
 		DrawDebugLine(GetWorld(), GetActorLocation(), LeftArmLocation, FColor::Emerald, false, 0.f, 0, 6.f);
 		DrawDebugBox(GetWorld(), LeftArmLocation, FVector(30, 30, 30), Rot.Quaternion(), FColor::Emerald, false, 0.f, 0, 4.f);
@@ -1787,7 +1787,7 @@ bool ASteikemannCharacter::DetectNearbyWall()
 
 	for (int i = 0; i < 4; i++)
 	{
-			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (LinetraceVector * WallDetectionRange), FColor::Yellow, false, 0.f, 0, 4.f);
+			//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (LinetraceVector * WallDetectionRange), FColor::Yellow, false, 0.f, 0, 4.f);
 		bHit = GetWorld()->LineTraceSingleByChannel(WallHit, GetActorLocation(), GetActorLocation() + (LinetraceVector * WallDetectionRange), ECC_Visibility, Params);
 		LinetraceVector = LinetraceVector.RotateAngleAxis(90, FVector(0, 0, 1));
 		if (bHit) { 
@@ -1804,7 +1804,7 @@ bool ASteikemannCharacter::DetectNearbyWall()
 		LinetraceVector = LinetraceVector.RotateAngleAxis(45.f, FVector(0, 0, 1));
 		for (int i = 0; i < 4; i++)
 		{
-				DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (LinetraceVector * WallDetectionRange), FColor::Red, false, 0.f, 0, 4.f);
+				//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (LinetraceVector * WallDetectionRange), FColor::Red, false, 0.f, 0, 4.f);
 			bHit = GetWorld()->LineTraceSingleByChannel(WallHit, GetActorLocation(), GetActorLocation() + (LinetraceVector * WallDetectionRange), ECC_Visibility, Params);
 			LinetraceVector = LinetraceVector.RotateAngleAxis(90, FVector(0, 0, 1));
 			if (bHit) {
@@ -1822,7 +1822,7 @@ bool ASteikemannCharacter::DetectNearbyWall()
 	{
 		FromActorToWall = WallHit.Normal * -1.f;
 
-		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (FromActorToWall * 200.f), FColor::White, false, 0.f, 0.f, 6.f);
+		//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (FromActorToWall * 200.f), FColor::White, false, 0.f, 0.f, 6.f);
 
 		const bool b = GetWorld()->LineTraceSingleByChannel(WallHit, GetActorLocation(), GetActorLocation() + (FromActorToWall * 200.f), ECC_Visibility, Params);
 		if (b)
@@ -2026,7 +2026,7 @@ void ASteikemannCharacter::Update_GrappleHook_Swing(float DeltaTime)
 
 
 			/* Debug stuff */
-			DrawDebugLine(GetWorld(), GrappledActor->GetActorLocation(), GrappledActor->GetActorLocation() + FVector::DownVector * GrappleHookRange, FColor::Black, false, -1, 0, 6.f);
+			//DrawDebugLine(GetWorld(), GrappledActor->GetActorLocation(), GrappledActor->GetActorLocation() + FVector::DownVector * GrappleHookRange, FColor::Black, false, -1, 0, 6.f);
 			//PRINTPAR("Length To Ground From GrappleTarget: %f", LengthFromGrappledToGround);
 			//PRINTPAR("Length Between Player And GrappleTarget: %f", fRadius);
 
@@ -2037,7 +2037,7 @@ void ASteikemannCharacter::Update_GrappleHook_Swing(float DeltaTime)
 	/* GrappleSwing IN AIR */
 	if (currentVelocity.SizeSquared() > 0 && GetMoveComponent()->IsFalling()) 
 	{
-		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + ToGrappledActor, FColor::Green, false, -1, 0, 4.f);
+		//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + ToGrappledActor, FColor::Green, false, -1, 0, 4.f);
 
 		/* Adjust actor location to match the initial length from the grappled object */
 		if (fRadius > GrappleRopeLength) 
@@ -2053,7 +2053,7 @@ void ASteikemannCharacter::Update_GrappleHook_Swing(float DeltaTime)
 
 		/* New Velocity */	// Is missing: normalizing the vectors before crossproduct or finding the length of the velocity. So that it doesn't exponentially scale
 		FVector newVelocity = FVector::CrossProduct(ToGrappledActor, (FVector::CrossProduct(currentVelocity, ToGrappledActor)));
-			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + newVelocity, FColor::Purple, false, -1, 0, 4.f);
+			//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + newVelocity, FColor::Purple, false, -1, 0, 4.f);
 
 		newVelocity = (currentVelocity.Size() / newVelocity.Size()) * newVelocity;
 
@@ -2131,7 +2131,7 @@ void ASteikemannCharacter::Update_GrappleHook_Drag(float DeltaTime)
 
 	newVelocity *= GrappleDrag_CurrentSpeed;
 
-		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + newVelocity, FColor::Red, false, 0, 0, 4.f);
+		//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + newVelocity, FColor::Red, false, 0, 0, 4.f);
 
 	if (radius.Size() > GrappleDrag_MinRadiusDistance) {
 		GetCharacterMovement()->Velocity = newVelocity;
@@ -2478,7 +2478,7 @@ void ASteikemannCharacter::Deactivate_GroundPound()
 
 	GroundPoundCollider->SetGenerateOverlapEvents(false);
 	GroundPoundCollider->SetSphereRadius(0.1f);
-	GroundPoundCollider->SetHiddenInGame(false);
+	//GroundPoundCollider->SetHiddenInGame(false);
 
 	bIsGroundPounding = false;
 	bCanGroundPound = true;
@@ -2498,7 +2498,7 @@ void ASteikemannCharacter::GroundPoundLand(const FHitResult& Hit)
 
 	GroundPoundCollider->SetWorldLocation(Hit.ImpactPoint, false, nullptr, ETeleportType::TeleportPhysics);
 	GroundPoundCollider->SetGenerateOverlapEvents(true);
-	GroundPoundCollider->SetHiddenInGame(false);
+	//GroundPoundCollider->SetHiddenInGame(false);
 
 	GroundPoundCollider->SetSphereRadius(MaxGroundPoundRadius, true);
 
@@ -2576,12 +2576,12 @@ void ASteikemannCharacter::GrappleHook_Swing_RotateCamera(float DeltaTime)
 	//PRINTPAR("Con: %s", *con.ToString());
 	con.Z = 0.f;
 	con.Normalize();
-		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (con * 20000), FColor::Yellow, false, 0, 0, 4.f);
+		//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (con * 20000), FColor::Yellow, false, 0, 0, 4.f);
 
 	FVector D = con.RotateAngleAxis(90.f, FVector(0, 0, 1));
 	D.Z = 0.f;
 	D.Normalize();
-		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (D * 20000), FColor::Red, false, 0, 0, 4.f);
+		//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (D * 20000), FColor::Red, false, 0, 0, 4.f);
 
 	FVector vel = GetCharacterMovement()->Velocity;
 	vel.Z = 0.f;

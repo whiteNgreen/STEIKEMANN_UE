@@ -83,7 +83,7 @@ void ASmallEnemy::HookedPure(const FVector InstigatorLocation)
 			FVector LaunchDirection = (cosf(angle) * Direction3D.GetSafeNormal2D()) + (sinf(angle) * FVector::UpVector);
 			//PRINTPARLONG("LaunchDirection LENGTH = %f", LaunchDirection.Size());
 
-			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (LaunchDirection * GrappledLaunchStrength), FColor::Red, false, 1.f, 0, 4.f);
+			//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (LaunchDirection * GrappledLaunchStrength), FColor::Red, false, 1.f, 0, 4.f);
 			GetCharacterMovement()->AddImpulse(LaunchDirection * GrappledLaunchStrength, true);
 		}
 		/* 2nd method */
@@ -99,7 +99,7 @@ void ASmallEnemy::HookedPure(const FVector InstigatorLocation)
 
 			Velocity.Z = 0.5f * GetCharacterMovement()->GetGravityZ() * GrappledLaunchTime * -1.f;
 
-			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + Velocity, FColor::Red, false, 1.f, 1, 4.f);
+			//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + Velocity, FColor::Red, false, 1.f, 1, 4.f);
 			GetCharacterMovement()->AddImpulse(Velocity, true);
 		}
 
@@ -126,7 +126,7 @@ void ASmallEnemy::Receive_SmackAttack_Pure(const FVector& Direction, const float
 	if (GetCanBeSmackAttacked())
 	{
 		//PRINTLONG("IM BEING ATTACKED");
-		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (Direction * Strength), FColor::Yellow, false, 2.f, 0, 3.f);
+		//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (Direction * Strength), FColor::Yellow, false, 2.f, 0, 3.f);
 
 		bCanBeSmackAttacked = false;
 		SetActorRotation(FVector(Direction.GetSafeNormal2D() * -1.f).Rotation(), ETeleportType::TeleportPhysics);
@@ -147,7 +147,7 @@ void ASmallEnemy::Receive_ScoopAttack_Pure(const FVector& Direction, const float
 	if (GetCanBeSmackAttacked())
 	{
 		//PRINTPARLONG("IM(%s) BEING ATTACKED", *GetName());
-		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (Direction * Strength), FColor::Yellow, false, 2.f, 0, 3.f);
+		//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (Direction * Strength), FColor::Yellow, false, 2.f, 0, 3.f);
 
 		bCanBeSmackAttacked = false;
 		SetActorRotation(FVector(Direction.GetSafeNormal2D() * -1.f).Rotation(), ETeleportType::TeleportPhysics);
@@ -162,7 +162,7 @@ void ASmallEnemy::Receive_ScoopAttack_Pure(const FVector& Direction, const float
 void ASmallEnemy::Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength)
 {
 	//PRINTPARLONG("IM(%s) BEING GROUNDPOUNDED", *GetName());
-	DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (PoundDirection * GP_Strength), FColor::Yellow, false, 2.f, 0, 3.f);
+	//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (PoundDirection * GP_Strength), FColor::Yellow, false, 2.f, 0, 3.f);
 
 	//bCanBeSmackAttacked = false;
 	SetActorRotation(FVector(PoundDirection.GetSafeNormal2D() * -1.f).Rotation(), ETeleportType::TeleportPhysics);
