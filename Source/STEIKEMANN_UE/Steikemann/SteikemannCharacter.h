@@ -454,82 +454,18 @@ public:/* ------------------- Basic Movement ------------------- */
 		void RotateActorYawPitchToVector(FVector AimVector, float DeltaTime = 0);	//Old
 	void RollActorTowardsLocation(FVector Point, float DeltaTime = 0);
 
-	/* Returns the angle and direction*/
-	//float AngleBetweenVectors(const FVector& FirstVec, const FVector& SecondVec);
-
-#pragma region Bounce
-	/* ------------------------ Bounce --------------------- */
-
-	//UPROPERTY(BlueprintReadOnly, Category = "Movement|Bounce")
-	bool bBounceClick{};
-	bool bBounce{};
-
-	/* The max length player can activate bounce */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Bounce")
-		float BounceCheckLength{ 100.f };
-
-	void Bounce();
-	void Stop_Bounce();
-#pragma endregion //Bounce
-
-#pragma region Dash
-	/* ------------------------ Dash --------------------- */
-
-	bool bDashClick{};
-	bool bDash{};
-	uint8 DashCounter{ 1 };
-
-	FVector DashDirection{};
-
-	/* How long the pre dash action lasts */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Dash")
-		float Pre_DashTime{ 0.1f };
-	/* How long the dash action lasts */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Dash")
-		float DashTime{ 0.5f };
-	/* How far the character will dash */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Dash")
-		float DashLength{ 1000.f };
-
-	UFUNCTION(BlueprintImplementableEvent)
-		void Activate_Dash();
-
-	void Dash();
-	void Stop_Dash();
-
-	bool IsDashing() const;
-
-	
-	/** Dash During Grapplehook Swing - GrappleSwingBoost
-	*/
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing")
-		float GrappleSwingBoostStrength{ 1000.f };
-	/* How long the internal timer is between each boost */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing")
-		float TimeBetweenGrappleSwingBoosts{ 1.f };
-
-	bool bCanGrappleSwingBoost{};
-	bool bGrappleSwingBoost{};
-	FTimerHandle TH_ResetGrappleSwingBoost;
-	void ResetGrappleSwingBoost();
-
-#pragma endregion //Dash
 
 /* -------------------------------- GRAPPLEHOOK ----------------------------- */
 #pragma region GrappleHook
 public: 
 	/* ------- GrappleTargetInterface ------ */
-	//void Targeted() {}
 	virtual void TargetedPure() override {}
 
-	//void UnTargeted() {}
 	virtual void UnTargetedPure() override {}
 
-	//void Hooked() {}
 	virtual void HookedPure() override {}
 	virtual void HookedPure(const FVector InstigatorLocation) override {}
 
-	//void UnHooked() {}
 	virtual void UnHookedPure() override {}
 
 	virtual FGameplayTag GetGrappledGameplayTag_Pure() const override { return Player; }
@@ -543,13 +479,13 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		TWeakObjectPtr<AActor> GrappledActor{ nullptr };
 	UPROPERTY(BlueprintReadOnly)
+		TWeakObjectPtr<AActor> Active_GrappledActor{ nullptr };
+
+	UPROPERTY(BlueprintReadOnly)
 		FGameplayTag GpT_GrappledActorTag;
 
 	/* The rope that goes from the player character to the grappled actor */
 	FVector GrappleRope{};
-
-	UPROPERTY(BlueprintReadOnly)
-		bool bGrapple_Available{};	// Brukes bare i swing atm, Kan kastes ut
 
 	/* Collision sphere used for detecting nearby grappleable actors */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Grappling Hook")
@@ -564,70 +500,51 @@ public:
 		void OnGrappleTargetDetectionBeginOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 	UFUNCTION()
 		void OnGrappleTargetDetectionEndOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
-	
-	/* The onscreen aiming location */
-	UPROPERTY(BlueprintReadOnly)
-		FVector2D AimingLocation {};
-	UPROPERTY(BlueprintReadOnly)
-		FVector2D AimingLocationPercentage {};
-	UPROPERTY(BlueprintReadOnly)
-		FVector2D ViewPortSize {};
 
-	/* Shows the debug aiming reticle */
-	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Targeting")
-		bool bShowAimingLocaiton_Debug{};
 	/* The added percentage of the screens height that is added to the aiming location. A higher number turns it closer to the
 		middle, with a lower number further up. 0 directly to the middle */
 	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Targeting")
 		float GrappleAimYChange_Base UMETA(DisplayName = "GrappleAimYDifference") { 4.f };
 	float GrappleAimYChange{};
 
-	bool LineTraceToGrappleableObject();	// Old version, Used raytracing from the screen onto the world
 	void GetGrappleTarget();
 
-	UFUNCTION()
-	void Start_Grapple_Swing();
-	void Stop_Grapple_Swing();
-	UFUNCTION()
-	void Start_Grapple_Drag();
-	void Stop_Grapple_Drag();
-
+	FTimerHandle TH_Grapplehook_Start;
+	FTimerHandle TH_Grapplehook_End_Launch;
 
 	UPROPERTY(BlueprintReadOnly)
-		bool bGrapple_Swing {};
+		bool bIsGrapplehooking{};
+	UPROPERTY(BlueprintReadOnly)
+		bool bIsPostGrapplehooking{};
+
+	void Initial_GrappleHook();
+	void Start_GrappleHook();
+	void Launch_GrappleHook();
+	void Stop_GrappleHook();
+
+	UPROPERTY(BlueprintReadOnly)
+		bool bGrapple_PreLaunch{};
+	UPROPERTY(BlueprintReadOnly)
+		bool bGrapple_Launch{};
 	
-	UPROPERTY(BlueprintReadOnly)
-		bool bGrapple_PreLaunch {};
-	UPROPERTY(BlueprintReadOnly)
-		bool bGrapple_Launch {};
-	
-	/* Time it takes for half a rotation around the GrappledActor */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing")
-		float GrappleHook_SwingTime{ 1.f };
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing")
-		float GrappleHook_Swing_MaxSpeed{ 2000.f };
+	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
+		float GrappleHook_LaunchSpeed{ 2000.f };
 
-	/* The minimum length of the grappleswing rope */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing")
-		float Min_GrappleRopeLength{ 100.f };
-	/* Initial length of the rope between the actor and grappled object/actor */
-	float Initial_GrappleRopeLength{};
-	/* The updated length of the rope between the actor and grappled object/actor */
-	float GrappleRopeLength{};
+	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
+		float GrappleHook_Threshhold{ 500.f };
 
-	/* Grapplehook swing */
-	UFUNCTION(BlueprintCallable)
-	void Initial_GrappleHook_Swing();
-	void Update_GrappleHook_Swing(float DeltaTime);
-	void RotateActor_GrappleHook_Swing(float DeltaTime);
-	void GrappleHook_Swing_RotateCamera(float DeltaTime);	// Slightly dissorienting
+	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
+		float GrappleHook_DividingFactor{ 2.f };
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
+		float GrappleHook_PostLaunchTimer UMETA(DisplayName = "Post Launch Timer") { 1.f };
+
 
 	/* How long the player will be held in the air before being launched towards the grappled actor */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
 		float GrappleDrag_PreLaunch_Timer_Length UMETA(DisplayName = "PreLaunch Timer")  { 0.25f };
 
-	float GrappleDrag_PreLaunch_Timer{};
-
+	/* -- GRAPPLE CAMERA VARIABLES -- */
 	/* Interpolation speed of the camera rotation during grapplehook Drag */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag|Camera Rotation")
 		float GrappleDrag_Camera_InterpSpeed			UMETA(DisplayName = "Interpolation Speed")		{ 3.f };
@@ -636,68 +553,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag|Camera Rotation")
 		float GrappleDrag_Camera_PitchPoint				UMETA(DisplayName = "Pitch Point")				{ 20.f };
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag")
-		float GrappleDrag_MaxSpeed						UMETA(DisplayName = "Max Speed")				{ 2000.f };
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag")
-		float GrappleDrag_MinRadiusDistance				UMETA(DisplayName = "Min Radius Distance")		{ 50.f };
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag")
-		float GrappleDrag_Update_TimeMultiplier			UMETA(DisplayName = "Time Multiplier")			{ 2.f };
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag")
-		float GrappleDrag_Update_Time_MIN_Multiplier	UMETA(DisplayName = "Minimum Time Multiplier")	{ 2.f };
-
-	float GrappleDrag_CurrentSpeed{};
-
-	/* Grapplehook drag during swing */
-	UFUNCTION(BlueprintCallable)
-	void Initial_GrappleHook_Drag(float DeltaTime);
-	void Update_GrappleHook_Drag(float DeltaTime);
 	void GrappleHook_Drag_RotateCamera(float DeltaTime);
 	void RotateActor_GrappleHook_Drag(float DeltaTime);
 
-	UPROPERTY(BlueprintReadWrite)
-	bool bGrappleEnd{};
-
 	UFUNCTION(BlueprintCallable)
-	bool IsGrappling() const;
-	bool IsGrappleSwinging() const { return bGrapple_Swing; }
-
-
-	/**	Adjusting rope length
-	*/
-	void AdjustRopeLength(FVector Rope);
-	
-	/* Can turn this feature on or off. Off will turn grapplehook_drag activation back to the way it was */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing|RopeAdjustment")
-		bool bShouldAdjustRope{ true };
-
-	/* Is the player currently adjusting the ropes length? */
-	bool bIsAdjustingRopeLength{};
-	bool IsAdjustingRopeLength() const { return bIsAdjustingRopeLength; }
-
-	/* How fast the rope is adjusted during AdjustRopeLength() */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing|RopeAdjustment")
-		float RopeAdjustmentSpeed{ 10.f };
-	
-
-	/* 
-	* Being dragged while on the Ground with Grapplehook Active 
-	*/ 
-
-	/* The speed of the drag towards the target */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing|OnGround")
-		float GrappleHook_OnGroundDragSpeed{ 1000.f };
-	/* The multiplier applied to the OnGroundSpeed when player is in the air */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing|OnGround")
-		float GrappleHook_OnGroundDragSpeed_InAirMultiplier{ 3.f };
-
-	/* How much the player should be moved towards the grappletarget, when they are being launched into swinging in the air */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing|OnGround")
-		float GrappleHook_OnGroundMoveTowardsTarget{ 100.f };
-
-		
+		bool IsGrappling() const;
+	UFUNCTION(BlueprintCallable)
+		bool IsPostGrapple() const { return bIsPostGrapplehooking; }		
 
 #pragma endregion //GrappleHook
 
@@ -718,8 +580,6 @@ public:
 		void Start_Attack();
 	UFUNCTION(BlueprintCallable)
 		void Start_Attack_Pure();
-
-
 
 	UFUNCTION(BlueprintCallable)
 		void Stop_Attack();

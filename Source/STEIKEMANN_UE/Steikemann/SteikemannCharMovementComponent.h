@@ -117,28 +117,30 @@ public:
 
 #pragma endregion //Jump
 
-#pragma region Bounce
-	void Bounce(FVector surfacenormal);
+#pragma region GRAPPLE HOOK
+	bool bGrappleHook_InitialState{};
 
-#pragma endregion //Bounce
+#pragma endregion //GRAPPLE HOOK
 
-#pragma region Dash
-	
-	float fPreDashTimerLength{};
-	float fPreDashTimer{};
-	float fDashTimerLength{};
-	float fDashTimer{};
-	float fDashLength{};
-	FVector DashDirection;
+//#pragma region Bounce
+	//void Bounce(FVector surfacenormal);
+//#pragma endregion //Bounce
 
-	void Start_Dash(float preDashTime, float dashTime, float dashLength, FVector dashdirection);
-	void Update_Dash(float deltaTime);
+//#pragma region Dash
+	//float fPreDashTimerLength{};
+	//float fPreDashTimer{};
+	//float fDashTimerLength{};
+	//float fDashTimer{};
+	//float fDashLength{};
+	//FVector DashDirection;
+
+	//void Start_Dash(float preDashTime, float dashTime, float dashLength, FVector dashdirection);
+	//void Update_Dash(float deltaTime);
 
 	/**	Dash During Grapplehook_Swing - Boost
 	*/
 	//void Grapplehook_Dash(float DashStrength, FVector DashDirection);
-
-#pragma endregion //Dash
+//#pragma endregion //Dash
 
 #pragma region Wall Jump
 

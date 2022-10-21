@@ -40,7 +40,7 @@ void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		bJumping = SteikeOwner->IsJumping();
 
 		/* Dash */
-		bDashing = SteikeOwner->IsDashing();
+		//bDashing = SteikeOwner->IsDashing();
 
 		/* Grappling */
 		bGrappling = SteikeOwner->IsGrappling();

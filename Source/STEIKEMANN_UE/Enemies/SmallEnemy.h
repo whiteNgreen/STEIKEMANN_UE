@@ -46,6 +46,7 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	void RotateActorYawToVector(FVector AimVector, float DeltaTime = 0);
 
 public: 
 	bool bCanBeGrappleHooked{ true };
@@ -92,6 +93,9 @@ public:
 	bool bCanBeSmackAttacked{ true };
 
 	FTimerHandle THandle_GotSmackAttacked{};
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|SmackAttack")
+		float SmackAttack_OnGroundMultiplication{ 0.1f };
 
 	/**
 	*	Sets a timer before character can be damaged again 

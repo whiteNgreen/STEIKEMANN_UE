@@ -42,6 +42,25 @@ void ASmallEnemy::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 }
 
+void ASmallEnemy::RotateActorYawToVector(FVector AimVector, float DeltaTime)
+{
+	FVector Aim = AimVector;
+	Aim.Normalize();
+
+	FVector AimXY = Aim;
+	AimXY.Z = 0.f;
+	AimXY.Normalize();
+
+	float YawDotProduct = FVector::DotProduct(AimXY, FVector::ForwardVector);
+	float Yaw = FMath::RadiansToDegrees(acosf(YawDotProduct));
+
+	/*		Check if yaw is to the right or left		*/
+	float RightDotProduct = FVector::DotProduct(AimXY, FVector::RightVector);
+	if (RightDotProduct < 0.f) { Yaw *= -1.f; }
+
+	SetActorRotation(FRotator(GetActorRotation().Pitch, Yaw, 0.f), ETeleportType::TeleportPhysics);
+}
+
 void ASmallEnemy::TargetedPure()
 {
 	//PRINTPAR("I; %s, am grapple targeted", *GetName());
@@ -74,23 +93,22 @@ void ASmallEnemy::HookedPure(const FVector InstigatorLocation)
 	{
 		GetCharacterMovement()->Velocity *= 0.f;
 
+		FVector Direction3D = InstigatorLocation - GetActorLocation();
+		RotateActorYawToVector(Direction3D.GetSafeNormal());
+
 		/* 1st method. Static launch strength and angle */
 		if (bUseFirstGrappleLaunchMethod)
 		{
-			FVector Direction3D = InstigatorLocation - GetActorLocation();
-
 			float angle = FMath::DegreesToRadians(GrappledLaunchAngle);
 			FVector LaunchDirection = (cosf(angle) * Direction3D.GetSafeNormal2D()) + (sinf(angle) * FVector::UpVector);
-			//PRINTPARLONG("LaunchDirection LENGTH = %f", LaunchDirection.Size());
 
-			//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (LaunchDirection * GrappledLaunchStrength), FColor::Red, false, 1.f, 0, 4.f);
 			GetCharacterMovement()->AddImpulse(LaunchDirection * GrappledLaunchStrength, true);
 		}
 		/* 2nd method */
 		else
 		{
 			//PRINTLONG("Second Method Launch");
-			FVector Direction3D = InstigatorLocation - GetActorLocation();
+			//FVector Direction3D = InstigatorLocation - GetActorLocation();
 			FVector Direction2D = Direction3D;
 			Direction3D.Z = 0.f;
 			//Direction2D.Normalize();
@@ -99,7 +117,6 @@ void ASmallEnemy::HookedPure(const FVector InstigatorLocation)
 
 			Velocity.Z = 0.5f * GetCharacterMovement()->GetGravityZ() * GrappledLaunchTime * -1.f;
 
-			//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + Velocity, FColor::Red, false, 1.f, 1, 4.f);
 			GetCharacterMovement()->AddImpulse(Velocity, true);
 		}
 
@@ -125,13 +142,14 @@ void ASmallEnemy::Receive_SmackAttack_Pure(const FVector& Direction, const float
 {
 	if (GetCanBeSmackAttacked())
 	{
-		//PRINTLONG("IM BEING ATTACKED");
-		//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (Direction * Strength), FColor::Yellow, false, 2.f, 0, 3.f);
+		float s;
+		/* Weaker smack attack if actor on ground than in air */
+		GetMovementComponent()->IsFalling() ? s = Strength : s = Strength * SmackAttack_OnGroundMultiplication;
 
 		bCanBeSmackAttacked = false;
 		SetActorRotation(FVector(Direction.GetSafeNormal2D() * -1.f).Rotation(), ETeleportType::TeleportPhysics);
 		GetCharacterMovement()->Velocity *= 0.f;
-		GetCharacterMovement()->AddImpulse(Direction * Strength, true);
+		GetCharacterMovement()->AddImpulse(Direction * s, true);
 
 		/* Sets a timer before character can be damaged by the same attack */
 		GetWorldTimerManager().SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, 0.5f, false);

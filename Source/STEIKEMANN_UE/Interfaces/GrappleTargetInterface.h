@@ -25,6 +25,8 @@ class STEIKEMANN_UE_API IGrappleTargetInterface
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
 
+	//bool bRecentlyGrappled{};
+
 	FGameplayTag GrappleTargetType;
 	UFUNCTION(BlueprintNativeEvent, Category = "GrappleHook Targeting")
 		FGameplayTag GetGrappledGameplayTag() const;
