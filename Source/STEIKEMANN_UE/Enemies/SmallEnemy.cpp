@@ -87,12 +87,21 @@ void ASmallEnemy::HookedPure()
 	Execute_Hooked(this);
 }
 
-void ASmallEnemy::HookedPure(const FVector InstigatorLocation)
+void ASmallEnemy::HookedPure(const FVector InstigatorLocation, bool PreAction /*=false*/)
 {
+	/* During Pre Action, Rotate Actor towards instigator - Yaw */
+	if (PreAction)
+	{
+		FVector Direction = InstigatorLocation - GetActorLocation();
+		RotateActorYawToVector(Direction.GetSafeNormal());
+		return;
+	}
+
 	if (bCanBeGrappleHooked)
 	{
 		GetCharacterMovement()->Velocity *= 0.f;
 
+		/* Rotate again towards Instigator - Yaw*/
 		FVector Direction3D = InstigatorLocation - GetActorLocation();
 		RotateActorYawToVector(Direction3D.GetSafeNormal());
 

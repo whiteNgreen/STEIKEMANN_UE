@@ -58,7 +58,7 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 
 	/* Jump velocity */
 	//if (GetCharOwner()->IsJumping())
-	if (bIsJumping)
+	if (bIsJumping || bIsDoubleJumping)
 	{
 		DetermineJump(DeltaTime);
 
@@ -180,17 +180,58 @@ bool USteikemannCharMovementComponent::DoJump(bool bReplayingMoves)
 	return false;
 }
 
-void USteikemannCharMovementComponent::Jump(float JumpStrength)
+void USteikemannCharMovementComponent::Jump(const float& JumpStrength)
 {
 	bIsJumping = true;
 
-	Velocity.Z *= 0.f;
+	Velocity.Z = 0.f;
 	AddImpulse(FVector::UpVector * JumpStrength, true);
 	InitialJumpVelocity = JumpStrength;
 }
 
+void USteikemannCharMovementComponent::DoubleJump(const FVector& Direction, const float& JumpStrength)
+{
+	/* Direction is input (2D) */
+
+	//FVector Dir = Direction; Dir.Normalize();
+
+	/* If input is nearly Zero do regular jump */
+	if (Direction.IsNearlyZero()) 
+	{
+		//PRINTLONG("ZERO : DOUBLE JUMP");
+		Jump(JumpStrength);
+		return;
+	}
+	if (FVector::DotProduct(Direction, Velocity.GetSafeNormal2D()) > 0.8)
+	{
+		//PRINTLONG("SIMILAR : DOUBLE JUMP");
+		Jump(JumpStrength);
+		return;
+	}
+
+	bIsJumping = true;
+	bIsDoubleJumping = true;
+
+	Velocity *= 0.f;
+	float UpAngle = GetCharOwner()->DoubleJump_AngleFromUp;
+	FVector JumpDirection = (cosf(FMath::DegreesToRadians(UpAngle)) * FVector::UpVector) + (sinf(FMath::DegreesToRadians(UpAngle)) * Direction);
+	JumpDirection *= JumpStrength;
+
+	AddImpulse(JumpDirection, true);
+	InitialJumpVelocity = JumpDirection.Z;
+}
+
 void USteikemannCharMovementComponent::DetermineJump(float DeltaTime)
 {
+	if (bIsDoubleJumping)
+	{
+		if (Velocity.Z <= 0.f)
+		{
+			StopJump();
+		}
+		return;
+	}
+
 	JumpPercentage = Velocity.Z / InitialJumpVelocity;
 	if (JumpPercentage < (1 - GetCharOwner()->JumpFullPercentage))
 	{
@@ -210,6 +251,7 @@ void USteikemannCharMovementComponent::SlowdownJumpSpeed(float DeltaTime)
 void USteikemannCharMovementComponent::StopJump()
 {
 	bIsJumping = false;
+	bIsDoubleJumping = false;
 	GetCharOwner()->bJumping = false;
 
 	if (JumpPercentage > (1 - GetCharOwner()->JumpFullPercentage))

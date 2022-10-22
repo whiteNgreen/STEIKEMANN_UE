@@ -175,18 +175,27 @@ public:/* ------------------- Basic Movement ------------------- */
 		bool bJumping{};
 	UPROPERTY(BlueprintReadOnly)
 		bool bCanEdgeJump{};
-	UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
-		bool bAddJumpVelocity{};
-	/* How long the jump key can be held to add upwards velocity */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
-		float fJumpTimerMax UMETA(DisplayName = "JumpHoldTimer") { 0.2f };
-	UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
-		float fJumpTimer{};
+	//UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
+	//	bool bAddJumpVelocity{};
+	///* How long the jump key can be held to add upwards velocity */
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
+	//	float fJumpTimerMax UMETA(DisplayName = "JumpHoldTimer") { 0.2f };
+	//UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
+	//	float fJumpTimer{};
+
 	/* How long after walking off an edge the player is still allowed to jump */
 	UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump")
 		float PostEdge_JumpTimer_Length{ 0.3f };
 	float PostEdge_JumpTimer{};
 	bool bCanPostEdgeRegularJump{};
+
+	/* The angle from the Upwards axis the jump direction will go towards input */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump")
+		float DoubleJump_AngleFromUp{ 60.f };
+
+	/* What the jump strength will be multiplied by when double jumping */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump")
+		float DoubleJump_MultiplicationFactor{ 0.6f };
 
 
 	void Landed(const FHitResult& Hit) override;
@@ -464,7 +473,7 @@ public:
 	virtual void UnTargetedPure() override {}
 
 	virtual void HookedPure() override {}
-	virtual void HookedPure(const FVector InstigatorLocation) override {}
+	virtual void HookedPure(const FVector InstigatorLocation, bool PreAction = false) override {}
 
 	virtual void UnHookedPure() override {}
 
@@ -556,6 +565,9 @@ public:
 	void GrappleHook_Drag_RotateCamera(float DeltaTime);
 	void RotateActor_GrappleHook_Drag(float DeltaTime);
 
+	bool bGrapplingStaticTarget{};
+	bool bGrapplingDynamicTarget{};
+
 	UFUNCTION(BlueprintCallable)
 		bool IsGrappling() const;
 	UFUNCTION(BlueprintCallable)
@@ -645,6 +657,7 @@ public:
 
 
 	bool bAttackPress{};
+
 	UFUNCTION(BlueprintCallable)
 		bool GetAttackPress() const { return bAttackPress; }
 	/* When the button can be pressed again */

@@ -188,14 +188,14 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 
 	
 	/*		Jump		*/
-	if (bJumping){
-		if (JumpKeyHoldTime < fJumpTimerMax){
-			JumpKeyHoldTime += DeltaTime;
-		}
-		else{
-			bAddJumpVelocity = false;
-		}
-	}
+	//if (bJumping){
+	//	if (JumpKeyHoldTime < fJumpTimerMax){
+	//		JumpKeyHoldTime += DeltaTime;
+	//	}
+	//	else{
+	//		bAddJumpVelocity = false;
+	//	}
+	//}
 	PostEdge_JumpTimer += DeltaTime;
 	if (GetMoveComponent()->IsFalling() && (PostEdge_JumpTimer < PostEdge_JumpTimer_Length))
 	{
@@ -423,6 +423,23 @@ void ASteikemannCharacter::RightTriggerClick()
 		if (TagInterface && GrappleInterface)
 		{
 			Active_GrappledActor = GrappledActor;
+
+			/* Checking tags to determine if the grapple target is dynamic or static */
+			FGameplayTagContainer GrappledTags;
+			TagInterface->GetOwnedGameplayTags(GrappledTags);
+
+			/* Grappling to Enemy/Dynamic Target */
+			//if (GrappledTags.HasTag(Tag_GrappleTarget_Dynamic))	// Burde bruke denne taggen på fiendene
+			if (GrappledTags.HasTag(Tag_EnemyAubergineDoggo))		// Også spesifisere videre med fiende type
+			{
+				bGrapplingDynamicTarget = true;
+			}
+			/* Grappling to Static Target */
+			else if (GrappledTags.HasTag(Tag_GrappleTarget_Static))
+			{
+				bGrapplingStaticTarget = true;
+			}
+
 			Initial_GrappleHook();
 		}
 	}
@@ -430,8 +447,7 @@ void ASteikemannCharacter::RightTriggerClick()
 
 void ASteikemannCharacter::RightTriggerUn_Click()
 {
-	/* Skal spilleren faktisk få lov til å kansellere GrappleDrag? */
-	//Stop_Grapple_Drag();
+	// Noe angående slapp grapple knappen
 }
 
 void ASteikemannCharacter::Initial_GrappleHook()
@@ -453,8 +469,10 @@ void ASteikemannCharacter::Initial_GrappleHook()
 	if (GrappleInterface)
 	{
 		GrappleInterface->HookedPure();
+		GrappleInterface->HookedPure(GetActorLocation(), true);	// To Rotate dynamic targets towards player 
 	}
 
+	/* Pre Launch/Grapple Timer before the GrappleHook is called */
 	GetWorldTimerManager().SetTimer(TH_Grapplehook_Start, this, &ASteikemannCharacter::Start_GrappleHook, GrappleDrag_PreLaunch_Timer_Length);
 }
 
@@ -466,13 +484,9 @@ void ASteikemannCharacter::Start_GrappleHook()
 	if (!TagInterface || !GrappleInterface) { return; }
 
 
-	/* Reset double jump */
-	JumpCurrentCount = 1;
-		
-
 	TagInterface->GetOwnedGameplayTags(GrappledTags);
 
-	/* Grappling to enemy */
+	/* Grappling to Enemy/Dynamic Target */
 	//if (GrappledTags.HasTag(Tag_GrappleTarget_Dynamic))	// Burde bruke denne taggen på fiendene
 	if (GrappledTags.HasTag(Tag_EnemyAubergineDoggo))		// Også spesifisere videre med fiende type
 	{
@@ -482,6 +496,8 @@ void ASteikemannCharacter::Start_GrappleHook()
 	else if (GrappledTags.HasTag(Tag_GrappleTarget_Static))
 	{
 		Launch_GrappleHook();
+		/* Reset double jump */
+		JumpCurrentCount = 1;
 	}
 
 	GetMoveComponent()->bGrappleHook_InitialState = false;
@@ -522,6 +538,8 @@ void ASteikemannCharacter::Stop_GrappleHook()
 {
 	bIsPostGrapplehooking = false;
 	Active_GrappledActor = nullptr;
+	bGrapplingStaticTarget = false;
+	bGrapplingDynamicTarget = false;
 }
 
 
@@ -651,18 +669,18 @@ void ASteikemannCharacter::Jump()
 		/* ------ VARIOUS TYPES OF JUMPS ------- */
 
 		/* ---- CROUCH - AND SLIDE- JUMP ---- */
-		if (IsCrouching() && GetMoveComponent()->IsWalking())
-		{
-			/* ---- CROUCH JUMP ---- */
-			if (IsCrouchWalking())
-			{
-				//PRINTLONG("--CrouchJump--");
-				JumpCurrentCount++;
-				bAddJumpVelocity = CanCrouchJump();
-				GetMoveComponent()->StartCrouchJump();
-				Anim_Activate_Jump();	// Anim_Activate_CrouchJump()
-				return;
-			}
+		//if (IsCrouching() && GetMoveComponent()->IsWalking())
+		//{
+			///* ---- CROUCH JUMP ---- */
+			//if (IsCrouchWalking())
+			//{
+			//	//PRINTLONG("--CrouchJump--");
+			//	JumpCurrentCount++;
+			//	bAddJumpVelocity = CanCrouchJump();
+			//	GetMoveComponent()->StartCrouchJump();
+			//	Anim_Activate_Jump();	// Anim_Activate_CrouchJump()
+			//	return;
+			//}
 
 			/* ---- CROUCH SLIDE JUMP ---- */
 			if (IsCrouchSliding())
@@ -671,12 +689,12 @@ void ASteikemannCharacter::Jump()
 				{
 					FVector CrouchSlideDirection = GetVelocity();
 					CrouchSlideDirection.Normalize();
-					bAddJumpVelocity = GetMoveComponent()->CrouchSlideJump(CrouchSlideDirection, InputVector);
+					/*bAddJumpVelocity = */GetMoveComponent()->CrouchSlideJump(CrouchSlideDirection, InputVector);
 				}
 				Anim_Activate_Jump();	// Anim_Activate_CrouchSlideJump()
 				return;
 			}
-		}
+		//}
 
 		/* ---- LEDGE JUMP ---- */
 		//if ((GetMoveComponent()->bLedgeGrab) && GetMoveComponent()->IsFalling())
@@ -715,6 +733,7 @@ void ASteikemannCharacter::Jump()
 				JumpCurrentCount = 2;
 			}
 			GetMoveComponent()->Jump(JumpStrength);
+			Anim_Activate_Jump();
 			return;
 		}
 
@@ -723,7 +742,8 @@ void ASteikemannCharacter::Jump()
 		if (CanDoubleJump())
 		{
 			JumpCurrentCount++;
-			GetMoveComponent()->Jump(JumpStrength);
+			//GetMoveComponent()->Jump(JumpStrength);
+			GetMoveComponent()->DoubleJump(InputVector.GetSafeNormal(), JumpStrength * DoubleJump_MultiplicationFactor);
 			Anim_Activate_Jump();	// Anim DoubleJump
 			return;
 		}
@@ -789,7 +809,7 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 				{
 					//PRINTLONG("--CrouchJump--");
 					JumpCurrentCount++;
-					bAddJumpVelocity = CanCrouchJump();
+					/*bAddJumpVelocity = */CanCrouchJump();
 					GetMoveComponent()->StartCrouchJump();
 					Anim_Activate_Jump();	// Anim_Activate_CrouchJump()
 					return;
@@ -802,7 +822,7 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 					{
 						FVector CrouchSlideDirection = GetVelocity();
 						CrouchSlideDirection.Normalize();
-						bAddJumpVelocity = GetMoveComponent()->CrouchSlideJump(CrouchSlideDirection, InputVector);
+						/*bAddJumpVelocity = */GetMoveComponent()->CrouchSlideJump(CrouchSlideDirection, InputVector);
 					}
 					Anim_Activate_Jump();	// Anim_Activate_CrouchSlideJump()
 					return;
@@ -813,7 +833,7 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 			if ((GetMoveComponent()->bLedgeGrab) && GetMoveComponent()->IsFalling())
 			{
 				JumpCurrentCount = 1;
-				bAddJumpVelocity = GetMoveComponent()->LedgeJump(LedgeLocation, JumpStrength);
+				/*bAddJumpVelocity = */GetMoveComponent()->LedgeJump(LedgeLocation, JumpStrength);
 				ResetWallJumpAndLedgeGrab();
 				Anim_Activate_Jump();	//	Anim_Activate_LedgeGrabJump
 				return;
@@ -838,7 +858,7 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 				bCanPostEdgeRegularJump = true;
 				JumpCurrentCount++;
 				Anim_Activate_Jump();
-				bAddJumpVelocity = GetCharacterMovement()->DoJump(bClientUpdating);
+				//bAddJumpVelocity = GetCharacterMovement()->DoJump(bClientUpdating);
 				return;
 			}
 			/* If player walks off edge with no jumpcount after post edge timer is valid */
@@ -847,7 +867,7 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 				bCanEdgeJump = true;
 				JumpCurrentCount += 2;
 				Anim_Activate_Jump();
-				bAddJumpVelocity = GetCharacterMovement()->DoJump(bClientUpdating);
+				//bAddJumpVelocity = GetCharacterMovement()->DoJump(bClientUpdating);
 				return;
 			}
 
@@ -1568,7 +1588,7 @@ void ASteikemannCharacter::CanBeAttacked()
 
 void ASteikemannCharacter::PreBasicAttackMoveCharacter(float DeltaTime)
 {
-	if (bPreBasicAttackMoveCharacter)
+	if (bPreBasicAttackMoveCharacter && !GetMoveComponent()->IsFalling())
 	{
 		AddActorWorldOffset(AttackDirection * ((PreBasicAttackMovementLength / (1 / SmackAttack_Anticipation_Rate)) * DeltaTime), false, nullptr, ETeleportType::None);
 	}
@@ -1576,7 +1596,7 @@ void ASteikemannCharacter::PreBasicAttackMoveCharacter(float DeltaTime)
 
 void ASteikemannCharacter::SmackAttackMoveCharacter(float DeltaTime)
 {
-	if (bSmackAttackMoveCharacter)
+	if (bSmackAttackMoveCharacter && !GetMoveComponent()->IsFalling())
 	{
 		AddActorWorldOffset(AttackDirection * ((SmackAttackMovementLength) / (1 / SmackAttack_Action_Rate) * DeltaTime), false, nullptr, ETeleportType::None);
 	}
@@ -1627,6 +1647,19 @@ void ASteikemannCharacter::Click_Attack()
 	if (bAttackPress) { return; }
 	if (!bCanAttack) { return; }
 	if (bAttacking) { return; }
+	if (IsLedgeGrabbing()) { return; }
+	if (IsOnWall() || IsStickingToWall()) { return; }
+	if (IsGrappling()) 
+	{ 
+		/* Buffer Attack if Grappling to Dynamic Target */
+		if (bGrapplingDynamicTarget)
+		{
+			FTimerHandle h;
+			float t = GetWorldTimerManager().GetTimerRemaining(TH_Grapplehook_Start);
+			GetWorldTimerManager().SetTimer(h, this, &ASteikemannCharacter::Click_Attack, t);
+		}
+		return; 
+	}	
 		
 
 	bAttackPress = true;

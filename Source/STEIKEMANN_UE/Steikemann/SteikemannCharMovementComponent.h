@@ -101,9 +101,11 @@ public:
 
 	/* --- New Jump --- */
 	bool bIsJumping{};
+	bool bIsDoubleJumping{};
 	
 	float InitialJumpVelocity;
-	void Jump(float JumpStrength);
+	void Jump(const float& JumpStrength);
+	void DoubleJump(const FVector& Direction, const float& JumpStrength);
 
 	/* How far through the jump is the player? Determined by the current velocity */
 	float JumpPercentage{};

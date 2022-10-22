@@ -50,7 +50,7 @@ public:
 
 
 	virtual void HookedPure() override;
-	virtual void HookedPure(const FVector InstigatorLocation) override{}
+	virtual void HookedPure(const FVector InstigatorLocation, bool PreAction = false) override{}
 
 	virtual void UnHookedPure() override;
 };
