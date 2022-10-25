@@ -524,9 +524,9 @@ void ASteikemannCharacter::Launch_GrappleHook()
 		LaunchStrength = GrappleHook_LaunchSpeed + (GrappleHook_LaunchSpeed * ((length - GrappleHook_Threshhold) / (GrappleHookRange - GrappleHook_Threshhold)) / GrappleHook_DividingFactor);
 	//length > 500.f ? PRINTPARLONG("LaunchStrength: %f", 2000.f + 2000.f * ((length - 500.f) / (GrappleHookRange - 500.f))) : PRINTPARLONG("LaunchStrength: %f", 2000.f);
 
-	PRINTPARLONG("LaunchStrength: %f", LaunchStrength);
-	PRINTPARLONG("Length: %f", length);
-	PRINTPARLONG("Range: %f", GrappleHookRange);
+	//PRINTPARLONG("LaunchStrength: %f", LaunchStrength);
+	//PRINTPARLONG("Length: %f", length);
+	//PRINTPARLONG("Range: %f", GrappleHookRange);
 
 	FVector Direction = LaunchDirection.GetSafeNormal() + FVector::UpVector;
 	Direction.Normalize();
