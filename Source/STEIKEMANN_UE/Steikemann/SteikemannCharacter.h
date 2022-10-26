@@ -42,6 +42,36 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
 		class UPoseableMeshComponent* GrappleHookMesh{ nullptr };
 
+	/* testing */
+	FGameplayTag Tag_Player;
+
+	FGameplayTag Tag_Enemy;
+
+	FGameplayTag Tag_EnemyAubergineDoggo;
+
+	FGameplayTag Tag_GrappleTarget;
+
+	FGameplayTag Tag_GrappleTarget_Static;
+
+	FGameplayTag Tag_GrappleTarget_Dynamic;
+
+
+protected:
+	// Called when the game starts or when spawned
+	virtual void BeginPlay() override;
+
+public:
+	// Called every frame
+	virtual void Tick(float DeltaTime) override;
+
+	// Called to bind functionality to input
+	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	/* The Raw InputVector */
+	FVector InputVectorRaw;
+	/* Input vector rotated to match the playercontrollers rotation */
+	FVector InputVector;
+
 
 	TWeakObjectPtr<class USteikemannCharMovementComponent> MovementComponent;
 	/* Returns the custom MovementComponent. A TWeakPtr<class USteikemannCharMovementComponent> */
@@ -120,21 +150,6 @@ public:
 #pragma endregion //ParticleEffects
 
 
-protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
-
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
-	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
-	/* The Raw InputVector */
-	FVector InputVectorRaw;
-	/* Input vector rotated to match the playercontrollers rotation */
-	FVector InputVector;
 
 #pragma region Slipping
 

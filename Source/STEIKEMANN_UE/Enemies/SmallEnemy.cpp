@@ -24,7 +24,7 @@ void ASmallEnemy::BeginPlay()
 	/*
 	* Adding GameplayTags to the GameplayTagsContainer
 	*/
-	Enemy = Tag_EnemyAubergineDoggo;
+	//Enemy = Tag_EnemyAubergineDoggo;
 	GameplayTags.AddTag(Enemy);
 }
 

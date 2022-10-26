@@ -16,7 +16,7 @@ void AGrappleTarget::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	GrappleTargetType = Tag_GrappleTarget_Static;
+	//GrappleTargetType = Tag_GrappleTarget_Static;
 
 	TagsContainer.AddTag(GrappleTargetType);
 }

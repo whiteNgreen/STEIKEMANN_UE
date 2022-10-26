@@ -188,14 +188,6 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 
 	
 	/*		Jump		*/
-	//if (bJumping){
-	//	if (JumpKeyHoldTime < fJumpTimerMax){
-	//		JumpKeyHoldTime += DeltaTime;
-	//	}
-	//	else{
-	//		bAddJumpVelocity = false;
-	//	}
-	//}
 	PostEdge_JumpTimer += DeltaTime;
 	if (GetMoveComponent()->IsFalling() && (PostEdge_JumpTimer < PostEdge_JumpTimer_Length))
 	{
@@ -254,7 +246,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	/*	
 	*	POGO BOUNCE
 	* 
-	* Raytrace under player to see if they hit an enemy
+	* Raytrace beneath player to see if they hit an enemy
 	*/
 	if ((GetMoveComponent()->IsFalling() || IsJumping()) && GetMoveComponent()->Velocity.Z < 0.f)
 	{

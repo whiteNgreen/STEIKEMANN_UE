@@ -12,14 +12,14 @@
  * 
  */
 
-UENUM(BlueprintType)
-enum ECustomMovementMode
-{
-	MOVECustom_None				UMETA(DisplayName = "None"),
-	MOVECustom_Slide			UMETA(DisplayName = "Slide"),
-	MOVECustom_WallSticking		UMETA(DisplayName = "Wallsticking"),
-	MOVECustom_Grappling		UMETA(DisplayName = "Grappling"),
-};
+//UENUM(BlueprintType)
+//enum ECustomMovementMode
+//{
+//	MOVECustom_None				UMETA(DisplayName = "None"),
+//	MOVECustom_Slide			UMETA(DisplayName = "Slide"),
+//	MOVECustom_WallSticking		UMETA(DisplayName = "Wallsticking"),
+//	MOVECustom_Grappling		UMETA(DisplayName = "Grappling"),
+//};
 
 UCLASS()
 class STEIKEMANN_UE_API USteikemannCharMovementComponent : public UCharacterMovementComponent
