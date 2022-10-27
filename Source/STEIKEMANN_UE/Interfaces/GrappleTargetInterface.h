@@ -4,7 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
-#include "../GameplayTags.h"
+//#include "../GameplayTags.h"
+#include "GameplayTagAssetInterface.h"
 
 #include "GrappleTargetInterface.generated.h"
 

@@ -5,6 +5,7 @@
 #include "DrawDebugHelpers.h"
 #include "Components/CapsuleComponent.h"
 #include "Gameframework/CharacterMovementComponent.h"
+#include "../GameplayTags.h"
 
 // Sets default values
 ASmallEnemy::ASmallEnemy()
@@ -24,8 +25,8 @@ void ASmallEnemy::BeginPlay()
 	/*
 	* Adding GameplayTags to the GameplayTagsContainer
 	*/
-	//Enemy = Tag_EnemyAubergineDoggo;
-	GameplayTags.AddTag(Enemy);
+	//Enemy = &Tag_EnemyAubergineDoggo;
+	GameplayTags.AddTag(GetTag_EnemyAubergineDoggo());
 }
 
 // Called every frame

@@ -2,6 +2,7 @@
 
 
 #include "../StaticActors/GrappleTarget.h"
+#include "../GameplayTags.h"
 
 // Sets default values
 AGrappleTarget::AGrappleTarget()
@@ -16,9 +17,17 @@ void AGrappleTarget::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	//GrappleTargetType = Tag_GrappleTarget_Static;
+	//GrappleTargetType = &Tag_GrappleTarget_Static;
+	//GrappleType = &Tag_GrappleTarget_Static;
 
-	TagsContainer.AddTag(GrappleTargetType);
+	//Tag_Player = FGameplayTag::RequestGameplayTag("Pottit");
+	//Tag_Enemy = FGameplayTag::RequestGameplayTag("Enemy");
+	//Tag_EnemyAubergineDoggo = FGameplayTag::RequestGameplayTag("Enemy.AubergineDoggo");
+	//Tag_GrappleTarget = FGameplayTag::RequestGameplayTag("GrappleTarget");
+	//Tag_GrappleTarget_Static = FGameplayTag::RequestGameplayTag("GrappleTarget.Static");
+	//Tag_GrappleTarget_Dynamic = FGameplayTag::RequestGameplayTag("GrappleTarget.Dynamic");
+
+	TagsContainer.AddTag(GetTag_GrappleTarget_Static());
 }
 
 // Called every frame

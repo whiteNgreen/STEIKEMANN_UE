@@ -8,7 +8,7 @@
 #include "../Interfaces/GrappleTargetInterface.h"
 #include "../DebugMacros.h"
 #include "GameplayTagAssetInterface.h"
-#include "../GameplayTags.h"
+//#include "../GameplayTags.h"
 
 #include "SmallEnemy.generated.h"
 
@@ -30,8 +30,8 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, Category = "GameplayTags")
 		FGameplayTagContainer GameplayTags;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GameplayTags")
-		FGameplayTag Enemy;
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GameplayTags")
+		//FGameplayTag* Enemy{ nullptr };
 
 	virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override { TagContainer = GameplayTags; return; }
 
@@ -87,7 +87,7 @@ public:
 
 	virtual void UnHookedPure() override;
 
-	virtual FGameplayTag GetGrappledGameplayTag_Pure() const override { return Enemy; }
+	//virtual FGameplayTag GetGrappledGameplayTag_Pure() const override { return Enemy; }
 
 public:
 	bool bCanBeSmackAttacked{ true };

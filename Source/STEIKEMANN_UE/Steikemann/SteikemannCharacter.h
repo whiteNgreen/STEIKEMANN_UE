@@ -10,7 +10,7 @@
 #include "Camera/CameraShakeBase.h"
 #include "SteikeAnimInstance.h"
 #include "GameplayTagAssetInterface.h"
-#include "../GameplayTags.h"
+//#include "../GameplayTags.h"
 
 #include "SteikemannCharacter.generated.h"
 
@@ -43,16 +43,12 @@ public:
 		class UPoseableMeshComponent* GrappleHookMesh{ nullptr };
 
 	/* testing */
-	FGameplayTag Tag_Player;
+	//FGameplayTag Tag_Player;
 
 	FGameplayTag Tag_Enemy;
-
 	FGameplayTag Tag_EnemyAubergineDoggo;
-
 	FGameplayTag Tag_GrappleTarget;
-
 	FGameplayTag Tag_GrappleTarget_Static;
-
 	FGameplayTag Tag_GrappleTarget_Dynamic;
 
 
@@ -88,8 +84,8 @@ public:
 	*/
 	
 	FGameplayTagContainer GameplayTags;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GameplayTags")
-		FGameplayTag Player;
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GameplayTags")
+		//FGameplayTag* Player;
 
 	UFUNCTION(BlueprintCallable, Category = GameplayTags)
 		virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override { TagContainer = GameplayTags; return; }
@@ -492,7 +488,7 @@ public:
 
 	virtual void UnHookedPure() override {}
 
-	virtual FGameplayTag GetGrappledGameplayTag_Pure() const override { return Player; }
+	//virtual FGameplayTag GetGrappledGameplayTag_Pure() const override { return Player; }
 
 	/* ------- Native Variables and functions -------- */
 	void RightTriggerClick();

@@ -26,7 +26,7 @@ protected:
 
 	FGameplayTagContainer TagsContainer;
 
-	//FGameplayTag GrappleType;
+	FGameplayTag* GrappleType;
 
 public:	
 	// Called every frame

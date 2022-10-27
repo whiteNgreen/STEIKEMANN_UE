@@ -15,6 +15,7 @@
 #include "Components/AudioComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/SphereComponent.h"
+#include "../GameplayTags.h"
 
 
 
@@ -116,11 +117,18 @@ void ASteikemannCharacter::BeginPlay()
 		GrappleTargetingDetectionSphere->SetSphereRadius(GrappleHookRange);
 	}
 
+	/* WHY DO I HAVE TO DO THIS??? WITH REQUEST TAG IN THE GETTAG FUNCTIONS AS WELL?? */
+	Tag_Player = FGameplayTag::RequestGameplayTag("Pottit");
+	Tag_Enemy = FGameplayTag::RequestGameplayTag("Enemy");
+	Tag_EnemyAubergineDoggo = FGameplayTag::RequestGameplayTag("Enemy.AubergineDoggo");
+	Tag_GrappleTarget = FGameplayTag::RequestGameplayTag("GrappleTarget");
+	Tag_GrappleTarget_Static = FGameplayTag::RequestGameplayTag("GrappleTarget.Static");
+	Tag_GrappleTarget_Dynamic = FGameplayTag::RequestGameplayTag("GrappleTarget.Dynamic");
+
 	/*
 	* Adding GameplayTags to the GameplayTagsContainer
 	*/
-	Player = Tag_Player;
-	GameplayTags.AddTag(Player);
+	GameplayTags.AddTag(GetTag_Player());
 }
 
 UNiagaraComponent* ASteikemannCharacter::CreateNiagaraComponent(FName Name, USceneComponent* Parent, FAttachmentTransformRules AttachmentRule, bool bTemp /*= false*/)
