@@ -208,6 +208,11 @@ public:/* ------------------- Basic Movement ------------------- */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump")
 		float DoubleJump_MultiplicationFactor{ 0.6f };
 
+	/* How long, post double jump, the character is held in the air (Z direction) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump")
+		float Jump_HeightHoldTimer{ 1.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump")
+		float JumpHeightHold_VelocityInterpSpeed{ 5.f };
 
 	void Landed(const FHitResult& Hit) override;
 
@@ -231,23 +236,6 @@ public:/* ------------------- Basic Movement ------------------- */
 	/* 
 	 * -------------------- New Jump : Cartoony --------------------------- 
 	*/
-	//FTimerHandle JumpTimer{};
-
-
-	/* How high should the character jump? in cm */
-	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump|NewJump")
-		//float JumpHeight UMETA(DisplayName = "Jump Height in cm") { 300.f };
-	/* The initial Jump Velocity. Needed to calculate the acceleration to ensure the 
-	 * character ends up at the specified height within the time */
-	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump|NewJump")
-		//float InitialJumpVelocity{ 1000.f };
-	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump|NewJump")
-	//	float JumpDownwardAcceleration{ 5500.f };
-
-	/* Time it takes to reach max height */
-	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump|NewJump")
-		//float Jump_TimeToTop{ 0.5f };
-
 	bool bJumpClick{};
 
 	/* The strength of the Jump */
@@ -408,6 +396,17 @@ public:/* ------------------- Basic Movement ------------------- */
 		FVector StickingSpot{};
 
 		void SetActorLocation_WallJump(float DeltaTime);
+
+		bool bPostWallJump{};
+		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall|Wall Jump")
+			float fPostWallJumpTimer{ 0.2f };
+
+		/* WallJump activation range on Jump, different from the passive activation range of On_Wall mechanics */
+		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall|Wall Jump")
+			float WallJump_JumpWallActivation{ 200.f };
+
+		bool Jump_DetectWall();
+		void WallJump_Reset();
 
 		/* Is currently sticking to a wall */
 		bool IsStickingToWall() const;

@@ -32,23 +32,27 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 	}
 
 	/* -- Gravity -- */
-	if (GetCharOwner()->IsJumping() || MovementMode == MOVE_Walking /* || bWallJump*//* || bIsJumping*/)
-	{
+	if (GetCharOwner()->IsJumping() || MovementMode == MOVE_Walking /* || bWallJump*//* || bIsJumping*/){
 		GravityScale = FMath::FInterpTo(GravityScale, GravityScaleOverride, DeltaTime, GravityScaleOverride_InterpSpeed);
 	}
-	else if (bGP_PreLaunch || bGrappleHook_InitialState)
-	{
+	else if (bGP_PreLaunch || bGrappleHook_InitialState){
 		GravityScale = 0.f;
 		Velocity *= 0.f;
 	}
-	else if (bStickingToWall || bWallSlowDown)
-	{
+	//else if (bJumpHeightHold){
+	//	GravityScale = FMath::FInterpTo(GravityScale, 0.f, DeltaTime, 20.f);
+	//	if (bIsJumping && bIsDoubleJumping && Velocity.Z > 0.f) {
+	//		Velocity.Z = FMath::FInterpTo(Velocity.Z, 0.f, DeltaTime, GetCharOwner()->JumpHeightHold_VelocityInterpSpeed);
+	//	}
+	//}
+	else if (bStickingToWall || bWallSlowDown){
 		GravityScale = FMath::FInterpTo(GravityScale, 0.f, GetWorld()->GetDeltaSeconds(), GravityScaleOverride_InterpSpeed);
 	}
-
 	else{
 		GravityScale = FMath::FInterpTo(GravityScale, GravityScaleOverride_Freefall, DeltaTime, GravityScaleOverride_InterpSpeed);
 	}
+
+
 
 	/* Crouch */
 	if (GetCharOwner()->IsCrouchSliding()) {
@@ -68,6 +72,18 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 	{
 		SlowdownJumpSpeed(DeltaTime);
 	}
+	//{
+		//AddForce(FVector(0, 0, 981.f * Mass * GravityScale));
+	//}
+	//else if (bJumpHeightHold){
+	if (bJumpHeightHold){
+		//GravityScale = FMath::FInterpTo(GravityScale, 0.f, DeltaTime, 20.f);
+		AddForce(FVector(0, 0, 981.f * Mass * GravityScale));
+		if (bIsJumping && bIsDoubleJumping && Velocity.Z > 0.f) {
+			Velocity.Z = FMath::FInterpTo(Velocity.Z, 0.f, DeltaTime, GetCharOwner()->JumpHeightHold_VelocityInterpSpeed);
+		}
+	}
+	PRINTPAR("Gravity Z = %f", GetGravityZ());
 
 	/* Wall Jump / Sticking to wall */
 	if (IsFalling())
@@ -225,9 +241,9 @@ void USteikemannCharMovementComponent::DetermineJump(float DeltaTime)
 {
 	if (bIsDoubleJumping)
 	{
-		if (Velocity.Z <= 0.f)
-		{
+		if (Velocity.Z <= 0.f){
 			StopJump();
+			//StartJumpHeightHold();
 		}
 		return;
 	}
@@ -250,6 +266,11 @@ void USteikemannCharMovementComponent::SlowdownJumpSpeed(float DeltaTime)
 
 void USteikemannCharMovementComponent::StopJump()
 {
+	//if (bIsDoubleJumping)
+	//{
+	//	StartJumpHeightHold();
+	//}
+
 	bIsJumping = false;
 	bIsDoubleJumping = false;
 	GetCharOwner()->bJumping = false;
@@ -259,6 +280,25 @@ void USteikemannCharMovementComponent::StopJump()
 		bJumpPrematureSlowdown = true;
 	}
 	JumpPercentage = 0.f;
+}
+
+void USteikemannCharMovementComponent::StartJumpHeightHold()
+{
+	bJumpHeightHold = true;
+	GetCharOwner()->GetWorldTimerManager().SetTimer(TH_JumpHold, this, &USteikemannCharMovementComponent::StopJumpHeightHold, GetCharOwner()->Jump_HeightHoldTimer);
+}
+
+void USteikemannCharMovementComponent::StopJumpHeightHold()
+{
+	bJumpHeightHold = false;
+}
+
+void USteikemannCharMovementComponent::DeactivateJumpMechanics()
+{
+	bIsJumping = false;
+	bIsDoubleJumping = false;
+	GetCharOwner()->bJumping = false;
+	bJumpPrematureSlowdown = false;
 }
 
 

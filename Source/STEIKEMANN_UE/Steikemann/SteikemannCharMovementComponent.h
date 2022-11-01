@@ -116,6 +116,14 @@ public:
 
 	bool bJumpPrematureSlowdown{};
 	void StopJump();
+	
+	bool bJumpHeightHold{};
+
+	FTimerHandle TH_JumpHold;
+	void StartJumpHeightHold();
+	void StopJumpHeightHold();
+	
+	void DeactivateJumpMechanics();
 
 #pragma endregion //Jump
 

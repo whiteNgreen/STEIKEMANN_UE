@@ -512,6 +512,8 @@ void ASteikemannCharacter::Start_GrappleHook()
 
 void ASteikemannCharacter::Launch_GrappleHook()
 {
+	GetMoveComponent()->DeactivateJumpMechanics();
+
 	/* Grapple Launch */
 	FVector LaunchDirection = Active_GrappledActor->GetActorLocation() - GetActorLocation();
 
@@ -661,40 +663,27 @@ void ASteikemannCharacter::Jump()
 {
 	/* Don't Jump if player is Grappling */
 	if (IsGrappling() && GetMoveComponent()->IsFalling()) { return; }
+	if (bPostWallJump) { return; }
 
 	if (!bJumpClick)
 	{
 		bJumpClick = true;
 		bJumping = true;
+
 		/* ------ VARIOUS TYPES OF JUMPS ------- */
 
-		/* ---- CROUCH - AND SLIDE- JUMP ---- */
-		//if (IsCrouching() && GetMoveComponent()->IsWalking())
-		//{
-			///* ---- CROUCH JUMP ---- */
-			//if (IsCrouchWalking())
-			//{
-			//	//PRINTLONG("--CrouchJump--");
-			//	JumpCurrentCount++;
-			//	bAddJumpVelocity = CanCrouchJump();
-			//	GetMoveComponent()->StartCrouchJump();
-			//	Anim_Activate_Jump();	// Anim_Activate_CrouchJump()
-			//	return;
-			//}
-
-			/* ---- CROUCH SLIDE JUMP ---- */
-			if (IsCrouchSliding())
+		/* ---- SLIDE JUMP ---- */
+		if (IsCrouchSliding())
+		{
+			JumpCurrentCount++;
 			{
-				JumpCurrentCount++;
-				{
-					FVector CrouchSlideDirection = GetVelocity();
-					CrouchSlideDirection.Normalize();
-					/*bAddJumpVelocity = */GetMoveComponent()->CrouchSlideJump(CrouchSlideDirection, InputVector);
-				}
-				Anim_Activate_Jump();	// Anim_Activate_CrouchSlideJump()
-				return;
+				FVector CrouchSlideDirection = GetVelocity();
+				CrouchSlideDirection.Normalize();
+				/*bAddJumpVelocity = */GetMoveComponent()->CrouchSlideJump(CrouchSlideDirection, InputVector);
 			}
-		//}
+			Anim_Activate_Jump();	// Anim_Activate_CrouchSlideJump()
+			return;
+		}
 
 		/* ---- LEDGE JUMP ---- */
 		//if ((GetMoveComponent()->bLedgeGrab) && GetMoveComponent()->IsFalling())
@@ -712,7 +701,8 @@ void ASteikemannCharacter::Jump()
 		}
 
 		/* ---- WALL JUMP ---- */
-		if ((GetMoveComponent()->bStickingToWall || bFoundStickableWall) && GetMoveComponent()->IsFalling())
+		if ((GetMoveComponent()->bStickingToWall || bFoundStickableWall) && GetMoveComponent()->IsFalling() || 
+			(GetMoveComponent()->IsFalling() && Jump_DetectWall()))
 		{
 			GetMoveComponent()->WallJump(Wall_Normal, JumpStrength);
 			Anim_Activate_Jump();	//	Anim_Activate_WallJump
@@ -744,6 +734,7 @@ void ASteikemannCharacter::Jump()
 			JumpCurrentCount++;
 			//GetMoveComponent()->Jump(JumpStrength);
 			GetMoveComponent()->DoubleJump(InputVector.GetSafeNormal(), JumpStrength * DoubleJump_MultiplicationFactor);
+			GetMoveComponent()->StartJumpHeightHold();
 			Anim_Activate_Jump();	// Anim DoubleJump
 			return;
 		}
@@ -1541,6 +1532,33 @@ bool ASteikemannCharacter::IsStickingToWall() const
 	return false;
 }
 
+bool ASteikemannCharacter::Jump_DetectWall()
+{
+	PRINTLONG("DETECTING JUMP WALL");
+	bool b{};
+	FTimerHandle h;
+	//auto func = [](FTimerHandle h){
+		//return true;
+		//GetWorldTimerManager().SetTimer(h, this, &ASteikemannCharacter::WallJump_Reset, PostWallJumpTimer);
+	//}
+
+	bFoundWall = DetectNearbyWall();
+
+	(ActorToWall_Length < WallJump_JumpWallActivation) ?
+		b = true:
+		b = false;
+
+	if (b) { GetWorldTimerManager().SetTimer(h, this, &ASteikemannCharacter::WallJump_Reset, fPostWallJumpTimer); }
+
+	bPostWallJump = b;
+	return b;
+}
+
+void ASteikemannCharacter::WallJump_Reset()
+{
+	bPostWallJump = false;
+}
+
 bool ASteikemannCharacter::IsOnWall() const
 {
 	if (GetMoveComponent().IsValid()) {
@@ -1828,6 +1846,9 @@ void ASteikemannCharacter::Do_ScoopAttack_Pure(IAttackInterface* OtherInterface,
 
 	if (b)
 	{
+		/* Rotates player towards scooped actor */
+		RotateActorYawToVector((OtherActor->GetActorLocation() - GetActorLocation()).GetSafeNormal());
+
 		FVector Direction{ OtherActor->GetActorLocation() - GetActorLocation() };
 		Direction = Direction.GetSafeNormal2D();
 		float angle = FMath::DegreesToRadians(85.f);
