@@ -26,7 +26,8 @@ void ASmallEnemy::BeginPlay()
 	* Adding GameplayTags to the GameplayTagsContainer
 	*/
 	//Enemy = &Tag_EnemyAubergineDoggo;
-	GameplayTags.AddTag(GetTag_EnemyAubergineDoggo());
+	//GameplayTags.AddTag(GetTag_EnemyAubergineDoggo());
+	GameplayTags.AddTag(TAG_AubergineDoggo());
 }
 
 // Called every frame

@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "../Interfaces/GrappleTargetInterface.h"
 #include "../Interfaces/AttackInterface.h"
+#include "../Interfaces/CameraGuideInterface.h"
 #include "../DebugMacros.h"
 #include "Camera/CameraShakeBase.h"
 #include "SteikeAnimInstance.h"
@@ -26,7 +27,8 @@ UCLASS()
 class STEIKEMANN_UE_API ASteikemannCharacter : public ACharacter, 
 	public IGrappleTargetInterface,
 	public IAttackInterface,
-	public IGameplayTagAssetInterface
+	public IGameplayTagAssetInterface,
+	public ICameraGuideInterface
 {
 	GENERATED_BODY()
 
@@ -97,6 +99,8 @@ public:
 
 #pragma endregion //Audio
 
+
+
 #pragma region ParticleEffects
 
 	/* ------------------- Particle Effects ------------------- */
@@ -166,6 +170,15 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 		void PlayCameraShake(TSubclassOf<UCameraShakeBase> shake, float falloff);
+
+#pragma region CameraGuide
+	
+	//TArray<FocusPoint> mFocusPoints;
+
+	//virtual void AddCameraGuide(const FocusPoint& Point) override{}
+	virtual void GuideCamera() override;
+
+#pragma endregion //CameraGuide
 
 #pragma endregion //Camera
 

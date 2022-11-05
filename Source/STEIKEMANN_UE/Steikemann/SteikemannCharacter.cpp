@@ -118,17 +118,19 @@ void ASteikemannCharacter::BeginPlay()
 	}
 
 	/* WHY DO I HAVE TO DO THIS??? WITH REQUEST TAG IN THE GETTAG FUNCTIONS AS WELL?? */
-	Tag_Player = FGameplayTag::RequestGameplayTag("Pottit");
-	Tag_Enemy = FGameplayTag::RequestGameplayTag("Enemy");
-	Tag_EnemyAubergineDoggo = FGameplayTag::RequestGameplayTag("Enemy.AubergineDoggo");
-	Tag_GrappleTarget = FGameplayTag::RequestGameplayTag("GrappleTarget");
-	Tag_GrappleTarget_Static = FGameplayTag::RequestGameplayTag("GrappleTarget.Static");
-	Tag_GrappleTarget_Dynamic = FGameplayTag::RequestGameplayTag("GrappleTarget.Dynamic");
+	//Tag_Player = FGameplayTag::RequestGameplayTag("Pottit");
+	//Tag_Enemy = FGameplayTag::RequestGameplayTag("Enemy");
+	//Tag_EnemyAubergineDoggo = FGameplayTag::RequestGameplayTag("Enemy.AubergineDoggo");
+	//Tag_GrappleTarget = FGameplayTag::RequestGameplayTag("GrappleTarget");
+	//Tag_GrappleTarget_Static = FGameplayTag::RequestGameplayTag("GrappleTarget.Static");
+	//Tag_GrappleTarget_Dynamic = FGameplayTag::RequestGameplayTag("GrappleTarget.Dynamic");
+	//Tag_CameraVolume = FGameplayTag::RequestGameplayTag("CameraVolume");
 
 	/*
 	* Adding GameplayTags to the GameplayTagsContainer
 	*/
-	GameplayTags.AddTag(GetTag_Player());
+	GameplayTags.AddTag(TAG_Player());
+	mFocusPoints.Empty();
 }
 
 UNiagaraComponent* ASteikemannCharacter::CreateNiagaraComponent(FName Name, USceneComponent* Parent, FAttachmentTransformRules AttachmentRule, bool bTemp /*= false*/)
@@ -267,6 +269,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		}
 	}
 
+	GuideCamera();
 
 	/* ----------------------- COMBAT TICKS ------------------------------ */
 	PreBasicAttackMoveCharacter(DeltaTime);
@@ -430,12 +433,12 @@ void ASteikemannCharacter::RightTriggerClick()
 
 			/* Grappling to Enemy/Dynamic Target */
 			//if (GrappledTags.HasTag(Tag_GrappleTarget_Dynamic))	// Burde bruke denne taggen på fiendene
-			if (GrappledTags.HasTag(Tag_EnemyAubergineDoggo))		// Også spesifisere videre med fiende type
+			if (GrappledTags.HasTag(TAG_AubergineDoggo()))		// Også spesifisere videre med fiende type
 			{
 				bGrapplingDynamicTarget = true;
 			}
 			/* Grappling to Static Target */
-			else if (GrappledTags.HasTag(Tag_GrappleTarget_Static))
+			else if (GrappledTags.HasTag(TAG_GrappleTarget_Static()))
 			{
 				bGrapplingStaticTarget = true;
 			}
@@ -488,12 +491,12 @@ void ASteikemannCharacter::Start_GrappleHook()
 
 	/* Grappling to Enemy/Dynamic Target */
 	//if (GrappledTags.HasTag(Tag_GrappleTarget_Dynamic))	// Burde bruke denne taggen på fiendene
-	if (GrappledTags.HasTag(Tag_EnemyAubergineDoggo))		// Også spesifisere videre med fiende type
+	if (GrappledTags.HasTag(TAG_AubergineDoggo()))		// Også spesifisere videre med fiende type
 	{
 		GrappleInterface->HookedPure(GetActorLocation());
 	}
 	/* Grappling to Static Target */
-	else if (GrappledTags.HasTag(Tag_GrappleTarget_Static))
+	else if (GrappledTags.HasTag(TAG_GrappleTarget_Static()))
 	{
 		Launch_GrappleHook();
 		/* Reset double jump */
@@ -583,6 +586,28 @@ void ASteikemannCharacter::PlayCameraShake(TSubclassOf<UCameraShakeBase> shake, 
 	/* Skal regne ut Velocity.Z også basere falloff på hvor stor den er */
 	UGameplayStatics::PlayWorldCameraShake(GetWorld(), shake, Camera->GetComponentLocation() + FVector(0, 0, 1), 0.f, 10.f, falloff);
 }
+
+void ASteikemannCharacter::GuideCamera()
+{
+	if (mFocusPoints.Num() == 0) { return; }
+	//FQuat ConRot = GetControlRotation().Quaternion();
+	
+	FocusPoint P = mFocusPoints[0];	// Hardkoder for første array punkt nå
+	FVector ToPoint = (P.Location - CameraBoom->GetComponentLocation()).GetSafeNormal();
+	float DotProd = FVector::DotProduct(ToPoint.GetSafeNormal2D(), GetControlRotation().Vector().GetSafeNormal2D()) * P.Weight;
+	float Direction = FVector::DotProduct(ToPoint.GetSafeNormal2D(), GetActorRightVector());
+	float angle = acosf(DotProd);
+	if (Direction < 0.f) { angle *= -1.f; }
+
+	AddControllerYawInput(angle);
+	PRINTPAR("ANGLE : %f", angle);
+	PRINTPAR("Fokuspoints: %i", mFocusPoints.Num());
+}
+
+//void ASteikemannCharacter::AddCameraGuide(const FocusPoint& Point)
+//{
+//	mFocusPoints.AddUnique(Point);
+//}
 
 void ASteikemannCharacter::MoveForward(float value)
 {
@@ -926,7 +951,7 @@ void ASteikemannCharacter::CheckIfEnemyBeneath(const FHitResult& Hit)
 		FGameplayTagContainer Container;
 		Interface->GetOwnedGameplayTags(Container);
 		
-		if (Container.HasTagExact(Tag_EnemyAubergineDoggo))
+		if (Container.HasTagExact(TAG_AubergineDoggo()))
 		{
 			if (CheckDistanceToEnemy(Hit))
 			{
@@ -1806,6 +1831,8 @@ void ASteikemannCharacter::OnAttackColliderBeginOverlap(UPrimitiveComponent* Ove
 					Do_ScoopAttack_Pure(Interface, OtherActor);
 				}
 			}
+
+
 		}
 
 		/* GroundPound collision */

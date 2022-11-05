@@ -27,7 +27,7 @@ void AGrappleTarget::BeginPlay()
 	//Tag_GrappleTarget_Static = FGameplayTag::RequestGameplayTag("GrappleTarget.Static");
 	//Tag_GrappleTarget_Dynamic = FGameplayTag::RequestGameplayTag("GrappleTarget.Dynamic");
 
-	TagsContainer.AddTag(GetTag_GrappleTarget_Static());
+	TagsContainer.AddTag(TAG_GrappleTarget_Static());
 }
 
 // Called every frame

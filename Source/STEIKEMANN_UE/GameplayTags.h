@@ -1,48 +1,18 @@
 #pragma once
 
 #include "GameplayTagAssetInterface.h"
+#include "DebugMacros.h"
 
 
-	/* Player GameplayTag */
-	static FGameplayTag Tag_Player;
-	static FGameplayTag GetTag_Player()
-	{
-		Tag_Player = FGameplayTag::RequestGameplayTag("Pottit");
-		return Tag_Player;
-	}
+	
+static FGameplayTag TAG_Player() { return FGameplayTag::RequestGameplayTag("Pottit"); }
 
-	static FGameplayTag Tag_Enemy;
-	static FGameplayTag GetTag_Enemy()
-	{
-		Tag_Enemy = FGameplayTag::RequestGameplayTag("Enemy");
-		return Tag_Enemy;
-	}
+static FGameplayTag TAG_Enemy() { return FGameplayTag::RequestGameplayTag("Enemy"); }
+static FGameplayTag TAG_AubergineDoggo() { return FGameplayTag::RequestGameplayTag("Enemy.AubergineDoggo"); }
 
-	static FGameplayTag Tag_EnemyAubergineDoggo;
-	static FGameplayTag GetTag_EnemyAubergineDoggo()
-	{
-		Tag_EnemyAubergineDoggo = FGameplayTag::RequestGameplayTag("Enemy.AubergineDoggo");
-		return Tag_EnemyAubergineDoggo;
-	}
+static FGameplayTag TAG_GrappleTarget() { return FGameplayTag::RequestGameplayTag("GrappleTarget"); }
+static FGameplayTag TAG_GrappleTarget_Static() { return FGameplayTag::RequestGameplayTag("GrappleTarget.Static"); }
+static FGameplayTag TAG_GrappleTarget_Dynamic() { return FGameplayTag::RequestGameplayTag("GrappleTarget.Dynamic"); }
 
-	static FGameplayTag Tag_GrappleTarget;
-	static FGameplayTag GetTag_GrappleTarget()
-	{
-		Tag_GrappleTarget = FGameplayTag::RequestGameplayTag("GrappleTarget");
-		return Tag_GrappleTarget;
-	}
-
-	static FGameplayTag Tag_GrappleTarget_Static;
-	static FGameplayTag GetTag_GrappleTarget_Static() 
-	{ 
-		Tag_GrappleTarget_Static = FGameplayTag::RequestGameplayTag("GrappleTarget.Static");
-		return Tag_GrappleTarget_Static; 
-	}
-
-	static FGameplayTag Tag_GrappleTarget_Dynamic;
-	static FGameplayTag GetTag_GrappleTarget_Dynamic()
-	{
-		Tag_GrappleTarget_Dynamic = FGameplayTag::RequestGameplayTag("GrappleTarget.Dynamic");
-		return Tag_GrappleTarget_Dynamic;
-	}
+static FGameplayTag TAG_CameraVolume(){ return FGameplayTag::RequestGameplayTag("CameraVolume"); }
 
