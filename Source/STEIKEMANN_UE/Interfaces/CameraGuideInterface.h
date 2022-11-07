@@ -8,6 +8,13 @@
 #include "CameraGuideInterface.generated.h"
 
 UENUM()
+enum class EFocusType : uint8
+{
+	FOCUS_Point,
+	FOCUS_Curve
+};
+
+UENUM()
 enum class EPointType
 {
 	NONE,
@@ -20,9 +27,16 @@ enum class EPointType
 USTRUCT(BlueprintType)
 struct FocusPoint 
 {
+	//GENERATED_BODY()
 	GENERATED_BODY()
 
-	UObject* Obj{ nullptr };
+	UObject* ParentObj{ nullptr };
+	class UBoxComponent* FocusBox{ nullptr };
+	class USplineComponent* FocusSpline{ nullptr };
+	UPROPERTY()
+		EFocusType ComponentType;
+	//UPrimitiveComponent* FocusObj{ nullptr };
+
 	FVector Location{};
 	/* Priority of Focus Point among other potential Focus Points 
 	 * Priority of 0 will ignore every other volume, if two priority 0's overlap, only the first entered will be acknowledged */

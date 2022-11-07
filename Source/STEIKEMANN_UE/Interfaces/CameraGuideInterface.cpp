@@ -8,7 +8,7 @@
 void ICameraGuideInterface::AddCameraGuide(const FocusPoint& Point)
 {
 	for (const auto& it : mFocusPoints) {
-		if (it.Obj == Point.Obj) { return; }
+		if (it.ParentObj == Point.ParentObj) { return; }
 	}
 
 	mFocusPoints.Add(Point);
@@ -17,7 +17,7 @@ void ICameraGuideInterface::AddCameraGuide(const FocusPoint& Point)
 void ICameraGuideInterface::RemoveCameraGuide(UObject* object)
 {
 	for (size_t i{}; i < mFocusPoints.Num(); i++){
-		if (mFocusPoints[i].Obj == object){
+		if (mFocusPoints[i].ParentObj == object){
 			mFocusPoints.RemoveAt(i);
 			return;
 		}

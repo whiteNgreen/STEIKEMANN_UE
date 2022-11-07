@@ -12,12 +12,7 @@
 /* Always last */
 #include "CameraGuidingVolume.generated.h"
 
-UENUM(BlueprintType)
-enum class EFocus : uint8
-{
-	FOCUS_Point		UMETA(DisplayName = "Point"),
-	FOCUS_Curve		UMETA(DisplayName = "Curve")
-};
+
 
 UCLASS()
 class STEIKEMANN_UE_API ACameraGuidingVolume : public AActor,
@@ -37,12 +32,17 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	//UFUNCTION(BlueprintCallable)
+	//	void RefreshComponents();
 
 public:	 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
-		class UBoxComponent* RootVolume{ nullptr };
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Camera Focus")
-		EFocus CameraFocus;
+		USceneComponent* Root{ nullptr };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
+		class UBoxComponent* CameraVolume{ nullptr };
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera Focus")
+		EFocusType CameraFocus;
 
 	UPROPERTY(EditAnywhere, Category = "TESTING")
 		bool bTesting{ true };
@@ -50,10 +50,12 @@ public:
 		float T{ 1.f };
 
 	/* Focus Points */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
-		class UBoxComponent* PointFocus{ nullptr };
-	UPROPERTY(EditAnywhere, Category = "Components")
-		class USplineComponent* SplineFocus{ nullptr };
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
+		class UPrimitiveComponent* FocusComponent{ nullptr };
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
+		//class UBoxComponent* PointFocus{ nullptr };
+	//UPROPERTY(EditAnywhere, Category = "Components")
+		//class USplineComponent* SplineFocus{ nullptr };
 
 
 

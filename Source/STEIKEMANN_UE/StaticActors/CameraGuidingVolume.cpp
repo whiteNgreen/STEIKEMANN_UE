@@ -13,17 +13,17 @@ ACameraGuidingVolume::ACameraGuidingVolume()
 	PrimaryActorTick.bCanEverTick = true;
 	bRunConstructionScriptOnDrag = true;
 
-	RootVolume = CreateDefaultSubobject<UBoxComponent>(TEXT("Root Volume"));
-	RootVolume->SetupAttachment(RootComponent);
+	Root = CreateDefaultSubobject<USceneComponent>(TEXT("ROOT"));
+	RootComponent = Root;
 
+	CameraVolume = CreateDefaultSubobject<UBoxComponent>(TEXT("Root Volume"));
+	CameraVolume->SetupAttachment(Root);
 
+	//PointFocus = CreateDefaultSubobject<UBoxComponent>(TEXT("PointFocus"));
+	//PointFocus->SetupAttachment(RootComponent);
 
-	PointFocus = CreateDefaultSubobject<UBoxComponent>(TEXT("PointFocus"));
-	PointFocus->SetupAttachment(RootComponent);
-
-	SplineFocus = CreateDefaultSubobject<USplineComponent>(TEXT("SplineFocus"));
-	SplineFocus->SetupAttachment(RootComponent);
-
+	//SplineFocus = CreateDefaultSubobject<USplineComponent>(TEXT("SplineFocus"));
+	//SplineFocus->SetupAttachment(RootComponent);
 }
 
 
@@ -33,8 +33,8 @@ void ACameraGuidingVolume::BeginPlay()
 {
 	Super::BeginPlay();
 
-	RootVolume->OnComponentBeginOverlap.AddDynamic(this, &ACameraGuidingVolume::OnVolumeBeginOverlap);
-	RootVolume->OnComponentEndOverlap.AddDynamic(this, &ACameraGuidingVolume::OnVolumeEndOverlap);
+	CameraVolume->OnComponentBeginOverlap.AddDynamic(this, &ACameraGuidingVolume::OnVolumeBeginOverlap);
+	CameraVolume->OnComponentEndOverlap.AddDynamic(this, &ACameraGuidingVolume::OnVolumeEndOverlap);
 	
 	GameplayTags.AddTag(TAG_CameraVolume());
 	//GameplayTags.AddTag(FGameplayTag::RequestGameplayTag("CameraVolume"));
@@ -55,8 +55,22 @@ void ACameraGuidingVolume::OnVolumeBeginOverlap(UPrimitiveComponent* OverlappedC
 		if (cap) {
 			ICameraGuideInterface* CamI = Cast<ICameraGuideInterface>(OtherActor);
 			if (CamI){
-				Point.Obj = this;	// ptr til root objektet eller til component?
-				Point.Location = PointFocus->GetComponentLocation();
+				Point.ParentObj = this;	// ptr til root objektet eller til component?
+				switch (CameraFocus)
+				{
+				case EFocusType::FOCUS_Point:
+					Point.FocusBox = Cast<UBoxComponent>(FocusComponent);
+					Point.ComponentType = EFocusType::FOCUS_Point;
+					break;
+				case EFocusType::FOCUS_Curve:
+					Point.FocusSpline = Cast<USplineComponent>(FocusComponent);
+					Point.ComponentType = EFocusType::FOCUS_Curve;
+					break;
+				default:
+					break;
+				}
+
+				Point.Location = FocusComponent->GetComponentLocation();
 				CamI->AddCameraGuide(Point);
 			}
 		}
