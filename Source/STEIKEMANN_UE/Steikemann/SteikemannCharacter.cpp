@@ -87,6 +87,8 @@ void ASteikemannCharacter::BeginPlay()
 
 	PlayerController = Cast<APlayerController>(GetController());
 
+	Base_CameraBoomLength = CameraBoom->TargetArmLength;
+
 	/* Creating Niagara Compnents */
 	{
 		NiComp_CrouchSlide = CreateNiagaraComponent("Niagara_CrouchSlide", RootComponent, FAttachmentTransformRules::SnapToTargetIncludingScale);
@@ -588,16 +590,38 @@ void ASteikemannCharacter::PlayCameraShake(TSubclassOf<UCameraShakeBase> shake, 
 	UGameplayStatics::PlayWorldCameraShake(GetWorld(), shake, Camera->GetComponentLocation() + FVector(0, 0, 1), 0.f, 10.f, falloff);
 }
 
+/* Read this function from the bottom->up after POINT */
 void ASteikemannCharacter::GuideCamera(float DeltaTime)
 {
+	/* Lerp CameraBoom TargetArmLength back to it's original length, after the changes caused by CAMERA_Absolute */
+	if (bCamLerpBackToPosition) {
+		float Current = CameraBoom->TargetArmLength;
+		float L = FMath::FInterpTo(Current, Base_CameraBoomLength, DeltaTime, 2.f);
+		CameraBoom->TargetArmLength = L;
+
+		if (CameraBoom->TargetArmLength == Base_CameraBoomLength) {
+			bCamLerpBackToPosition = false;
+		}
+	}
+
+
 	if (mFocusPoints.Num() == 0) { 
 		//CameraGuideAlpha <= 0.f ? CameraGuideAlpha = 0.f : CameraGuideAlpha -= DeltaTime * 3.f;
 		CameraGuideAlpha = 0.f;
+
+		/* Reset camera TargetArmLength */
+		if (CurrentCameraGuide == EPointType::CAMERA_Absolute) {
+			bCamLerpBackToPosition = true;
+			CurrentCameraGuide = EPointType::NONE;
+		}
+
 		return; 
 	}
 
 	/* This sets the camera directly to the FocusPoint */
 	FocusPoint FP = mFocusPoints[0];	// Hardkoder for første array punkt nå, Så vil ikke håndterer flere volumes og prioriteringene mellom dem
+
+	/* ----------------- POINT ------------------- */
 
 	/* Pitch Adjustment  
 	* Based on distance to object */
@@ -619,7 +643,7 @@ void ASteikemannCharacter::GuideCamera(float DeltaTime)
 		return Z;
 	};
 
-	auto SLerpToQuat = [&](FQuat& Target, float alpha, APlayerController* Con) {
+	auto LA_SLerpToQuat = [&](FQuat& Target, float alpha, APlayerController* Con) {
 		FQuat Rot{ Con->GetControlRotation() };
 		FQuat New{ FQuat::Slerp(Rot, Target, alpha) };
 		FRotator Rot1 = New.Rotator();
@@ -631,12 +655,12 @@ void ASteikemannCharacter::GuideCamera(float DeltaTime)
 		alpha >= 1.f ? alpha = 1.f : alpha += DeltaTime * P.LerpSpeed;
 		FQuat VToP{ ((P.Location - FVector(0, 0, PitchAdjust(CameraGuide_Pitch, CameraGuide_Pitch_MIN, CameraGuide_Pitch_MAX)/*Pitch Adjustment*/)) - CameraBoom->GetComponentLocation()).Rotation() };	// Juster pitch adjustment basert på z til VToP uten adjustment
 		
-		SLerpToQuat(VToP, alpha, Con);
+		LA_SLerpToQuat(VToP, alpha, Con);
 	};
 
 	auto LA_Lean = [&](FocusPoint& P, float& alpha, APlayerController* Con) {
 		FVector VToP_vec = (P.Location - FVector(0, 0, PitchAdjust(CameraGuide_Pitch, CameraGuide_Pitch_MIN, CameraGuide_Pitch_MAX)/*Pitch Adjustment*/)) - CameraBoom->GetComponentLocation();
-		FQuat VToP_quat{ (VToP_vec).Rotation() };	// Juster pitch adjustment basert på z til VToP uten adjustment
+		FQuat VToP_quat{ (VToP_vec).Rotation() };	
 		
 		float DotProd = FVector::DotProduct(VToP_vec.GetSafeNormal(), Con->GetControlRotation().Vector());
 
@@ -653,17 +677,82 @@ void ASteikemannCharacter::GuideCamera(float DeltaTime)
 			return;
 		}
 
-		SLerpToQuat(VToP_quat, alpha, Con);
+		LA_SLerpToQuat(VToP_quat, alpha, Con);
 	};
 
+	auto CAM_LerpToPosition = [&](FQuat& Target, float& alpha, float& length, float lerpSpeed, APlayerController* Con) {
+		LA_SLerpToQuat(Target, alpha, Con);
+
+		float Current = CameraBoom->TargetArmLength;
+		float L = FMath::FInterpTo(Current, length, DeltaTime, lerpSpeed);
+		CameraBoom->TargetArmLength = L;
+	};
+
+
+	auto CAM_Absolute = [&](FocusPoint& P, float& alpha, APlayerController* Con) {
+		alpha >= 1.f ? alpha = 1.f : alpha += DeltaTime * P.LerpSpeed;
+		FVector VtoP_vec = CameraBoom->GetComponentLocation() - P.Location;
+		FQuat VtoP_quat{ (VtoP_vec).Rotation() };
+		float length = VtoP_vec.Size();
+
+		// SLerp CameraBoom til quat
+		// Set Target Arm length slik at kamera sitter på target
+		CAM_LerpToPosition(VtoP_quat, alpha, length, 1.f/P.LerpSpeed, Con);
+	};
+
+	auto CAM_Lean = [&](FocusPoint& P, float& alpha, APlayerController* Con) {
+		//alpha >= 1.f ? alpha = 1.f : alpha += DeltaTime * P.LerpSpeed;
+		FVector VtoP_vec = CameraBoom->GetComponentLocation() - P.Location;
+		FQuat VtoP_quat{ (VtoP_vec).Rotation() };
+
+		float DotProd = FVector::DotProduct(VtoP_vec.GetSafeNormal(), Con->GetControlRotation().Vector());
+
+		PRINTPAR("DOT PROD NEW : %f", 1.f - (DotProd / 2.f + 0.5f));
+		PRINTPAR("LEAN : %f", (P.LeanMultiplier - ((DotProd / 2.f + 0.5f) * (P.LeanMultiplier - 1))));
+
+		if (DotProd >= ((2 * P.LeanRelax) - 1)) {
+			alpha = FMath::FInterpTo(alpha, (P.LeanSpeed / 100.f) * (P.LeanMultiplier - ((DotProd / 2.f + 0.5f) * (P.LeanMultiplier - 1))), DeltaTime, 2.f);
+		}
+		else {
+			alpha = FMath::FInterpTo(alpha, (P.LeanSpeed / 50.f) * (P.LeanMultiplier - ((DotProd / 2.f + 0.5f) * (P.LeanMultiplier - 1))), DeltaTime, 2.f);
+		}
+		if (DotProd >= ((2 * P.LeanAmount) - 1)) {
+			return;
+		}
+
+		LA_SLerpToQuat(VtoP_quat, alpha, Con);
+	};
+
+
+	/* ----- SWITCH TO DETERMINE TYPE OF CAMERA VOLUME ----- */
 	switch (FP.Type)
 	{
 	case EPointType::LOOKAT_Absolute:
+		CurrentCameraGuide = EPointType::LOOKAT_Absolute;
+		if (CurrentCameraGuide != PreviousCameraGuide) { CameraGuideAlpha = 0.f; }
 		LA_Absolute(FP, CameraGuideAlpha, GetPlayerController());
+		PreviousCameraGuide = EPointType::LOOKAT_Absolute;
 		break;
 
 	case EPointType::LOOKAT_Lean:
+		CurrentCameraGuide = EPointType::LOOKAT_Lean;
+		if (CurrentCameraGuide != PreviousCameraGuide) { CameraGuideAlpha = 0.f; }
 		LA_Lean(FP, CameraGuideAlpha, GetPlayerController());
+		PreviousCameraGuide = EPointType::LOOKAT_Lean;
+		break;
+
+	case EPointType::CAMERA_Absolute:
+		CurrentCameraGuide = EPointType::CAMERA_Absolute;
+		if (CurrentCameraGuide != PreviousCameraGuide) { CameraGuideAlpha = 0.f; }
+		CAM_Absolute(FP, CameraGuideAlpha, GetPlayerController());
+		PreviousCameraGuide = EPointType::CAMERA_Absolute;
+		break;
+
+	case EPointType::CAMERA_Lean:
+		CurrentCameraGuide = EPointType::CAMERA_Lean;
+		if (CurrentCameraGuide != PreviousCameraGuide) { CameraGuideAlpha = 0.f; }
+		CAM_Lean(FP, CameraGuideAlpha, GetPlayerController());
+		PreviousCameraGuide = EPointType::CAMERA_Lean;
 		break;
 
 	default:

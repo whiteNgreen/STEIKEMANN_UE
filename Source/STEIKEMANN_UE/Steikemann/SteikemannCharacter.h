@@ -195,6 +195,11 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "10000"))
 			float CameraGuide_Pitch_DistanceMIN		UMETA(DisplayName = "Min Distance") { 100.f };
 
+	EPointType CurrentCameraGuide;
+	EPointType PreviousCameraGuide;
+	float Base_CameraBoomLength;
+	bool bCamLerpBackToPosition{};
+
 	//TArray<FocusPoint> mFocusPoints;
 	float CameraGuideAlpha{};
 
