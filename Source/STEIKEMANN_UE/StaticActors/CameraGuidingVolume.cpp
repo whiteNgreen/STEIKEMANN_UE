@@ -4,22 +4,29 @@
 #include "../StaticActors/CameraGuidingVolume.h"
 #include "Components/BoxComponent.h"
 #include "Components/SplineComponent.h"
+#include "Components/CapsuleComponent.h"
 
 // Sets default values
 ACameraGuidingVolume::ACameraGuidingVolume()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	bRunConstructionScriptOnDrag = true;
 
 	RootVolume = CreateDefaultSubobject<UBoxComponent>(TEXT("Root Volume"));
 	RootVolume->SetupAttachment(RootComponent);
 
+
+
 	PointFocus = CreateDefaultSubobject<UBoxComponent>(TEXT("PointFocus"));
 	PointFocus->SetupAttachment(RootComponent);
 
-	//SplineFocus = CreateDefaultSubobject<USplineComponent>(TEXT("SplineFocus"));
-	//SplineFocus->SetupAttachment(RootComponent);
+	SplineFocus = CreateDefaultSubobject<USplineComponent>(TEXT("SplineFocus"));
+	SplineFocus->SetupAttachment(RootComponent);
+
 }
+
+
 
 // Called when the game starts or when spawned
 void ACameraGuidingVolume::BeginPlay()
@@ -44,13 +51,14 @@ void ACameraGuidingVolume::OnVolumeBeginOverlap(UPrimitiveComponent* OverlappedC
 {
 	if (OtherActor != this)
 	{
-		ICameraGuideInterface* CamI = Cast<ICameraGuideInterface>(OtherActor);
-		if (CamI){
-			Point.Obj = this;	// ptr til root objektet eller til component?
-			Point.Priority = 0;
-			Point.Weight = 1.f;
-			Point.Location = PointFocus->GetComponentLocation();
-			CamI->AddCameraGuide(Point);
+		UCapsuleComponent* cap = Cast<UCapsuleComponent>(OtherComp);
+		if (cap) {
+			ICameraGuideInterface* CamI = Cast<ICameraGuideInterface>(OtherActor);
+			if (CamI){
+				Point.Obj = this;	// ptr til root objektet eller til component?
+				Point.Location = PointFocus->GetComponentLocation();
+				CamI->AddCameraGuide(Point);
+			}
 		}
 	}
 }
@@ -58,9 +66,12 @@ void ACameraGuidingVolume::OnVolumeBeginOverlap(UPrimitiveComponent* OverlappedC
 void ACameraGuidingVolume::OnVolumeEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
 	if (OtherActor != this){
-		ICameraGuideInterface* CamI = Cast<ICameraGuideInterface>(OtherActor);
-		if (CamI){
-			CamI->RemoveCameraGuide(this);
+		UCapsuleComponent* cap = Cast<UCapsuleComponent>(OtherComp);
+		if (cap) {
+			ICameraGuideInterface* CamI = Cast<ICameraGuideInterface>(OtherActor);
+			if (CamI) {
+				CamI->RemoveCameraGuide(this);
+			}
 		}
 	}
 }

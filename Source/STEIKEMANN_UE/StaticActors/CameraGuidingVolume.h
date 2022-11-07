@@ -15,9 +15,7 @@
 UENUM(BlueprintType)
 enum class EFocus : uint8
 {
-	FOCUS_None		UMETA(DisplayName = "None"),
 	FOCUS_Point		UMETA(DisplayName = "Point"),
-	FOCUS_Line		UMETA(DisplayName = "Line"),
 	FOCUS_Curve		UMETA(DisplayName = "Curve")
 };
 
@@ -30,6 +28,7 @@ class STEIKEMANN_UE_API ACameraGuidingVolume : public AActor,
 public:	
 	// Sets default values for this actor's properties
 	ACameraGuidingVolume();
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -45,13 +44,21 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Camera Focus")
 		EFocus CameraFocus;
 
+	UPROPERTY(EditAnywhere, Category = "TESTING")
+		bool bTesting{ true };
+	UPROPERTY(EditAnywhere, Category = "TESTING", meta = (EditCondition = "!bTesting", EditConditionHides))	// Gjemmer T basert på om bTesting er false eller true
+		float T{ 1.f };
+
 	/* Focus Points */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
 		class UBoxComponent* PointFocus{ nullptr };
-	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
-		//class USplineComponent* SplineFocus{ nullptr };
+	UPROPERTY(EditAnywhere, Category = "Components")
+		class USplineComponent* SplineFocus{ nullptr };
 
-	FocusPoint Point;
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusPoint")
+		FocusPoint Point;
 
 	UFUNCTION()
 		void OnVolumeBeginOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);

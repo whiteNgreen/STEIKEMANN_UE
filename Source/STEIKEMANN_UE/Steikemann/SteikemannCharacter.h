@@ -80,6 +80,8 @@ public:
 	void AssignAnimInstance(USteikeAnimInstance* AnimInstance) { SteikeAnimInstance = AnimInstance; }
 	USteikeAnimInstance* GetAnimInstance() const { return SteikeAnimInstance; }
 
+	APlayerController* PlayerController{ nullptr };
+	APlayerController* GetPlayerController() const { return PlayerController; }
 
 	/*
 		GameplayTags
@@ -173,10 +175,26 @@ public:
 
 #pragma region CameraGuide
 	
+	//UPROPERTY(EditAnywhere, Category = "Camera", meta = (UIMin = "0", UIMax = "1"))
+	float CameraGuide_Pitch{ 0.f };
+
+	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "90"))
+			float CameraGuide_Pitch_MIN{ 10.f };
+
+	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "90"))
+			float CameraGuide_Pitch_MAX{ 40.f };
+
+	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "10000"))
+			float CameraGuide_Pitch_DistanceMAX{ 2000.f };
+
+	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "10000"))
+			float CameraGuide_Pitch_DistanceMIN{ 100.f };
+
 	//TArray<FocusPoint> mFocusPoints;
+	float CameraGuideAlpha{};
 
 	//virtual void AddCameraGuide(const FocusPoint& Point) override{}
-	virtual void GuideCamera() override;
+	virtual void GuideCamera(float DeltaTime) override;
 
 #pragma endregion //CameraGuide
 

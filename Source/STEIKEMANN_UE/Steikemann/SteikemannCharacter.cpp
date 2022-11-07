@@ -85,6 +85,7 @@ void ASteikemannCharacter::BeginPlay()
 
 	MovementComponent = Cast<USteikemannCharMovementComponent>(GetCharacterMovement());
 
+	PlayerController = Cast<APlayerController>(GetController());
 
 	/* Creating Niagara Compnents */
 	{
@@ -269,7 +270,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		}
 	}
 
-	GuideCamera();
+	GuideCamera(DeltaTime);
 
 	/* ----------------------- COMBAT TICKS ------------------------------ */
 	PreBasicAttackMoveCharacter(DeltaTime);
@@ -587,27 +588,90 @@ void ASteikemannCharacter::PlayCameraShake(TSubclassOf<UCameraShakeBase> shake, 
 	UGameplayStatics::PlayWorldCameraShake(GetWorld(), shake, Camera->GetComponentLocation() + FVector(0, 0, 1), 0.f, 10.f, falloff);
 }
 
-void ASteikemannCharacter::GuideCamera()
+void ASteikemannCharacter::GuideCamera(float DeltaTime)
 {
-	if (mFocusPoints.Num() == 0) { return; }
-	//FQuat ConRot = GetControlRotation().Quaternion();
-	
-	FocusPoint P = mFocusPoints[0];	// Hardkoder for første array punkt nå
-	FVector ToPoint = (P.Location - CameraBoom->GetComponentLocation()).GetSafeNormal();
-	float DotProd = FVector::DotProduct(ToPoint.GetSafeNormal2D(), GetControlRotation().Vector().GetSafeNormal2D()) * P.Weight;
-	float Direction = FVector::DotProduct(ToPoint.GetSafeNormal2D(), GetActorRightVector());
-	float angle = acosf(DotProd);
-	if (Direction < 0.f) { angle *= -1.f; }
+	if (mFocusPoints.Num() == 0) { 
+		//CameraGuideAlpha <= 0.f ? CameraGuideAlpha = 0.f : CameraGuideAlpha -= DeltaTime * 3.f;
+		CameraGuideAlpha = 0.f;
+		return; 
+	}
 
-	AddControllerYawInput(angle);
-	PRINTPAR("ANGLE : %f", angle);
+	/* This sets the camera directly to the FocusPoint */
+	FocusPoint FP = mFocusPoints[0];	// Hardkoder for første array punkt nå, Så vil ikke håndterer flere volumes og prioriteringene mellom dem
+
+	/* Pitch Adjustment  
+	* Based on distance to object */
+	auto PitchAdjust = [&](float& PitchCurrent, float PitchMin, float PitchMax) {
+		float DistMin = CameraGuide_Pitch_DistanceMIN;
+		float DistMax = CameraGuide_Pitch_DistanceMAX;
+		FVector VtoP = FP.Location - CameraBoom->GetComponentLocation();
+		float Distance = FMath::Clamp(VtoP.Length(), DistMin, DistMax);
+		
+		float N = Distance / DistMax;
+		PitchCurrent = FMath::Clamp(N * PitchMax, PitchMin, PitchMax);
+
+		float Z = tanf(FMath::DegreesToRadians(PitchCurrent)) * Distance;
+
+		PRINTPAR("Distance : %f", Distance);
+		PRINTPAR("PitchCurrent : %f", PitchCurrent);
+		return Z;
+	};
+
+	auto SLerpToQuat = [&](FQuat& Target, float alpha, APlayerController* Con) {
+		FQuat Rot{ Con->GetControlRotation() };
+		FQuat New{ FQuat::Slerp(Rot, Target, alpha) };
+		FRotator Rot1 = New.Rotator();
+		Rot1.Roll = 0.f;
+		Con->SetControlRotation(Rot1);
+	};
+
+	auto LA_Absolute = [&](FocusPoint& P, float& alpha, APlayerController* Con) {
+		alpha >= 1.f ? alpha = 1.f : alpha += DeltaTime * P.LerpSpeed;
+		FQuat VToP{ ((P.Location - FVector(0, 0, PitchAdjust(CameraGuide_Pitch, CameraGuide_Pitch_MIN, CameraGuide_Pitch_MAX)/*Pitch Adjustment*/)) - CameraBoom->GetComponentLocation()).Rotation() };	// Juster pitch adjustment basert på z til VToP uten adjustment
+		
+		SLerpToQuat(VToP, alpha, Con);
+	};
+
+	auto LA_Lean = [&](FocusPoint& P, float& alpha, APlayerController* Con) {
+		FVector VToP_vec = (P.Location - FVector(0, 0, PitchAdjust(CameraGuide_Pitch, CameraGuide_Pitch_MIN, CameraGuide_Pitch_MAX)/*Pitch Adjustment*/)) - CameraBoom->GetComponentLocation();
+		FQuat VToP_quat{ (VToP_vec).Rotation() };	// Juster pitch adjustment basert på z til VToP uten adjustment
+		
+		float DotProd = FVector::DotProduct(VToP_vec.GetSafeNormal(), Con->GetControlRotation().Vector());
+
+		PRINTPAR("DOT PROD NEW : %f", 1.f - (DotProd / 2.f + 0.5f));
+		PRINTPAR("LEAN : %f", (P.LeanMultiplier - ((DotProd / 2.f + 0.5f) * (P.LeanMultiplier - 1))));
+
+		if (DotProd >= ((2 * P.LeanRelax) - 1)){
+			alpha = FMath::FInterpTo(alpha, (P.LeanSpeed / 100.f) * (P.LeanMultiplier - ((DotProd / 2.f + 0.5f) * (P.LeanMultiplier - 1))), DeltaTime, 2.f);
+		}
+		else {
+			alpha = FMath::FInterpTo(alpha, (P.LeanSpeed / 50.f) * (P.LeanMultiplier - ((DotProd / 2.f + 0.5f) * (P.LeanMultiplier - 1))), DeltaTime, 2.f);
+		}
+		if (DotProd >= ((2 * P.LeanAmount) - 1)) {
+			return;
+		}
+
+		SLerpToQuat(VToP_quat, alpha, Con);
+	};
+
+	switch (FP.Type)
+	{
+	case EPointType::LOOKAT_Absolute:
+		LA_Absolute(FP, CameraGuideAlpha, GetPlayerController());
+		break;
+
+	case EPointType::LOOKAT_Lean:
+		LA_Lean(FP, CameraGuideAlpha, GetPlayerController());
+		break;
+
+	default:
+		break;
+	}
+
+	PRINTPAR("Alpha : %f", CameraGuideAlpha);
 	PRINTPAR("Fokuspoints: %i", mFocusPoints.Num());
 }
 
-//void ASteikemannCharacter::AddCameraGuide(const FocusPoint& Point)
-//{
-//	mFocusPoints.AddUnique(Point);
-//}
 
 void ASteikemannCharacter::MoveForward(float value)
 {
