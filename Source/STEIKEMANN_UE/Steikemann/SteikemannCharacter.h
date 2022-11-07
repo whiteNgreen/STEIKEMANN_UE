@@ -178,17 +178,22 @@ public:
 	//UPROPERTY(EditAnywhere, Category = "Camera", meta = (UIMin = "0", UIMax = "1"))
 	float CameraGuide_Pitch{ 0.f };
 
-	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "90"))
-			float CameraGuide_Pitch_MIN{ 10.f };
+	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "500"))
+			float CameraGuide_Pitch_MIN		UMETA(DisplayName = "Pitch At Min") { 100.f };
 
-	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "90"))
-			float CameraGuide_Pitch_MAX{ 40.f };
+	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "5000"))
+			float CameraGuide_Pitch_MAX		UMETA(DisplayName = "Pitch At Max") { 500.f };
 
+	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "2"))
+			float CameraGuide_ZdiffMultiplier		UMETA(DisplayName = "Zdiff Multiplier") { 1.f };
+			
+	/* Maximum distance for pitch adjustment */
 	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "10000"))
-			float CameraGuide_Pitch_DistanceMAX{ 2000.f };
+			float CameraGuide_Pitch_DistanceMAX		UMETA(DisplayName = "Max Distance") { 2000.f };
 
+	/* Minimum distance for pitch adjustment */
 	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "10000"))
-			float CameraGuide_Pitch_DistanceMIN{ 100.f };
+			float CameraGuide_Pitch_DistanceMIN		UMETA(DisplayName = "Min Distance") { 100.f };
 
 	//TArray<FocusPoint> mFocusPoints;
 	float CameraGuideAlpha{};

@@ -601,19 +601,21 @@ void ASteikemannCharacter::GuideCamera(float DeltaTime)
 
 	/* Pitch Adjustment  
 	* Based on distance to object */
-	auto PitchAdjust = [&](float& PitchCurrent, float PitchMin, float PitchMax) {
+	auto PitchAdjust = [&](float& PitchCurrent, float ZAtMin, float ZAtMax) {
 		float DistMin = CameraGuide_Pitch_DistanceMIN;
 		float DistMax = CameraGuide_Pitch_DistanceMAX;
 		FVector VtoP = FP.Location - CameraBoom->GetComponentLocation();
 		float Distance = FMath::Clamp(VtoP.Length(), DistMin, DistMax);
 		
-		float N = Distance / DistMax;
-		PitchCurrent = FMath::Clamp(N * PitchMax, PitchMin, PitchMax);
+		float Z;
+		float N = Distance / DistMax;	// Prosenten
+		Z = (N * ZAtMax) + (1-N)*ZAtMin;
 
-		float Z = tanf(FMath::DegreesToRadians(PitchCurrent)) * Distance;
-
-		PRINTPAR("Distance : %f", Distance);
-		PRINTPAR("PitchCurrent : %f", PitchCurrent);
+		/* Juster for høyden */
+		float Zdiff = FP.Location.Z - GetActorLocation().Z;
+		if (Zdiff < 0){ Zdiff *= -1.f; }
+		Z += Zdiff * CameraGuide_ZdiffMultiplier;
+		
 		return Z;
 	};
 
