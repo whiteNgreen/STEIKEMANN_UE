@@ -62,15 +62,17 @@ void ACameraGuidingVolume::OnVolumeBeginOverlap(UPrimitiveComponent* OverlappedC
 					Point.FocusBox = Cast<UBoxComponent>(FocusComponent);
 					Point.ComponentType = EFocusType::FOCUS_Point;
 					break;
-				case EFocusType::FOCUS_Curve:
+				case EFocusType::FOCUS_Spline:
 					Point.FocusSpline = Cast<USplineComponent>(FocusComponent);
-					Point.ComponentType = EFocusType::FOCUS_Curve;
+					Point.ComponentType = EFocusType::FOCUS_Spline;
+					Point.SplineInputKey = Point.FocusSpline->FindInputKeyClosestToWorldLocation(OtherActor->GetActorLocation());
+					CamI->SetSplineInputkey(Point.SplineInputKey);
 					break;
 				default:
 					break;
 				}
 
-				Point.Location = FocusComponent->GetComponentLocation();
+				Point.ComponentLocation = FocusComponent->GetComponentLocation();
 				CamI->AddCameraGuide(Point);
 			}
 		}

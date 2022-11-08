@@ -175,6 +175,7 @@ public:
 
 #pragma region CameraGuide
 	
+
 	//UPROPERTY(EditAnywhere, Category = "Camera", meta = (UIMin = "0", UIMax = "1"))
 	float CameraGuide_Pitch{ 0.f };
 
@@ -200,11 +201,18 @@ public:
 	float Base_CameraBoomLength;
 	bool bCamLerpBackToPosition{};
 
-	//TArray<FocusPoint> mFocusPoints;
 	float CameraGuideAlpha{};
 
-	//virtual void AddCameraGuide(const FocusPoint& Point) override{}
+	/* ---- GUIDING CAMERA -----
+	* Every type of automatic camera guide interaction within one function
+	* Volume
+	* Automatic during movement
+	* */
 	virtual void GuideCamera(float DeltaTime) override;
+	float Internal_SplineInputkey{};
+	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Spline", meta = (UIMin = "0", UIMax = "10"))
+		float SplineLerpSpeed{ 10.f };
+	virtual void SetSplineInputkey(const float SplineKey) override { Internal_SplineInputkey = SplineKey; }
 
 #pragma endregion //CameraGuide
 

@@ -16,6 +16,7 @@
 #include "Components/BoxComponent.h"
 #include "Components/SphereComponent.h"
 #include "../GameplayTags.h"
+#include "Components/SplineComponent.h"
 
 
 
@@ -590,7 +591,7 @@ void ASteikemannCharacter::PlayCameraShake(TSubclassOf<UCameraShakeBase> shake, 
 	UGameplayStatics::PlayWorldCameraShake(GetWorld(), shake, Camera->GetComponentLocation() + FVector(0, 0, 1), 0.f, 10.f, falloff);
 }
 
-/* Read this function from the bottom->up after POINT */
+/* ----------------- Read this function from the bottom->up after POINT ----------------- */
 void ASteikemannCharacter::GuideCamera(float DeltaTime)
 {
 	/* Lerp CameraBoom TargetArmLength back to it's original length, after the changes caused by CAMERA_Absolute */
@@ -620,6 +621,23 @@ void ASteikemannCharacter::GuideCamera(float DeltaTime)
 
 	/* This sets the camera directly to the FocusPoint */
 	FocusPoint FP = mFocusPoints[0];	// Hardkoder for første array punkt nå, Så vil ikke håndterer flere volumes og prioriteringene mellom dem
+	/* Get location used for */
+	switch (FP.ComponentType)
+	{
+	case EFocusType::FOCUS_Point:
+		FP.Location = FP.ComponentLocation;
+		break;
+	case EFocusType::FOCUS_Spline:
+		// Bruk Internal_key til å finne lokasjonen
+		// Finn ny Spline key
+		// Lerp internal_key til ny splinekey
+		FP.Location = FP.FocusSpline->GetLocationAtSplineInputKey(Internal_SplineInputkey, ESplineCoordinateSpace::World);
+		FP.SplineInputKey = FP.FocusSpline->FindInputKeyClosestToWorldLocation(CameraBoom->GetComponentLocation());
+		Internal_SplineInputkey = FMath::FInterpTo(Internal_SplineInputkey, FP.SplineInputKey, DeltaTime, SplineLerpSpeed);
+		break;
+	default:
+		break;
+	}
 
 	/* ----------------- POINT ------------------- */
 
@@ -654,7 +672,7 @@ void ASteikemannCharacter::GuideCamera(float DeltaTime)
 	auto LA_Absolute = [&](FocusPoint& P, float& alpha, APlayerController* Con) {
 		alpha >= 1.f ? alpha = 1.f : alpha += DeltaTime * P.LerpSpeed;
 		FQuat VToP{ ((P.Location - FVector(0, 0, PitchAdjust(CameraGuide_Pitch, CameraGuide_Pitch_MIN, CameraGuide_Pitch_MAX)/*Pitch Adjustment*/)) - CameraBoom->GetComponentLocation()).Rotation() };	// Juster pitch adjustment basert på z til VToP uten adjustment
-		
+
 		LA_SLerpToQuat(VToP, alpha, Con);
 	};
 
@@ -663,9 +681,6 @@ void ASteikemannCharacter::GuideCamera(float DeltaTime)
 		FQuat VToP_quat{ (VToP_vec).Rotation() };	
 		
 		float DotProd = FVector::DotProduct(VToP_vec.GetSafeNormal(), Con->GetControlRotation().Vector());
-
-		PRINTPAR("DOT PROD NEW : %f", 1.f - (DotProd / 2.f + 0.5f));
-		PRINTPAR("LEAN : %f", (P.LeanMultiplier - ((DotProd / 2.f + 0.5f) * (P.LeanMultiplier - 1))));
 
 		if (DotProd >= ((2 * P.LeanRelax) - 1)){
 			alpha = FMath::FInterpTo(alpha, (P.LeanSpeed / 100.f) * (P.LeanMultiplier - ((DotProd / 2.f + 0.5f) * (P.LeanMultiplier - 1))), DeltaTime, 2.f);
@@ -706,9 +721,6 @@ void ASteikemannCharacter::GuideCamera(float DeltaTime)
 		FQuat VtoP_quat{ (VtoP_vec).Rotation() };
 
 		float DotProd = FVector::DotProduct(VtoP_vec.GetSafeNormal(), Con->GetControlRotation().Vector());
-
-		PRINTPAR("DOT PROD NEW : %f", 1.f - (DotProd / 2.f + 0.5f));
-		PRINTPAR("LEAN : %f", (P.LeanMultiplier - ((DotProd / 2.f + 0.5f) * (P.LeanMultiplier - 1))));
 
 		if (DotProd >= ((2 * P.LeanRelax) - 1)) {
 			alpha = FMath::FInterpTo(alpha, (P.LeanSpeed / 100.f) * (P.LeanMultiplier - ((DotProd / 2.f + 0.5f) * (P.LeanMultiplier - 1))), DeltaTime, 2.f);
@@ -759,8 +771,8 @@ void ASteikemannCharacter::GuideCamera(float DeltaTime)
 		break;
 	}
 
-	PRINTPAR("Alpha : %f", CameraGuideAlpha);
-	PRINTPAR("Fokuspoints: %i", mFocusPoints.Num());
+	//PRINTPAR("Alpha : %f", CameraGuideAlpha);
+	//PRINTPAR("Fokuspoints: %i", mFocusPoints.Num());
 }
 
 

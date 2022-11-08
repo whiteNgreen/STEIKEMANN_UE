@@ -11,7 +11,7 @@ UENUM()
 enum class EFocusType : uint8
 {
 	FOCUS_Point,
-	FOCUS_Curve
+	FOCUS_Spline
 };
 
 UENUM()
@@ -37,7 +37,10 @@ struct FocusPoint
 		EFocusType ComponentType;
 	//UPrimitiveComponent* FocusObj{ nullptr };
 
+	FVector ComponentLocation{};
 	FVector Location{};
+	float SplineInputKey{};
+
 	/* Priority of Focus Point among other potential Focus Points 
 	 * Priority of 0 will ignore every other volume, if two priority 0's overlap, only the first entered will be acknowledged */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusPoint", meta = (UIMin = "0", DisplayPriority = "0"))
@@ -103,4 +106,6 @@ public:
 	
 	virtual void AddCameraGuide(const FocusPoint& Point);
 	virtual void RemoveCameraGuide(UObject* object);
+
+	virtual void SetSplineInputkey(const float SplineKey){}
 };
