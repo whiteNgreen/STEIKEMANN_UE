@@ -594,6 +594,15 @@ void ASteikemannCharacter::PlayCameraShake(TSubclassOf<UCameraShakeBase> shake, 
 /* ----------------- Read this function from the bottom->up after POINT ----------------- */
 void ASteikemannCharacter::GuideCamera(float DeltaTime)
 {
+	/* Lambda function for SLerp Playercontroller Quaternion to target Quat */	// Kunne bare vært en funksjon som tar inn en enum verdi
+	auto SLerpToQuat = [&](FQuat& Target, float alpha, APlayerController* Con) {
+		FQuat Rot{ Con->GetControlRotation() };
+		FQuat New{ FQuat::Slerp(Rot, Target, alpha) };
+		FRotator Rot1 = New.Rotator();
+		Rot1.Roll = 0.f;
+		Con->SetControlRotation(Rot1);
+	};
+
 	/* Lerp CameraBoom TargetArmLength back to it's original length, after the changes caused by CAMERA_Absolute */
 	if (bCamLerpBackToPosition) {
 		float Current = CameraBoom->TargetArmLength;
@@ -605,7 +614,7 @@ void ASteikemannCharacter::GuideCamera(float DeltaTime)
 		}
 	}
 
-
+	/* IF NOT IN CAMERA VOLUME */
 	if (mFocusPoints.Num() == 0) { 
 		//CameraGuideAlpha <= 0.f ? CameraGuideAlpha = 0.f : CameraGuideAlpha -= DeltaTime * 3.f;
 		CameraGuideAlpha = 0.f;
@@ -615,6 +624,7 @@ void ASteikemannCharacter::GuideCamera(float DeltaTime)
 			bCamLerpBackToPosition = true;
 			CurrentCameraGuide = EPointType::NONE;
 		}
+
 
 		return; 
 	}
@@ -661,19 +671,13 @@ void ASteikemannCharacter::GuideCamera(float DeltaTime)
 		return Z;
 	};
 
-	auto LA_SLerpToQuat = [&](FQuat& Target, float alpha, APlayerController* Con) {
-		FQuat Rot{ Con->GetControlRotation() };
-		FQuat New{ FQuat::Slerp(Rot, Target, alpha) };
-		FRotator Rot1 = New.Rotator();
-		Rot1.Roll = 0.f;
-		Con->SetControlRotation(Rot1);
-	};
+
 
 	auto LA_Absolute = [&](FocusPoint& P, float& alpha, APlayerController* Con) {
 		alpha >= 1.f ? alpha = 1.f : alpha += DeltaTime * P.LerpSpeed;
 		FQuat VToP{ ((P.Location - FVector(0, 0, PitchAdjust(CameraGuide_Pitch, CameraGuide_Pitch_MIN, CameraGuide_Pitch_MAX)/*Pitch Adjustment*/)) - CameraBoom->GetComponentLocation()).Rotation() };	// Juster pitch adjustment basert på z til VToP uten adjustment
 
-		LA_SLerpToQuat(VToP, alpha, Con);
+		SLerpToQuat(VToP, alpha, Con);
 	};
 
 	auto LA_Lean = [&](FocusPoint& P, float& alpha, APlayerController* Con) {
@@ -692,11 +696,11 @@ void ASteikemannCharacter::GuideCamera(float DeltaTime)
 			return;
 		}
 
-		LA_SLerpToQuat(VToP_quat, alpha, Con);
+		SLerpToQuat(VToP_quat, alpha, Con);
 	};
 
 	auto CAM_LerpToPosition = [&](FQuat& Target, float& alpha, float& length, float lerpSpeed, APlayerController* Con) {
-		LA_SLerpToQuat(Target, alpha, Con);
+		SLerpToQuat(Target, alpha, Con);
 
 		float Current = CameraBoom->TargetArmLength;
 		float L = FMath::FInterpTo(Current, length, DeltaTime, lerpSpeed);
@@ -732,7 +736,7 @@ void ASteikemannCharacter::GuideCamera(float DeltaTime)
 			return;
 		}
 
-		LA_SLerpToQuat(VtoP_quat, alpha, Con);
+		SLerpToQuat(VtoP_quat, alpha, Con);
 	};
 
 

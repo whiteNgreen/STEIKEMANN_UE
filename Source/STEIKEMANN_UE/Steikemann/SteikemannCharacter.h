@@ -203,6 +203,9 @@ public:
 
 	float CameraGuideAlpha{};
 
+	UPROPERTY(EditAnywhere, Category = "Camera|Default", meta = (UIMin = "0", UIMax = "1"))
+		float Default_CameraGuideAlpha{ 0.1f };
+
 	/* ---- GUIDING CAMERA -----
 	* Every type of automatic camera guide interaction within one function
 	* Volume

@@ -37,6 +37,7 @@ struct FocusPoint
 		EFocusType ComponentType;
 	//UPrimitiveComponent* FocusObj{ nullptr };
 
+
 	FVector ComponentLocation{};
 	FVector Location{};
 	float SplineInputKey{};
@@ -51,9 +52,9 @@ struct FocusPoint
 
 	
 	/* -------------------------------- LOOKAT_Absolute & CAMERA_Absolute -------------------------------- */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusPoint", meta = (UIMin = "0.0",
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusPoint", meta = (UIMin = "0.0", UIMax = "1.0",
 		EditCondition = "Type == EPointType::LOOKAT_Absolute || Type == EPointType::CAMERA_Absolute", EditConditionHides))
-		float LerpSpeed{ 0.2f };
+		float LerpSpeed{ 0.18f };
 	
 
 
@@ -65,22 +66,22 @@ struct FocusPoint
 	 * and 0 in the opposite direction, essentially 0 effect */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusPoint", meta = (UIMin = "0.0", UIMax = "1.0",
 		EditCondition = "Type == EPointType::LOOKAT_Lean || Type == EPointType::CAMERA_Lean", EditConditionHides))
-		float LeanAmount{ 0.8f };
+		float LeanAmount{ 1.0f };
 	/* Similar to the LeanAmount, but regarding the point the lean should start to relax
 	 * NB! Should ALWAYS be lower than the lean amount */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusPoint", meta = (UIMin = "0.0", UIMax = "1.0",
 		EditCondition = "Type == EPointType::LOOKAT_Lean || Type == EPointType::CAMERA_Lean", EditConditionHides))
-		float LeanRelax{ 0.6f };
+		float LeanRelax{ 0.8f };
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusPoint", meta = (UIMin = "0.0", UIMax = "1.0",
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusPoint", meta = (UIMin = "0.0", UIMax = "5.0",
 		EditCondition = "Type == EPointType::LOOKAT_Lean || Type == EPointType::CAMERA_Lean", EditConditionHides))
-		float LeanSpeed{ 0.2f };
+		float LeanSpeed{ 0.6f };
 
 	/* If the lean strength will be stronger the further away the camera is rotated from the target, 
 	 * and get weaker the closer it gets to the desired rotation */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusPoint", meta = (UIMin = "1.0", UIMax = "5.0",
 		EditCondition = "Type == EPointType::LOOKAT_Lean || Type == EPointType::CAMERA_Lean", EditConditionHides))
-		float LeanMultiplier{ 1.f };
+		float LeanMultiplier{ 2.f };
 };
 
 // This class does not need to be modified.

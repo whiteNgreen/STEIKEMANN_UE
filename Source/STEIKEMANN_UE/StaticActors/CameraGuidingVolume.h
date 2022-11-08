@@ -44,10 +44,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera Focus")
 		EFocusType CameraFocus;
 
-	UPROPERTY(EditAnywhere, Category = "TESTING")
-		bool bTesting{ true };
-	UPROPERTY(EditAnywhere, Category = "TESTING", meta = (EditCondition = "!bTesting", EditConditionHides))	// Gjemmer T basert på om bTesting er false eller true
-		float T{ 1.f };
 
 	/* Focus Points */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
@@ -59,7 +55,7 @@ public:
 
 
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusPoint")
+	UPROPERTY(EditInstanceOnly, Category = "FocusPoint")
 		FocusPoint Point;
 
 	UFUNCTION()
