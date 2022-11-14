@@ -3,7 +3,7 @@
 
 #include "../StaticActors/Collectible.h"
 #include "NiagaraFunctionLibrary.h"
-#include "../Steikemann/SteikemannCharacter.h"
+//#include "../Steikemann/SteikemannCharacter.h"
 
 // Sets default values
 ACollectible::ACollectible()
@@ -34,7 +34,7 @@ void ACollectible::BeginPlay()
 }
 void ACollectible::Init()
 {
-	Sphere->OnComponentBeginOverlap.AddDynamic(this, &ACollectible::OnCollectibleBeginOverlap);
+	//Sphere->OnComponentBeginOverlap.AddDynamic(this, &ACollectible::OnCollectibleBeginOverlap);
 }
 
 // Called every frame
@@ -46,16 +46,7 @@ void ACollectible::Tick(float DeltaTime)
 
 void ACollectible::OnCollectibleBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	IGameplayTagAssetInterface* tag = Cast<IGameplayTagAssetInterface>(OtherActor);
-	if (tag) {
-		FGameplayTagContainer con;
-		tag->GetOwnedGameplayTags(con);
-		if (con.HasTag(Tag::Player()) || OverlappedComp->IsA(UCapsuleComponent::StaticClass())) {
-			auto Steik = Cast<ASteikemannCharacter>(OtherActor);
-			Steik->ReceiveCollectible(CollectibleType);
-			Destruction();
-		}
-	}
+
 }
 
 
@@ -72,5 +63,5 @@ void ACollectible::Destruction()
 	};
 	FTimerDelegate FDelegate;
 	FDelegate.BindLambda(func);
-	GetWorldTimerManager().SetTimer(FTHDestruction, FDelegate, 5.f, false);
+	GetWorldTimerManager().SetTimer(FTHDestruction, FDelegate, 2.f, false);
 }

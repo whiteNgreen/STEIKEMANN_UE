@@ -17,7 +17,7 @@
 #include "Components/SphereComponent.h"
 #include "../GameplayTags.h"
 #include "Components/SplineComponent.h"
-
+#include "../StaticActors/Collectible.h"
 
 
 
@@ -89,6 +89,8 @@ void ASteikemannCharacter::BeginPlay()
 	PlayerController = Cast<APlayerController>(GetController());
 
 	Base_CameraBoomLength = CameraBoom->TargetArmLength;
+
+	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &ASteikemannCharacter::OnCapsuleComponentBeginOverlap);
 
 	/* Creating Niagara Compnents */
 	{
@@ -1268,17 +1270,17 @@ void ASteikemannCharacter::Reset_CrouchSliding()
 	bCanCrouchSlide = true;
 }
 
-void ASteikemannCharacter::ReceiveCollectible(ECollectible type)
+void ASteikemannCharacter::ReceiveCollectible(ECollectibleType type)
 {
 	switch (type)
 	{
-	case ECollectible::Common:
+	case ECollectibleType::Common:
 		CollectibleCommon++;
 		break;
-	case ECollectible::Health:
+	case ECollectibleType::Health:
 		GainHealth(1);
 		break;
-	case ECollectible::CorruptionCore:
+	case ECollectibleType::CorruptionCore:
 		CollectibleCorruptionCore++;
 		break;
 	default:
@@ -1289,6 +1291,21 @@ void ASteikemannCharacter::ReceiveCollectible(ECollectible type)
 void ASteikemannCharacter::GainHealth(int amount)
 {
 	Health = FMath::Clamp(Health += amount, 0, 3);
+}
+
+void ASteikemannCharacter::OnCapsuleComponentBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	IGameplayTagAssetInterface* tag = Cast<IGameplayTagAssetInterface>(OtherActor);
+	if (!tag) { return; }
+
+	FGameplayTagContainer con;
+	tag->GetOwnedGameplayTags(con);
+	/* Collision with collectible */
+	if (con.HasTag(Tag::Collectible())) {
+		ACollectible* collectible = Cast<ACollectible>(OtherActor);
+		ReceiveCollectible(collectible->CollectibleType);
+		collectible->Destruction();
+	}
 }
 
 

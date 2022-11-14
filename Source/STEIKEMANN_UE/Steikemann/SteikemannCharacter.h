@@ -390,7 +390,7 @@ public:/* ------------------- Basic Movement ------------------- */
 
 #pragma region Collectibles & Health
 
-	void ReceiveCollectible(ECollectible type);
+	void ReceiveCollectible(ECollectibleType type);
 
 	UPROPERTY(BlueprintReadWrite, Category = "Collectibles")
 		int CollectibleCommon{};
@@ -401,6 +401,10 @@ public:/* ------------------- Basic Movement ------------------- */
 		int Health{ 3 };
 
 	void GainHealth(int amount);
+
+	UFUNCTION()
+		void OnCapsuleComponentBeginOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
 
 #pragma endregion //Collectibles & Health
 

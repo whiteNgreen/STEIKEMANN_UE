@@ -10,7 +10,7 @@
 #include "Collectible.generated.h"
 
 UENUM()
-enum class ECollectible : uint8
+enum class ECollectibleType : uint8
 {
 	Common,
 	Health,
@@ -37,7 +37,7 @@ public:
 		class USphereComponent* Sphere{ nullptr };
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Type")
-		ECollectible CollectibleType;
+		ECollectibleType CollectibleType;
 
 	FGameplayTagContainer GTagContainer;
 	void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override { TagContainer = GTagContainer; }
