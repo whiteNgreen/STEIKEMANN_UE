@@ -4,3 +4,4 @@
 #include "../Interfaces/AttackInterface.h"
 
 // Add default functionality here for any IAttackInterface functions that are not pure virtual.
+

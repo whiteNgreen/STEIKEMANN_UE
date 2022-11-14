@@ -102,7 +102,7 @@ public:
 	*	With respect to the specific handle it should use */
 	void WaitBeforeNewDamage(FTimerHandle TimerHandle, float Time);	
 	
-	void CanBeAttacked() override;
+	bool CanBeAttacked() override;
 
 	void Do_SmackAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override;	// Getting SmackAttacked
 	void Receive_SmackAttack_Pure(const FVector& Direction, const float& Strength) override;

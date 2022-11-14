@@ -27,7 +27,7 @@ void ASmallEnemy::BeginPlay()
 	*/
 	//Enemy = &Tag_EnemyAubergineDoggo;
 	//GameplayTags.AddTag(GetTag_EnemyAubergineDoggo());
-	GameplayTags.AddTag(TAG_AubergineDoggo());
+	GameplayTags.AddTag(Tag::AubergineDoggo());
 }
 
 // Called every frame
@@ -141,8 +141,9 @@ void ASmallEnemy::UnHookedPure()
 	Execute_UnHooked(this);
 }
 
-void ASmallEnemy::CanBeAttacked()
+bool ASmallEnemy::CanBeAttacked()
 {
+	return false;
 }
 
 void ASmallEnemy::Do_SmackAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor)

@@ -133,7 +133,7 @@ void ASteikemannCharacter::BeginPlay()
 	/*
 	* Adding GameplayTags to the GameplayTagsContainer
 	*/
-	GameplayTags.AddTag(TAG_Player());
+	GameplayTags.AddTag(Tag::Player());
 	mFocusPoints.Empty();
 }
 
@@ -182,6 +182,11 @@ void ASteikemannCharacter::NS_Land_Implementation(const FHitResult& Hit)
 void ASteikemannCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	/* SHOW COLLECTIBLES */
+	GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Red, FString::Printf(TEXT("Common : %i"), CollectibleCommon));
+	GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Red, FString::Printf(TEXT("CorruptionCore : %i"), CollectibleCorruptionCore));
+	GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Red, FString::Printf(TEXT("Health : %i"), Health), true, FVector2D(3));
 
 	/* Rotate Inputvector to match the playercontroller */
 	{
@@ -279,6 +284,10 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	PreBasicAttackMoveCharacter(DeltaTime);
 	SmackAttackMoveCharacter(DeltaTime);
 	ScoopAttackMoveCharacter(DeltaTime);
+	// Hack method of forcing camera to not freak out during attack movements
+	if (bPreBasicAttackMoveCharacter || bSmackAttackMoveCharacter || bScoopAttackMoveCharacter) {	
+		CameraBoom->bDoCollisionTest = false;
+	} else { CameraBoom->bDoCollisionTest = true; }
 }
 
 // Called to bind functionality to input
@@ -437,12 +446,12 @@ void ASteikemannCharacter::RightTriggerClick()
 
 			/* Grappling to Enemy/Dynamic Target */
 			//if (GrappledTags.HasTag(Tag_GrappleTarget_Dynamic))	// Burde bruke denne taggen på fiendene
-			if (GrappledTags.HasTag(TAG_AubergineDoggo()))		// Også spesifisere videre med fiende type
+			if (GrappledTags.HasTag(Tag::AubergineDoggo()))		// Også spesifisere videre med fiende type
 			{
 				bGrapplingDynamicTarget = true;
 			}
 			/* Grappling to Static Target */
-			else if (GrappledTags.HasTag(TAG_GrappleTarget_Static()))
+			else if (GrappledTags.HasTag(Tag::GrappleTarget_Static()))
 			{
 				bGrapplingStaticTarget = true;
 			}
@@ -495,12 +504,12 @@ void ASteikemannCharacter::Start_GrappleHook()
 
 	/* Grappling to Enemy/Dynamic Target */
 	//if (GrappledTags.HasTag(Tag_GrappleTarget_Dynamic))	// Burde bruke denne taggen på fiendene
-	if (GrappledTags.HasTag(TAG_AubergineDoggo()))		// Også spesifisere videre med fiende type
+	if (GrappledTags.HasTag(Tag::AubergineDoggo()))		// Også spesifisere videre med fiende type
 	{
 		GrappleInterface->HookedPure(GetActorLocation());
 	}
 	/* Grappling to Static Target */
-	else if (GrappledTags.HasTag(TAG_GrappleTarget_Static()))
+	else if (GrappledTags.HasTag(Tag::GrappleTarget_Static()))
 	{
 		Launch_GrappleHook();
 		/* Reset double jump */
@@ -1122,7 +1131,7 @@ void ASteikemannCharacter::CheckIfEnemyBeneath(const FHitResult& Hit)
 		FGameplayTagContainer Container;
 		Interface->GetOwnedGameplayTags(Container);
 		
-		if (Container.HasTagExact(TAG_AubergineDoggo()))
+		if (Container.HasTagExact(Tag::AubergineDoggo()))
 		{
 			if (CheckDistanceToEnemy(Hit))
 			{
@@ -1257,6 +1266,29 @@ void ASteikemannCharacter::Stop_CrouchSliding()
 void ASteikemannCharacter::Reset_CrouchSliding()
 {
 	bCanCrouchSlide = true;
+}
+
+void ASteikemannCharacter::ReceiveCollectible(ECollectible type)
+{
+	switch (type)
+	{
+	case ECollectible::Common:
+		CollectibleCommon++;
+		break;
+	case ECollectible::Health:
+		GainHealth(1);
+		break;
+	case ECollectible::CorruptionCore:
+		CollectibleCorruptionCore++;
+		break;
+	default:
+		break;
+	}
+}
+
+void ASteikemannCharacter::GainHealth(int amount)
+{
+	Health = FMath::Clamp(Health += amount, 0, 3);
 }
 
 
@@ -1796,8 +1828,9 @@ bool ASteikemannCharacter::IsGrappling() const
 }
 
 
-void ASteikemannCharacter::CanBeAttacked()
+bool ASteikemannCharacter::CanBeAttacked()
 {
+	return false;
 }
 
 void ASteikemannCharacter::PreBasicAttackMoveCharacter(float DeltaTime)
@@ -1988,35 +2021,51 @@ void ASteikemannCharacter::OnAttackColliderBeginOverlap(UPrimitiveComponent* Ove
 {
 	if (OtherActor != this)
 	{
+		IAttackInterface* IAttack = Cast<IAttackInterface>(OtherActor);
+		IGameplayTagAssetInterface* ITag = Cast<IGameplayTagAssetInterface>(OtherActor);
+		if (!ITag || !IAttack) { return; }
+
+		/* Get gameplay tags */
+		FGameplayTagContainer TCon;	
+		ITag->GetOwnedGameplayTags(TCon);
+		
+		/* Attacking a corruption core */
+		if (TCon.HasTag(Tag::CorruptionCore()))
+		{
+			EAttackType AType;
+			if (OverlappedComp == AttackCollider) { AType = EAttackType::SmackAttack; }
+			if (OverlappedComp == GroundPoundCollider) { AType = EAttackType::GroundPound; }
+			Gen_Attack(IAttack, OtherActor, AType);
+		}
+
+
 		/* Smack attack collider */
 		if (OverlappedComp == AttackCollider)
 		{
-			IAttackInterface* Interface = Cast<IAttackInterface>(OtherActor);
-			if (Interface) {
-				if (bIsSmackAttacking)
-				{
-					Do_SmackAttack_Pure(Interface, OtherActor);
-				}
-				else /*if (bIsScoopAttacking)*/
-				{
-					Do_ScoopAttack_Pure(Interface, OtherActor);
-				}
+			//IAttackInterface* Interface = Cast<IAttackInterface>(OtherActor);
+			if (bIsSmackAttacking){
+				Do_SmackAttack_Pure(IAttack, OtherActor);
 			}
-
-
+			else { /*if (bIsScoopAttacking)*/
+				Do_ScoopAttack_Pure(IAttack, OtherActor);
+			}
 		}
 
 		/* GroundPound collision */
 		else if (OverlappedComp == GroundPoundCollider)
 		{
-			IAttackInterface* Interface = Cast<IAttackInterface>(OtherActor);
-			if (Interface) {
-				Do_GroundPound_Pure(Interface, OtherActor);
-			}
+			Do_GroundPound_Pure(IAttack, OtherActor);
 		}
 	}
 }
 
+void ASteikemannCharacter::Gen_Attack(IAttackInterface* OtherInterface, AActor* OtherActor, EAttackType& AType)
+{
+	FVector Direction{ OtherActor->GetActorLocation() - GetActorLocation() };
+	Direction = Direction.GetSafeNormal2D();
+
+	OtherInterface->Gen_ReceiveAttack(Direction, SmackAttackStrength, AType);
+}
 
 void ASteikemannCharacter::Do_SmackAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor)
 {

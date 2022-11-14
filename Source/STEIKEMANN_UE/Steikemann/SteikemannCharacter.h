@@ -12,6 +12,7 @@
 #include "SteikeAnimInstance.h"
 #include "GameplayTagAssetInterface.h"
 //#include "../GameplayTags.h"
+#include "../StaticActors/Collectible.h"
 
 #include "SteikemannCharacter.generated.h"
 
@@ -387,6 +388,21 @@ public:/* ------------------- Basic Movement ------------------- */
 
 #pragma endregion //Crouch	
 
+#pragma region Collectibles & Health
+
+	void ReceiveCollectible(ECollectible type);
+
+	UPROPERTY(BlueprintReadWrite, Category = "Collectibles")
+		int CollectibleCommon{};
+	UPROPERTY(BlueprintReadWrite, Category = "Collectibles")
+		int CollectibleCorruptionCore{};
+
+	UPROPERTY(BlueprintReadWrite, Category = "Health")
+		int Health{ 3 };
+
+	void GainHealth(int amount);
+
+#pragma endregion //Collectibles & Health
 
 /* ---------------------------------- ON WALL ----------------------------------- */
 #pragma region OnWall
@@ -640,7 +656,7 @@ public:
 /* ----------------------------------------- ATTACKS ----------------------------------------------- */
 #pragma region Attacks
 
-	void CanBeAttacked() override;
+	bool CanBeAttacked() override;
 
 	FVector AttackDirection{};
 
@@ -677,7 +693,7 @@ public:
 	UFUNCTION()
 		void OnAttackColliderBeginOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
-
+	void Gen_Attack(IAttackInterface* OtherInterface, AActor* OtherActor, EAttackType& AType) override;
 
 	/* ---- Moving Character During Shared Basic Attack Anticipation ---- */
 	/* How far the character will move forward during the Shared Basic Attack Anticipation. Before the attack type is decided */

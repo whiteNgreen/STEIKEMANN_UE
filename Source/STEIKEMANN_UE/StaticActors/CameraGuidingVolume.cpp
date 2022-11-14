@@ -36,7 +36,7 @@ void ACameraGuidingVolume::BeginPlay()
 	CameraVolume->OnComponentBeginOverlap.AddDynamic(this, &ACameraGuidingVolume::OnVolumeBeginOverlap);
 	CameraVolume->OnComponentEndOverlap.AddDynamic(this, &ACameraGuidingVolume::OnVolumeEndOverlap);
 	
-	GameplayTags.AddTag(TAG_CameraVolume());
+	GameplayTags.AddTag(Tag::CameraVolume());
 	//GameplayTags.AddTag(FGameplayTag::RequestGameplayTag("CameraVolume"));
 }
 

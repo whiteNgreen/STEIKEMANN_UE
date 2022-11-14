@@ -44,15 +44,15 @@ struct FocusPoint
 
 	/* Priority of Focus Point among other potential Focus Points 
 	 * Priority of 0 will ignore every other volume, if two priority 0's overlap, only the first entered will be acknowledged */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusPoint", meta = (UIMin = "0", DisplayPriority = "0"))
+	UPROPERTY(EditInstanceOnly, Category = "FocusPoint", meta = (UIMin = "0", DisplayPriority = "0"))
 		int Priority;
 
-	UPROPERTY(EditAnywhere, Category = "FocusPoint", meta = (DisplayPriority = "1"))
+	UPROPERTY(EditInstanceOnly, Category = "FocusPoint", meta = (DisplayPriority = "1"))
 		EPointType Type;
 
 	
 	/* -------------------------------- LOOKAT_Absolute & CAMERA_Absolute -------------------------------- */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusPoint", meta = (UIMin = "0.0", UIMax = "1.0",
+	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "FocusPoint", meta = (UIMin = "0.0", UIMax = "1.0",
 		EditCondition = "Type == EPointType::LOOKAT_Absolute || Type == EPointType::CAMERA_Absolute", EditConditionHides))
 		float LerpSpeed{ 0.18f };
 	
@@ -64,22 +64,22 @@ struct FocusPoint
 	 * 1 is directly towards the target, 
 	 * 0.5 is 90 degrees 
 	 * and 0 in the opposite direction, essentially 0 effect */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusPoint", meta = (UIMin = "0.0", UIMax = "1.0",
+	UPROPERTY(EditInstanceOnly, Category = "FocusPoint", meta = (UIMin = "0.0", UIMax = "1.0",
 		EditCondition = "Type == EPointType::LOOKAT_Lean || Type == EPointType::CAMERA_Lean", EditConditionHides))
 		float LeanAmount{ 1.0f };
 	/* Similar to the LeanAmount, but regarding the point the lean should start to relax
 	 * NB! Should ALWAYS be lower than the lean amount */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusPoint", meta = (UIMin = "0.0", UIMax = "1.0",
+	UPROPERTY(EditInstanceOnly, Category = "FocusPoint", meta = (UIMin = "0.0", UIMax = "1.0",
 		EditCondition = "Type == EPointType::LOOKAT_Lean || Type == EPointType::CAMERA_Lean", EditConditionHides))
 		float LeanRelax{ 0.8f };
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusPoint", meta = (UIMin = "0.0", UIMax = "5.0",
+	UPROPERTY(EditInstanceOnly, Category = "FocusPoint", meta = (UIMin = "0.0", UIMax = "4.0",
 		EditCondition = "Type == EPointType::LOOKAT_Lean || Type == EPointType::CAMERA_Lean", EditConditionHides))
 		float LeanSpeed{ 0.6f };
 
 	/* If the lean strength will be stronger the further away the camera is rotated from the target, 
 	 * and get weaker the closer it gets to the desired rotation */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusPoint", meta = (UIMin = "1.0", UIMax = "5.0",
+	UPROPERTY(EditInstanceOnly, Category = "FocusPoint", meta = (UIMin = "1.0", UIMax = "5.0",
 		EditCondition = "Type == EPointType::LOOKAT_Lean || Type == EPointType::CAMERA_Lean", EditConditionHides))
 		float LeanMultiplier{ 2.f };
 };
