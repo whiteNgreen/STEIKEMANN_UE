@@ -23,6 +23,19 @@ class UNiagaraSystem;
 class UNiagaraComponent;
 class USoundBase;
 
+//USTRUCT()
+//struct Hazard
+//{
+//	GENERATED_USTRUCT_BODY()
+//
+//	Hazard(AActor* hazard, bool b) {
+//		HazardActor = hazard;
+//		bWithinHazard = b;
+//	}
+//	~Hazard();
+//	AActor* HazardActor{ nullptr };
+//	bool bWithinHazard{};
+//};
 
 UCLASS()
 class STEIKEMANN_UE_API ASteikemannCharacter : public ACharacter, 
@@ -397,13 +410,32 @@ public:/* ------------------- Basic Movement ------------------- */
 	UPROPERTY(BlueprintReadWrite, Category = "Collectibles")
 		int CollectibleCorruptionCore{};
 
-	UPROPERTY(BlueprintReadWrite, Category = "Health")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health & Damage", meta = (UIMin = "0", UIMax = "10"))
 		int Health{ 3 };
+	int MaxHealth{};
+
+	FTimerHandle THDamageBuffer;
+	bool bPlayerCanTakeDamage{ true };
+	/* Time player is invincible after taking damage */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health & Damage", meta = (UIMin = "0.0", UIMax = "2.0"))
+		float DamageInvincibilityTime{ 1.f };
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health & Damage", meta = (UIMin = "0.0", UIMax = "4000.0"))
+		float SelfDamageLaunchStrength{ 1000.f };
 
 	void GainHealth(int amount);
+	//void PTakeDamage(int damage, FVector launchdirection);
+	void PTakeDamage(int damage, AActor* otheractor, int i = 0);
+	
+	void Death();
+
+	/* Array of hazard actors whose collision the player is still within */
+	TArray<AActor*> CloseHazards;
 
 	UFUNCTION()
 		void OnCapsuleComponentBeginOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	UFUNCTION()
+		void OnCapsuleComponentEndOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
 
 #pragma endregion //Collectibles & Health

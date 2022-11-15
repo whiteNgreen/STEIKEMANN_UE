@@ -85,12 +85,11 @@ void ASteikemannCharacter::BeginPlay()
 	Super::BeginPlay();
 
 	MovementComponent = Cast<USteikemannCharMovementComponent>(GetCharacterMovement());
-
 	PlayerController = Cast<APlayerController>(GetController());
-
 	Base_CameraBoomLength = CameraBoom->TargetArmLength;
-
 	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &ASteikemannCharacter::OnCapsuleComponentBeginOverlap);
+	GetCapsuleComponent()->OnComponentEndOverlap.AddDynamic(this, &ASteikemannCharacter::OnCapsuleComponentEndOverlap);
+	MaxHealth = Health;
 
 	/* Creating Niagara Compnents */
 	{
@@ -1290,7 +1289,43 @@ void ASteikemannCharacter::ReceiveCollectible(ECollectibleType type)
 
 void ASteikemannCharacter::GainHealth(int amount)
 {
-	Health = FMath::Clamp(Health += amount, 0, 3);
+	Health = FMath::Clamp(Health += amount, 0, MaxHealth);
+}
+
+//void ASteikemannCharacter::PTakeDamage(int damage, FVector launchdirection)
+void ASteikemannCharacter::PTakeDamage(int damage, AActor* otheractor, int i/* = 0*/)
+{
+	bPlayerCanTakeDamage = false;
+	Health = FMath::Clamp(Health -= damage, 0, MaxHealth);
+	if (Health == 0) {
+		Death();
+	}
+
+	/* Launch player */
+	FVector direction = (GetActorLocation() - otheractor->GetActorLocation()).GetSafeNormal();
+	direction = (direction + FVector::UpVector).GetSafeNormal();
+	//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (direction * 1000.f), FColor::Red, true, 0, 0, 5.f);
+
+	FTimerHandle TH;
+	GetWorldTimerManager().SetTimer(TH, 
+		[this, otheractor, i]()
+		{ 
+		for (auto& it : CloseHazards) {
+			PTakeDamage(1, otheractor, i+1);
+			return;
+		}
+		bPlayerCanTakeDamage = true; 
+		}, 
+		DamageInvincibilityTime, false);
+
+	/* Damage launch */
+	GetMoveComponent()->Velocity *= 0.f;
+	GetMoveComponent()->AddImpulse(direction * SelfDamageLaunchStrength, true);
+}
+
+void ASteikemannCharacter::Death()
+{
+	PRINTLONG("POTTITT IS DEAD");
 }
 
 void ASteikemannCharacter::OnCapsuleComponentBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
@@ -1300,11 +1335,33 @@ void ASteikemannCharacter::OnCapsuleComponentBeginOverlap(UPrimitiveComponent* O
 
 	FGameplayTagContainer con;
 	tag->GetOwnedGameplayTags(con);
+	
 	/* Collision with collectible */
 	if (con.HasTag(Tag::Collectible())) {
 		ACollectible* collectible = Cast<ACollectible>(OtherActor);
 		ReceiveCollectible(collectible->CollectibleType);
 		collectible->Destruction();
+	}
+
+	/* Environmental Hazard collision */
+	if (con.HasTag(Tag::EnvironmentHazard())) {
+		CloseHazards.Add(OtherActor);
+		if (bPlayerCanTakeDamage)
+			PTakeDamage(1, OtherActor);
+	}
+}
+
+void ASteikemannCharacter::OnCapsuleComponentEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	IGameplayTagAssetInterface* tag = Cast<IGameplayTagAssetInterface>(OtherActor);
+	if (!tag) { return; }
+
+	FGameplayTagContainer con;
+	tag->GetOwnedGameplayTags(con);
+
+	/* Environmental Hazard END collision */
+	if (con.HasTag(Tag::EnvironmentHazard())) {
+		CloseHazards.Remove(OtherActor);
 	}
 }
 
