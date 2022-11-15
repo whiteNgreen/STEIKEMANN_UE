@@ -13,20 +13,9 @@ ACameraGuidingVolume::ACameraGuidingVolume()
 	PrimaryActorTick.bCanEverTick = true;
 	bRunConstructionScriptOnDrag = true;
 
-	Root = CreateDefaultSubobject<USceneComponent>(TEXT("ROOT"));
-	RootComponent = Root;
-
 	CameraVolume = CreateDefaultSubobject<UBoxComponent>(TEXT("Root Volume"));
 	CameraVolume->SetupAttachment(Root);
-
-	//PointFocus = CreateDefaultSubobject<UBoxComponent>(TEXT("PointFocus"));
-	//PointFocus->SetupAttachment(RootComponent);
-
-	//SplineFocus = CreateDefaultSubobject<USplineComponent>(TEXT("SplineFocus"));
-	//SplineFocus->SetupAttachment(RootComponent);
 }
-
-
 
 // Called when the game starts or when spawned
 void ACameraGuidingVolume::BeginPlay()
@@ -36,8 +25,7 @@ void ACameraGuidingVolume::BeginPlay()
 	CameraVolume->OnComponentBeginOverlap.AddDynamic(this, &ACameraGuidingVolume::OnVolumeBeginOverlap);
 	CameraVolume->OnComponentEndOverlap.AddDynamic(this, &ACameraGuidingVolume::OnVolumeEndOverlap);
 	
-	GameplayTags.AddTag(Tag::CameraVolume());
-	//GameplayTags.AddTag(FGameplayTag::RequestGameplayTag("CameraVolume"));
+	GTagContainer.AddTag(Tag::CameraVolume());
 }
 
 // Called every frame

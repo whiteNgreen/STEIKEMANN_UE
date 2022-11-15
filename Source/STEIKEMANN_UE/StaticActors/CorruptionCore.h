@@ -4,16 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-
-#include "../STEIKEMANN_UE.h"
+#include "Base/BaseStaticActor.h"
 #include "../Interfaces/AttackInterface.h"
 
 
 #include "CorruptionCore.generated.h"
 
 UCLASS()
-class ACorruptionCore : public AActor,
-	public IGameplayTagAssetInterface,
+class ACorruptionCore : public ABaseStaticActor,
 	public IAttackInterface
 {
 	GENERATED_BODY()
@@ -21,9 +19,6 @@ class ACorruptionCore : public AActor,
 public:	
 	// Sets default values for this actor's properties
 	ACorruptionCore();
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
-		USceneComponent* Root{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
 		UStaticMeshComponent* Mesh{ nullptr };
