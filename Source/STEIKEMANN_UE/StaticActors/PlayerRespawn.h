@@ -3,35 +3,41 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
 #include "Base/BaseStaticActor.h"
+#include "PlayerRespawn.generated.h"
 
-#include "EnvironmentalHazard.generated.h"
-
+/**
+ * 
+ */
 UCLASS()
-class STEIKEMANN_UE_API AEnvironmentalHazard : public ABaseStaticActor
+class STEIKEMANN_UE_API APlayerRespawn : public ABaseStaticActor
 {
 	GENERATED_BODY()
-	
-public:	
-	// Sets default values for this actor's properties
-	AEnvironmentalHazard();
+
+public:
+	APlayerRespawn();
+
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
 		UStaticMeshComponent* Mesh{ nullptr };
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Collision")
 		UBoxComponent* BoxCollider{ nullptr };
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Collision")
 		USphereComponent* SphereCollider{ nullptr };
 
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "SpawnPoint")
+		UBoxComponent* SpawnPoint{ nullptr };
+		
+	FTransform GetSpawnTransform();
+
 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-public:	
+public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-
 };

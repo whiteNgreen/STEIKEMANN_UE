@@ -7,8 +7,6 @@
 // Sets default values
 AGrappleTarget::AGrappleTarget()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
 
 }
 
@@ -17,7 +15,7 @@ void AGrappleTarget::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	TagsContainer.AddTag(Tag::GrappleTarget_Static());
+	GTagContainer.AddTag(Tag::GrappleTarget_Static());
 }
 
 // Called every frame

@@ -11,13 +11,8 @@ ACollectible::ACollectible()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
-	RootComponent = Root;
-
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
 	Mesh->SetupAttachment(Root);
-	
-
 	Sphere = CreateDefaultSubobject<USphereComponent>(TEXT("Sphere"));
 	Sphere->SetupAttachment(Root);
 }
@@ -29,13 +24,12 @@ void ACollectible::BeginPlay()
 	Super::BeginPlay();
 	
 	GTagContainer.AddTag(Tag::Collectible());
-
-	GetWorldTimerManager().SetTimer(FTHInit, this, &ACollectible::Init, InitTimer);
+	//GetWorldTimerManager().SetTimer(FTHInit, this, &ACollectible::Init, InitTimer);
 }
-void ACollectible::Init()
-{
+//void ACollectible::Init()
+//{
 	//Sphere->OnComponentBeginOverlap.AddDynamic(this, &ACollectible::OnCollectibleBeginOverlap);
-}
+//}
 
 // Called every frame
 void ACollectible::Tick(float DeltaTime)

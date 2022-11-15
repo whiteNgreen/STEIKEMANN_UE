@@ -11,8 +11,8 @@
 #include "Camera/CameraShakeBase.h"
 #include "SteikeAnimInstance.h"
 #include "GameplayTagAssetInterface.h"
-//#include "../GameplayTags.h"
 #include "../StaticActors/Collectible.h"
+
 
 #include "SteikemannCharacter.generated.h"
 
@@ -23,19 +23,6 @@ class UNiagaraSystem;
 class UNiagaraComponent;
 class USoundBase;
 
-//USTRUCT()
-//struct Hazard
-//{
-//	GENERATED_USTRUCT_BODY()
-//
-//	Hazard(AActor* hazard, bool b) {
-//		HazardActor = hazard;
-//		bWithinHazard = b;
-//	}
-//	~Hazard();
-//	AActor* HazardActor{ nullptr };
-//	bool bWithinHazard{};
-//};
 
 UCLASS()
 class STEIKEMANN_UE_API ASteikemannCharacter : public ACharacter, 
@@ -410,7 +397,16 @@ public:/* ------------------- Basic Movement ------------------- */
 	UPROPERTY(BlueprintReadWrite, Category = "Collectibles")
 		int CollectibleCorruptionCore{};
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health & Damage", meta = (UIMin = "0", UIMax = "10"))
+	/* Array of hazard actors whose collision the player is still within */
+	TArray<AActor*> CloseHazards;
+
+	UFUNCTION()
+		void OnCapsuleComponentBeginOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	UFUNCTION()
+		void OnCapsuleComponentEndOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health & Damage", meta = (UIMin = "1", UIMax = "10"))
 		int Health{ 3 };
 	int MaxHealth{};
 
@@ -427,16 +423,16 @@ public:/* ------------------- Basic Movement ------------------- */
 	//void PTakeDamage(int damage, FVector launchdirection);
 	void PTakeDamage(int damage, AActor* otheractor, int i = 0);
 	
+	bool bIsDead{};
+	bool IsDead() const { return bIsDead; }
+
 	void Death();
 
-	/* Array of hazard actors whose collision the player is still within */
-	TArray<AActor*> CloseHazards;
-
-	UFUNCTION()
-		void OnCapsuleComponentBeginOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
-	UFUNCTION()
-		void OnCapsuleComponentEndOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
-
+	FTransform StartTransform;
+	class APlayerRespawn* Checkpoint{ nullptr };
+	void Respawn();
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health & Damage", meta = (UIMin = "0.0", UIMax = "4000.0"))
+		float RespawnTimer{ 2.f };
 
 #pragma endregion //Collectibles & Health
 

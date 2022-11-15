@@ -17,6 +17,8 @@ namespace Tag {
 
 	static FGameplayTag CameraVolume() { return FGameplayTag::RequestGameplayTag("CameraVolume"); }
 
+	static FGameplayTag PlayerRespawn() { return FGameplayTag::RequestGameplayTag("PlayerRespawn"); }
+	static FGameplayTag DeathZone() { return FGameplayTag::RequestGameplayTag("DeathZone"); }
 
 	static FGameplayTag Environment() { return FGameplayTag::RequestGameplayTag("Environment"); }
 	static FGameplayTag CorruptionCore() { return FGameplayTag::RequestGameplayTag("Environment.CorruptionCore"); }
