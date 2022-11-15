@@ -6,13 +6,18 @@
 #include "GameFramework/Character.h"
 #include "../Interfaces/GrappleTargetInterface.h"
 #include "../Interfaces/AttackInterface.h"
+#include "../Interfaces/CameraGuideInterface.h"
 #include "../DebugMacros.h"
 #include "Camera/CameraShakeBase.h"
 #include "SteikeAnimInstance.h"
+#include "GameplayTagAssetInterface.h"
+//#include "../GameplayTags.h"
+#include "../StaticActors/Collectible.h"
 
 #include "SteikemannCharacter.generated.h"
 
 #define GRAPPLE_HOOK ECC_GameTraceChannel1
+#define ECC_PogoCollision ECC_GameTraceChannel2
 
 class UNiagaraSystem;
 class UNiagaraComponent;
@@ -22,7 +27,9 @@ class USoundBase;
 UCLASS()
 class STEIKEMANN_UE_API ASteikemannCharacter : public ACharacter, 
 	public IGrappleTargetInterface,
-	public IAttackInterface
+	public IAttackInterface,
+	public IGameplayTagAssetInterface,
+	public ICameraGuideInterface
 {
 	GENERATED_BODY()
 
@@ -38,13 +45,55 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
 		class UPoseableMeshComponent* GrappleHookMesh{ nullptr };
 
+	/* testing */
+	//FGameplayTag Tag_Player;
+
+	FGameplayTag Tag_Enemy;
+	FGameplayTag Tag_EnemyAubergineDoggo;
+	FGameplayTag Tag_GrappleTarget;
+	FGameplayTag Tag_GrappleTarget_Static;
+	FGameplayTag Tag_GrappleTarget_Dynamic;
+
+
+protected:
+	// Called when the game starts or when spawned
+	virtual void BeginPlay() override;
+
+public:
+	// Called every frame
+	virtual void Tick(float DeltaTime) override;
+
+	// Called to bind functionality to input
+	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	/* The Raw InputVector */
+	FVector InputVectorRaw;
+	/* Input vector rotated to match the playercontrollers rotation */
+	FVector InputVector;
+
 
 	TWeakObjectPtr<class USteikemannCharMovementComponent> MovementComponent;
+	/* Returns the custom MovementComponent. A TWeakPtr<class USteikemannCharMovementComponent> */
+	TWeakObjectPtr<class USteikemannCharMovementComponent> GetMoveComponent() const { return MovementComponent; }
 
 	USteikeAnimInstance* SteikeAnimInstance{ nullptr };
 
 	void AssignAnimInstance(USteikeAnimInstance* AnimInstance) { SteikeAnimInstance = AnimInstance; }
 	USteikeAnimInstance* GetAnimInstance() const { return SteikeAnimInstance; }
+
+	APlayerController* PlayerController{ nullptr };
+	APlayerController* GetPlayerController() const { return PlayerController; }
+
+	/*
+		GameplayTags
+	*/
+	
+	FGameplayTagContainer GameplayTags;
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GameplayTags")
+		//FGameplayTag* Player;
+
+	UFUNCTION(BlueprintCallable, Category = GameplayTags)
+		virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override { TagContainer = GameplayTags; return; }
 
 #pragma region Audio
 	UPROPERTY(EditAnywhere, Category = "Audio")
@@ -52,6 +101,8 @@ public:
 
 
 #pragma endregion //Audio
+
+
 
 #pragma region ParticleEffects
 
@@ -102,21 +153,6 @@ public:
 #pragma endregion //ParticleEffects
 
 
-protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
-
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
-	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
-	/* The Raw InputVector */
-	FVector InputVectorRaw;
-	/* Input vector rotated to match the playercontrollers rotation */
-	FVector InputVector;
 
 #pragma region Slipping
 
@@ -138,6 +174,52 @@ public:
 	UFUNCTION(BlueprintCallable)
 		void PlayCameraShake(TSubclassOf<UCameraShakeBase> shake, float falloff);
 
+#pragma region CameraGuide
+	
+
+	//UPROPERTY(EditAnywhere, Category = "Camera", meta = (UIMin = "0", UIMax = "1"))
+	float CameraGuide_Pitch{ 0.f };
+
+	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "500"))
+			float CameraGuide_Pitch_MIN		UMETA(DisplayName = "Pitch At Min") { 100.f };
+
+	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "5000"))
+			float CameraGuide_Pitch_MAX		UMETA(DisplayName = "Pitch At Max") { 500.f };
+
+	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "2"))
+			float CameraGuide_ZdiffMultiplier		UMETA(DisplayName = "Zdiff Multiplier") { 1.f };
+			
+	/* Maximum distance for pitch adjustment */
+	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "10000"))
+			float CameraGuide_Pitch_DistanceMAX		UMETA(DisplayName = "Max Distance") { 2000.f };
+
+	/* Minimum distance for pitch adjustment */
+	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "10000"))
+			float CameraGuide_Pitch_DistanceMIN		UMETA(DisplayName = "Min Distance") { 100.f };
+
+	EPointType CurrentCameraGuide;
+	EPointType PreviousCameraGuide;
+	float Base_CameraBoomLength;
+	bool bCamLerpBackToPosition{};
+
+	float CameraGuideAlpha{};
+
+	UPROPERTY(EditAnywhere, Category = "Camera|Default", meta = (UIMin = "0", UIMax = "1"))
+		float Default_CameraGuideAlpha{ 0.1f };
+
+	/* ---- GUIDING CAMERA -----
+	* Every type of automatic camera guide interaction within one function
+	* Volume
+	* Automatic during movement
+	* */
+	virtual void GuideCamera(float DeltaTime) override;
+	float Internal_SplineInputkey{};
+	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Spline", meta = (UIMin = "0", UIMax = "10"))
+		float SplineLerpSpeed{ 10.f };
+	virtual void SetSplineInputkey(const float SplineKey) override { Internal_SplineInputkey = SplineKey; }
+
+#pragma endregion //CameraGuide
+
 #pragma endregion //Camera
 
 #pragma region Basic_Movement
@@ -157,28 +239,44 @@ public:/* ------------------- Basic Movement ------------------- */
 		bool bJumping{};
 	UPROPERTY(BlueprintReadOnly)
 		bool bCanEdgeJump{};
-	UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
-		bool bAddJumpVelocity{};
-	/* How long the jump key can be held to add upwards velocity */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
-		float fJumpTimerMax UMETA(DisplayName = "JumpHoldTimer") { 0.2f };
-	UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
-		float fJumpTimer{};
+	//UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
+	//	bool bAddJumpVelocity{};
+	///* How long the jump key can be held to add upwards velocity */
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
+	//	float fJumpTimerMax UMETA(DisplayName = "JumpHoldTimer") { 0.2f };
+	//UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
+	//	float fJumpTimer{};
+
 	/* How long after walking off an edge the player is still allowed to jump */
 	UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump")
 		float PostEdge_JumpTimer_Length{ 0.3f };
 	float PostEdge_JumpTimer{};
-	bool bCanPostEdgeJump{};
+	bool bCanPostEdgeRegularJump{};
+
+	/* The angle from the Upwards axis the jump direction will go towards input */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump")
+		float DoubleJump_AngleFromUp{ 60.f };
+
+	/* What the jump strength will be multiplied by when double jumping */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump")
+		float DoubleJump_MultiplicationFactor{ 0.6f };
+
+	/* How long, post double jump, the character is held in the air (Z direction) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump")
+		float Jump_HeightHoldTimer{ 1.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump")
+		float JumpHeightHold_VelocityInterpSpeed{ 5.f };
 
 	void Landed(const FHitResult& Hit) override;
 
 	void Jump() override;
 	void StopJumping() override;
+	void JumpRelease();
 	void CheckJumpInput(float DeltaTime) override;
 
-	/* Animation activation */
 	UFUNCTION(BlueprintImplementableEvent)
-		void Activate_Jump();
+		/* Animation activation */
+		void Anim_Activate_Jump();
 
 	bool CanDoubleJump() const;
 	bool IsJumping() const;
@@ -186,15 +284,63 @@ public:/* ------------------- Basic Movement ------------------- */
 	bool IsFalling() const;
 	bool IsOnGround() const;
 
+	//bool CanJump() const override;
+
+	/* 
+	 * -------------------- New Jump : Cartoony --------------------------- 
+	*/
+	bool bJumpClick{};
+
+	/* The strength of the Jump */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump|NewJump")
+		float JumpStrength{ 2500.f };
+
+	/* If the jump button is released, how fast will the character slow down? */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump|NewJump")
+		float JumpPrematureSlowDownTime{ 0.2f };
+
+	/* How far through the jump, percentage wise, can the player go. Before releasing the button and still get the full jump height? */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump|NewJump")
+		float JumpFullPercentage{ 0.8f };
+
+	/* How long should the character stay at max height? */
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump|NewJump")
+		//float Jump_TopFloatTime{ 1.f };
+
+
+
+	/*
+	* -------------------- Player Pogo Jumping on enemy --------------------------
+	*/
+	/* The strength of the pogo bounce */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce")
+		float PogoBounceStrength{ 2000.f };
+
+	/* Extra contingency length checked between the player and the enemy they are falling towards, before the PogoBounce is called */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce")
+		float PogoContingency{ 50.f };
+
+
+	void CheckIfEnemyBeneath(const FHitResult& Hit);
+	UFUNCTION(BlueprintCallable)
+		bool CheckDistanceToEnemy(const FHitResult& Hit);
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce")
+		float PogoInputDirectionMultiplier{ 0.1f };
+
+	UFUNCTION(BlueprintCallable)
+		void PogoBounce(const FVector& EnemyLocation);
 
 #pragma endregion //Basic_Movement
 	
 	/* Includes all actions related to the crouch button */
 #pragma region Crouch		
-
+	
 	bool bPressedCrouch{};
 	bool bIsCrouchWalking{};
 	bool IsCrouchWalking() const { return bIsCrouchWalking; }
+	bool IsCrouching() const { return bIsCrouched; }
 
 	/* Regular Crouch */
 	/* Crouch slide will only start if the player is walking with a speed above this */
@@ -203,16 +349,24 @@ public:/* ------------------- Basic Movement ------------------- */
 	void Start_Crouch();
 	void Stop_Crouch();
 
-	/* Crouch Slide */
+	/* -------------- SLIDE ------------- */
+	bool bPressedSlide{};
+	
+	void Click_Slide();
+	void UnClick_Slide();
+
 	/* How long will the crouch slide last */
 	UPROPERTY(EditAnywhere, Category = "Movement|Crouch")
 		float CrouchSlide_Time  UMETA(DisplayName = "Crouch Slide Time") { 0.5f };
+
 	/* How long before a new crouchslide can begin */
 	UPROPERTY(EditAnywhere, Category = "Movement|Crouch")
 		float Post_CrouchSlide_Time  UMETA(DisplayName = "Crouch Slide Wait Time") { 0.5f };
+
 	/* Initial CrouchSlide Speed */
 	UPROPERTY(EditAnywhere, Category = "Movement|Crouch")
 		float CrouchSlideSpeed{ 1000.f };
+
 	/* The End CrouchSlide Speed will be multiplied by this value */
 	UPROPERTY(EditAnywhere, Category = "Movement|Crouch")
 		float EndCrouchSlideSpeedMultiplier{ 0.5f };
@@ -228,19 +382,51 @@ public:/* ------------------- Basic Movement ------------------- */
 	void Stop_CrouchSliding();
 	void Reset_CrouchSliding();
 
+	/* CrouchJump && CrouchSlideJump */
+	bool CanCrouchJump()		const { return IsCrouching() && IsCrouchWalking(); }
+	bool CanCrouchSlideJump()	const { return IsCrouching() && IsCrouchSliding(); }
+
 #pragma endregion //Crouch	
 
+#pragma region Collectibles & Health
 
+	void ReceiveCollectible(ECollectibleType type);
+
+	UPROPERTY(BlueprintReadWrite, Category = "Collectibles")
+		int CollectibleCommon{};
+	UPROPERTY(BlueprintReadWrite, Category = "Collectibles")
+		int CollectibleCorruptionCore{};
+
+	UPROPERTY(BlueprintReadWrite, Category = "Health")
+		int Health{ 3 };
+
+	void GainHealth(int amount);
+
+	UFUNCTION()
+		void OnCapsuleComponentBeginOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+
+#pragma endregion //Collectibles & Health
+
+/* ---------------------------------- ON WALL ----------------------------------- */
 #pragma region OnWall
+
 	/* How far from the player walls will be detected */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall")
 		float WallDetectionRange		UMETA(DisplayName = "Wall Detection Range") { 200.f };
-	/* If the player is within this length from the wall, WallJump / WallSlide mechanics are enabled. Should NOT be lower then Wall Detection Range */
+	
+	/* If the player is within this length from the wall, WallJump / WallSlide mechanics are enabled. Should NOT be higher than Wall Detection Range */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall")
 		float WallJump_ActivationRange	UMETA(DisplayName = "Wall-Jump/Slide Activation Length") { 80.f };
+	
 	/* Activate ledgegrab if a wall + ledge is detected and the player is within this range */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall")
 		float LedgeGrab_ActivationRange		UMETA(DisplayName = " Ledgegrab Activation Length") { 120.f };
+
+	/* How far, including the capsule radius, should the character be from the wall during OnWall mechanics 
+	 * Functions more as a contingency */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall")
+		float OnWall_ExtraCharacterLengthFromWall UMETA(DisplayName = "Length from wall") { 10.f };
 
 	void Do_OnWallMechanics(float DeltaTime);
 
@@ -259,6 +445,8 @@ public:/* ------------------- Basic Movement ------------------- */
 	float InputDotProdToForward{};
 
 	void CalcAngleFromActorForwardToInput();
+
+	void ResetWallJumpAndLedgeGrab();
 
 	#pragma region Wall Jump
 		/* ------------------------ Wall Jump --------------------- */
@@ -280,6 +468,17 @@ public:/* ------------------- Basic Movement ------------------- */
 		FVector StickingSpot{};
 
 		void SetActorLocation_WallJump(float DeltaTime);
+
+		bool bPostWallJump{};
+		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall|Wall Jump")
+			float fPostWallJumpTimer{ 0.2f };
+
+		/* WallJump activation range on Jump, different from the passive activation range of On_Wall mechanics */
+		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall|Wall Jump")
+			float WallJump_JumpWallActivation{ 200.f };
+
+		bool Jump_DetectWall();
+		void WallJump_Reset();
 
 		/* Is currently sticking to a wall */
 		bool IsStickingToWall() const;
@@ -337,143 +536,106 @@ public:/* ------------------- Basic Movement ------------------- */
 #pragma endregion //OnWall
 
 
-	void ResetWallJumpAndLedgeGrab();
 
+
+	/* ----------------------- Actor Rotation Functions ---------------------------------- */
 	void ResetActorRotationPitchAndRoll(float DeltaTime);
-	void RotateActorYawToVector(float DeltaTime, FVector AimVector);
-	void RotateActorPitchToVector(float DeltaTime, FVector AimVector);
-		void RotateActorYawPitchToVector(float DeltaTime, FVector AimVector);	//Old
-	void RollActorTowardsLocation(float DeltaTime, FVector Point);
-
-	/* Returns the angle and direction*/
-	//float AngleBetweenVectors(const FVector& FirstVec, const FVector& SecondVec);
-
-#pragma region Bounce
-	/* ------------------------ Bounce --------------------- */
-
-	//UPROPERTY(BlueprintReadOnly, Category = "Movement|Bounce")
-	bool bBounceClick{};
-	bool bBounce{};
-
-	/* The max length player can activate bounce */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Bounce")
-		float BounceCheckLength{ 100.f };
-
-	void Bounce();
-	void Stop_Bounce();
-#pragma endregion //Bounce
-
-#pragma region Dash
-	/* ------------------------ Dash --------------------- */
-
-	bool bDashClick{};
-	bool bDash{};
-	uint8 DashCounter{ 1 };
-
-	FVector DashDirection{};
-
-	/* How long the pre dash action lasts */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Dash")
-		float Pre_DashTime{ 0.1f };
-	/* How long the dash action lasts */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Dash")
-		float DashTime{ 0.5f };
-	/* How far the character will dash */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Dash")
-		float DashLength{ 1000.f };
-
-	UFUNCTION(BlueprintImplementableEvent)
-		void Activate_Dash();
-
-	void Dash();
-	void Stop_Dash();
-
-	bool IsDashing() const;
-
-#pragma endregion //Dash
+	void RotateActorYawToVector(FVector AimVector, float DeltaTime = 0);
+	void RotateActorPitchToVector(FVector AimVector, float DeltaTime = 0);
+		void RotateActorYawPitchToVector(FVector AimVector, float DeltaTime = 0);	//Old
+	void RollActorTowardsLocation(FVector Point, float DeltaTime = 0);
 
 
+/* -------------------------------- GRAPPLEHOOK ----------------------------- */
 #pragma region GrappleHook
-public: /* ------------------------ Grapplehook --------------------- */
-		/*                     GrappleTargetInterface                 */
-	void Targeted() {}
+public: 
+	/* ------- GrappleTargetInterface ------ */
 	virtual void TargetedPure() override {}
 
-	void UnTargeted() {}
 	virtual void UnTargetedPure() override {}
 
-	void Hooked() {}
 	virtual void HookedPure() override {}
+	virtual void HookedPure(const FVector InstigatorLocation, bool PreAction = false) override {}
 
-	void UnHooked() {}
 	virtual void UnHookedPure() override {}
 
+	//virtual FGameplayTag GetGrappledGameplayTag_Pure() const override { return Player; }
 
-	/*                    Native Variables and functions             */
+	/* ------- Native Variables and functions -------- */
+	void RightTriggerClick();
+	void RightTriggerUn_Click();
+	void LeftTriggerClick();
+	void LeftTriggerUn_Click();
+
 	UPROPERTY(BlueprintReadOnly)
 		TWeakObjectPtr<AActor> GrappledActor{ nullptr };
-
+	UPROPERTY(BlueprintReadOnly)
+		TWeakObjectPtr<AActor> Active_GrappledActor{ nullptr };
 
 	UPROPERTY(BlueprintReadOnly)
-		bool bGrapple_Available{};
+		FGameplayTag GpT_GrappledActorTag;
+
+	/* The rope that goes from the player character to the grappled actor */
+	FVector GrappleRope{};
+
+	/* Collision sphere used for detecting nearby grappleable actors */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Grappling Hook")
+		class USphereComponent* GrappleTargetingDetectionSphere{ nullptr };
+
 	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
 		float GrappleHookRange{ 2000.f };
-	
-	/* The onscreen aiming location */
-	UPROPERTY(BlueprintReadOnly)
-		FVector2D AimingLocation {};
-	UPROPERTY(BlueprintReadOnly)
-		FVector2D AimingLocationPercentage {};
-	UPROPERTY(BlueprintReadOnly)
-		FVector2D ViewPortSize {};
 
-	/* Shows the debug aiming reticle */
-	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Targeting")
-		bool bShowAimingLocaiton_Debug{};
+	TArray<AActor*> InReachGrappleTargets;
+
+	UFUNCTION()
+		void OnGrappleTargetDetectionBeginOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	UFUNCTION()
+		void OnGrappleTargetDetectionEndOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
 	/* The added percentage of the screens height that is added to the aiming location. A higher number turns it closer to the
 		middle, with a lower number further up. 0 directly to the middle */
 	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Targeting")
 		float GrappleAimYChange_Base UMETA(DisplayName = "GrappleAimYDifference") { 4.f };
 	float GrappleAimYChange{};
 
-	bool LineTraceToGrappleableObject();
-	UFUNCTION()
-	void Start_Grapple_Swing();
-	void Stop_Grapple_Swing();
-	UFUNCTION()
-	void Start_Grapple_Drag();
-	void Stop_Grapple_Drag();
+	void GetGrappleTarget();
 
+	FTimerHandle TH_Grapplehook_Start;
+	FTimerHandle TH_Grapplehook_End_Launch;
 
 	UPROPERTY(BlueprintReadOnly)
-		bool bGrapple_Swing {};
+		bool bIsGrapplehooking{};
+	UPROPERTY(BlueprintReadOnly)
+		bool bIsPostGrapplehooking{};
+
+	void Initial_GrappleHook();
+	void Start_GrappleHook();
+	void Launch_GrappleHook();
+	void Stop_GrappleHook();
+
+	UPROPERTY(BlueprintReadOnly)
+		bool bGrapple_PreLaunch{};
+	UPROPERTY(BlueprintReadOnly)
+		bool bGrapple_Launch{};
 	
-	UPROPERTY(BlueprintReadOnly)
-		bool bGrapple_PreLaunch {};
-	UPROPERTY(BlueprintReadOnly)
-		bool bGrapple_Launch {};
-	
-	/* Time it takes for half a rotation around the GrappledActor */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing")
-		float GrappleHook_SwingTime{ 1.f };
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Swing")
-		float GrappleHook_Swing_MaxSpeed{ 2000.f };
-	/* Initial length between actor and grappled object */
-	float GrappleRadiusLength{};
+	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
+		float GrappleHook_LaunchSpeed{ 2000.f };
 
-	/* Grapplehook swing */
-	UFUNCTION(BlueprintCallable)
-	void Initial_GrappleHook_Swing();
-	void Update_GrappleHook_Swing(float DeltaTime);
-	void RotateActor_GrappleHook_Swing(float DeltaTime);
-	void GrappleHook_Swing_RotateCamera(float DeltaTime);	// Slightly dissorienting
+	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
+		float GrappleHook_Threshhold{ 500.f };
+
+	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
+		float GrappleHook_DividingFactor{ 2.f };
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
+		float GrappleHook_PostLaunchTimer UMETA(DisplayName = "Post Launch Timer") { 1.f };
+
 
 	/* How long the player will be held in the air before being launched towards the grappled actor */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
 		float GrappleDrag_PreLaunch_Timer_Length UMETA(DisplayName = "PreLaunch Timer")  { 0.25f };
 
-	float GrappleDrag_PreLaunch_Timer{};
-
+	/* -- GRAPPLE CAMERA VARIABLES -- */
 	/* Interpolation speed of the camera rotation during grapplehook Drag */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag|Camera Rotation")
 		float GrappleDrag_Camera_InterpSpeed			UMETA(DisplayName = "Interpolation Speed")		{ 3.f };
@@ -482,54 +644,52 @@ public: /* ------------------------ Grapplehook --------------------- */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag|Camera Rotation")
 		float GrappleDrag_Camera_PitchPoint				UMETA(DisplayName = "Pitch Point")				{ 20.f };
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag")
-		float GrappleDrag_MaxSpeed						UMETA(DisplayName = "Max Speed")				{ 2000.f };
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag")
-		float GrappleDrag_MinRadiusDistance				UMETA(DisplayName = "Min Radius Distance")		{ 50.f };
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag")
-		float GrappleDrag_Update_TimeMultiplier			UMETA(DisplayName = "Time Multiplier")			{ 2.f };
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag")
-		float GrappleDrag_Update_Time_MIN_Multiplier	UMETA(DisplayName = "Minimum Time Multiplier")	{ 2.f };
-
-	float GrappleDrag_CurrentSpeed{};
-
-	/* Grapplehook drag during swing */
-	UFUNCTION(BlueprintCallable)
-	void Initial_GrappleHook_Drag(float DeltaTime);
-	void Update_GrappleHook_Drag(float DeltaTime);
 	void GrappleHook_Drag_RotateCamera(float DeltaTime);
 	void RotateActor_GrappleHook_Drag(float DeltaTime);
 
-	UPROPERTY(BlueprintReadWrite)
-	bool bGrappleEnd{};
+	bool bGrapplingStaticTarget{};
+	bool bGrapplingDynamicTarget{};
 
 	UFUNCTION(BlueprintCallable)
-	bool IsGrappling() const;
+		bool IsGrappling() const;
+	UFUNCTION(BlueprintCallable)
+		bool IsPostGrapple() const { return bIsPostGrapplehooking; }		
+
 #pragma endregion //GrappleHook
 
-#pragma region SmackAttack
+/* ----------------------------------------- ATTACKS ----------------------------------------------- */
+#pragma region Attacks
 
-	bool bAttackPress{};
-	bool bCanAttack{ true };
-	bool bAttacking{};
+	bool CanBeAttacked() override;
 
-	bool bCanBeSmackAttacked{ true };
-
-	float TimeAttackIsActive{ 0.2f };
-	float TimeBetweenAttacks{ 0.5f };
-
-	FTimerHandle THandle_AttackDuration{};
-	FTimerHandle THandle_AttackReset{};
+	FVector AttackDirection{};
 
 	FVector AttackColliderScale{};
 
 	void Click_Attack();
 	void UnClick_Attack();
-	void Stop_Attack();
-	void Deactivate_Attack();
+
+
+	UFUNCTION(BlueprintImplementableEvent)
+		void Start_Attack();
+	UFUNCTION(BlueprintCallable)
+		void Start_Attack_Pure();
+
+	UFUNCTION(BlueprintCallable)
+		void Stop_Attack();
+
+	UFUNCTION(BlueprintCallable)
+		void Activate_AttackCollider();
+
+	UFUNCTION(BlueprintCallable)
+		void Deactivate_AttackCollider();
+
+	UFUNCTION(BlueprintPure)
+		bool DecideAttackType();
+
+	void RotateToAttack();
+
+
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Attack")
 		class UBoxComponent* AttackCollider{ nullptr };
@@ -537,11 +697,188 @@ public: /* ------------------------ Grapplehook --------------------- */
 	UFUNCTION()
 		void OnAttackColliderBeginOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
-	void Do_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength) override;
-	void Recieve_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength) override;
+	void Gen_Attack(IAttackInterface* OtherInterface, AActor* OtherActor, EAttackType& AType) override;
+
+	/* ---- Moving Character During Shared Basic Attack Anticipation ---- */
+	/* How far the character will move forward during the Shared Basic Attack Anticipation. Before the attack type is decided */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
+		float PreBasicAttackMovementLength{ 50.f };
+	bool bPreBasicAttackMoveCharacter{};
+	void PreBasicAttackMoveCharacter(float DeltaTime);
+
+
+	/* -------- Animation Variables -------- */
+	/* The speed of the anticipation to the regular attack. Which is shared between SmackAttack and ScoopAttack.
+	 * At the end of this anticipation, 
+	 * If the player still holds the attack button, the character will perform the scoop attack. 
+	 *  Else if the button is not held at this time, the character will perform the regular SmackAttack */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|SmackAttack")
+		float SmackAttack_Anticipation_Rate		UMETA(DisplayName = "1. Smack Anticipation Rate") { 4.5f };
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|SmackAttack")
+		float SmackAttack_Action_Rate			UMETA(DisplayName = "2. Smack Action Rate") { 5.f };
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|SmackAttack")
+		float SmackAttack_Reaction_Rate			UMETA(DisplayName = "3. Smack Reaction Rate") { 2.f };
+	
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|ScoopAttack")
+		float ScoopAttack_Anticipation_Rate		UMETA(DisplayName = "1. Scoop Anticipation Rate") { 10.f };
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|ScoopAttack")
+		float ScoopAttack_Action_Rate			UMETA(DisplayName = "2. Scoop Action Rate") { 7.f };
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|ScoopAttack")
+		float ScoopAttack_Reaction_Rate			UMETA(DisplayName = "3. Scoop Reaction Rate") { 2.f };
+
+
+
+
+	/* --------------------------------- SMACK ATTACK ----------------------------- */
+	#pragma region SmackAttack
+
+
+	bool bAttackPress{};
+
+	UFUNCTION(BlueprintCallable)
+		bool GetAttackPress() const { return bAttackPress; }
+	/* When the button can be pressed again */
+	bool bCanAttack{ true };
+	/* Related to collider and locking movement */
+	bool bAttacking{};
+	bool IsAttacking() const { return bAttacking; }
+	
+	/* When TRUE the characters rotation is decided by the players input direction 
+	 * When FALSE the characters rotation is decided by the direction of the camera */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
+		bool bSmackDirectionDecidedByInput{ true };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
+		bool bDisableMovementDuringAttack{ true };
+
+	/* The angle from the ground the enemy will be smacked. 0 degrees: Is parallel to the ground. 90 degrees: Is directly upwards */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
+		float SmackUpwardAngle{ 30.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
+		float SmackAttackStrength{ 1500.f };
+
+	/* ---- Moving Character During SmackAttack ---- */
+	/* How far the character will move forward during Smack Attack. Happens during The Action when the collider is active */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
+		float SmackAttackMovementLength{ 100.f };
+
+	bool bSmackAttackMoveCharacter{};
+	void SmackAttackMoveCharacter(float DeltaTime);
+
+
+
+	UFUNCTION(BlueprintCallable)
+		void Activate_SmackAttack();
+	UFUNCTION(BlueprintCallable)
+		void Deactivate_SmackAttack();
+
+	bool bIsSmackAttacking{};
+
+	bool bCanBeSmackAttacked{ true };
+
+
+
+	//void Do_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength) override;
+	void Do_SmackAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override;
+	void Receive_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength) override;
 
 	bool GetCanBeSmackAttacked() const override { return bCanBeSmackAttacked; }
 	void ResetCanBeSmackAttacked() override { bCanBeSmackAttacked = true; }
 
-#pragma endregion //SmackAttack
+	#pragma endregion //SmackAttack
+
+	/* ---------------------------- SCOOP ATTACK ---------------------- */
+	#pragma region ScoopAttack
+
+	bool bClickScoopAttack{};
+
+	UFUNCTION(BlueprintImplementableEvent)
+		void Start_ScoopAttack();
+	UFUNCTION(BlueprintCallable)
+		void Start_ScoopAttack_Pure();
+	void Click_ScoopAttack();
+	void UnClick_ScoopAttack();
+
+	bool bIsScoopAttacking{};
+	bool bHasbeenScoopLaunched{};
+
+	/* ---- Moving Character During ScoopAttack ---- */
+	/* How far the character will move forward during Scoop Attack. During Scoop Anticipation and Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
+		float ScoopAttackMovementLength{ 75.f };
+
+	bool bScoopAttackMoveCharacter{};
+	void ScoopAttackMoveCharacter(float DeltaTime);
+
+	UFUNCTION(BlueprintCallable)
+		void Activate_ScoopAttack();
+	UFUNCTION(BlueprintCallable)
+		void Deactivate_ScoopAttack();
+
+	/* Whether or not the player character stay on the ground and only launch the enemy in the air during scoop		(true)  (Checked) 
+	 * OR the player character will be launched in to the air with the enemy when using scoop attack				(false) (Un-checked) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
+		bool bStayOnGroundDuringScoop{ true }; 
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
+		float ScoopStrength{ 5000.f };
+
+	void Do_ScoopAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override;
+	void Receive_ScoopAttack_Pure(const FVector& Direction, const float& Strength) override;
+
+	#pragma endregion //ScoopAttack
+
+	/* --------------------------- GROUND POUND -------------------------- */
+	#pragma region GroundPound
+
+	bool bGroundPoundPress{};
+	bool bCanGroundPound{ true };
+	bool bIsGroundPounding{};
+
+	void Click_GroundPound();
+	void UnClick_GroundPound();
+
+	/* Movement */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GroundPound")
+		float GP_PrePoundAirtime{ 0.3f };
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|GroundPound")
+		float GP_LaunchStrength{ 2500.f };
+	FTimerHandle THandle_GPHangTime;
+
+
+	void Launch_GroundPound();
+
+	/* Collider */
+	/* Time it takes for the ground pound collider to expand to max size */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GroundPound")
+		float GroundPoundExpandTime{ 0.5f };
+	/* The size of the ground pound hitbox's radius */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GroundPound")
+		float MaxGroundPoundRadius{ 300.f };
+	float CurrentGroundPoundColliderSize{};
+
+	FTimerHandle THandle_GPExpandTime{};
+	FTimerHandle THandle_GPReset{};
+
+	void Start_GroundPound();
+	void Deactivate_GroundPound();
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+		class USphereComponent* GroundPoundCollider{ nullptr };
+
+
+	UFUNCTION(BlueprintCallable)
+		void GroundPoundLand(const FHitResult& Hit);
+	void ExpandGroundPoundCollider(float DeltaTime);
+
+	void Do_GroundPound_Pure(IAttackInterface* OtherInterface, AActor* OtherActor);
+	void Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength);
+
+	#pragma endregion //GroundPound
+
+#pragma endregion //Attacks
 };
