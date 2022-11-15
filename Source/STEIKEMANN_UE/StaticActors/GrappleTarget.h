@@ -5,14 +5,13 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "../Interfaces/GrappleTargetInterface.h"
-#include "GameplayTagAssetInterface.h"
+#include "Base/BaseStaticActor.h"
 
 #include "GrappleTarget.generated.h"
 
 UCLASS()
-class STEIKEMANN_UE_API AGrappleTarget : public AActor,
-	public IGrappleTargetInterface,
-	public IGameplayTagAssetInterface
+class STEIKEMANN_UE_API AGrappleTarget : public ABaseStaticActor,
+	public IGrappleTargetInterface
 {
 	GENERATED_BODY()
 	
@@ -24,30 +23,17 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-	FGameplayTagContainer TagsContainer;
-
-	FGameplayTag* GrappleType;
-
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	/* --------- Gameplay Tag Interface ------------ */
-	virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override { TagContainer = TagsContainer; return; }
-
-
-	/* --------- GrappleTarget Interface --------- */
-	//virtual FGameplayTag GetGrappledGameplayTag_Pure() const override { return GrappleTargetType; }
-
+/* Grapple Target Interface */
+public:
 	virtual void TargetedPure() override;
-
 	virtual void UnTargetedPure() override;
 
-
 	virtual void InReach_Pure() override;
-
 	virtual void OutofReach_Pure() override;
-
 
 	virtual void HookedPure() override;
 	virtual void HookedPure(const FVector InstigatorLocation, bool PreAction = false) override{}

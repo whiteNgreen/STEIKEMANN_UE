@@ -4,8 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "../GameplayTags.h"
-#include "../STEIKEMANN_UE.h"
+#include "Base/BaseStaticActor.h"
 
 #include "Collectible.generated.h"
 
@@ -18,8 +17,7 @@ enum class ECollectibleType : uint8
 };
 
 UCLASS()
-class STEIKEMANN_UE_API ACollectible : public AActor,
-	public IGameplayTagAssetInterface
+class STEIKEMANN_UE_API ACollectible : public ABaseStaticActor
 {
 	GENERATED_BODY()
 	
@@ -27,20 +25,13 @@ public:
 	// Sets default values for this actor's properties
 	ACollectible();
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
-		USceneComponent* Root { nullptr };
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Mesh")
 		UStaticMeshComponent* Mesh { nullptr };
-
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
 		class USphereComponent* Sphere{ nullptr };
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Type")
 		ECollectibleType CollectibleType;
-
-	FGameplayTagContainer GTagContainer;
-	void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override { TagContainer = GTagContainer; }
 
 	UFUNCTION()
 		void OnCollectibleBeginOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
@@ -48,11 +39,12 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Particles")
 		class UNiagaraSystem* DeathParticles{ nullptr };
 
+
 	/* Buffer/Timer before collectible can be collected */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "OnSpawn")
-		float InitTimer{ 0.5f };
-	FTimerHandle FTHInit;
-	void Init();
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "OnSpawn")
+		//float InitTimer{ 0.5f };
+	//FTimerHandle FTHInit;
+	//void Init();
 
 	FTimerHandle FTHDestruction;
 	void Destruction();

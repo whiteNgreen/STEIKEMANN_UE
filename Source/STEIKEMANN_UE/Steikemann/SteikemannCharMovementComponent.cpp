@@ -76,8 +76,8 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 		}
 		
 	}
-	PRINTPAR("Gravity Z = %f", GetGravityZ());
-	PRINTPAR("Velocity Z = %f", Velocity.Z);
+	//PRINTPAR("Gravity Z = %f", GetGravityZ());
+	//PRINTPAR("Velocity Z = %f", Velocity.Z);
 
 	/* Wall Jump / Sticking to wall */
 	if (IsFalling())

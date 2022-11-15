@@ -4,10 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "GameplayTagAssetInterface.h"
+#include "Base/BaseStaticActor.h"
 #include "../Interfaces/CameraGuideInterface.h"
-#include "../GameplayTags.h"
-#include "../DebugMacros.h"
 
 /* Always last */
 #include "CameraGuidingVolume.generated.h"
@@ -15,8 +13,7 @@
 
 
 UCLASS()
-class STEIKEMANN_UE_API ACameraGuidingVolume : public AActor,
-	public IGameplayTagAssetInterface
+class STEIKEMANN_UE_API ACameraGuidingVolume : public ABaseStaticActor
 {
 	GENERATED_BODY()
 	
@@ -32,12 +29,7 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	//UFUNCTION(BlueprintCallable)
-	//	void RefreshComponents();
-
 public:	 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
-		USceneComponent* Root{ nullptr };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
 		class UBoxComponent* CameraVolume{ nullptr };
 
@@ -48,11 +40,6 @@ public:
 	/* Focus Points */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
 		class UPrimitiveComponent* FocusComponent{ nullptr };
-	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
-		//class UBoxComponent* PointFocus{ nullptr };
-	//UPROPERTY(EditAnywhere, Category = "Components")
-		//class USplineComponent* SplineFocus{ nullptr };
-
 
 
 	UPROPERTY(EditInstanceOnly, Category = "FocusPoint")
@@ -62,10 +49,5 @@ public:
 		void OnVolumeBeginOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 	UFUNCTION()
 		void OnVolumeEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
-
-
-	/* GameplayTags */
-	FGameplayTagContainer GameplayTags;
-	virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override{ TagContainer = GameplayTags; }
 
 };
