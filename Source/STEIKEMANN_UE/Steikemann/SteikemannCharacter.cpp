@@ -1882,7 +1882,7 @@ bool ASteikemannCharacter::IsStickingToWall() const
 
 bool ASteikemannCharacter::Jump_DetectWall()
 {
-	PRINTLONG("DETECTING JUMP WALL");
+	//PRINTLONG("DETECTING JUMP WALL");
 	bool b{};
 	FTimerHandle h;
 	//auto func = [](FTimerHandle h){
