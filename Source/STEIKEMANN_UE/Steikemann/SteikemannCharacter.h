@@ -218,6 +218,17 @@ public:
 		float SplineLerpSpeed{ 10.f };
 	virtual void SetSplineInputkey(const float SplineKey) override { Internal_SplineInputkey = SplineKey; }
 
+
+	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic", meta = (UIMin = "0", UIMax = "1"))
+		float GrappleDynamic_MaxAngle{ 0.3f };
+	//UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic", meta = (UIMin = "0", UIMax = "1"))
+		//float GrappleDynamic_MaxPitch{ 0.3f };
+
+	float GrappleDynamic_SLerpAlpha{};
+	void GuideCameraTowardsVector(FVector vector, float alpha);
+
+	void GrappleDynamicGuideCamera(float deltatime);
+
 #pragma endregion //CameraGuide
 
 #pragma endregion //Camera
@@ -682,6 +693,9 @@ public:
 		bool IsGrappling() const;
 	UFUNCTION(BlueprintCallable)
 		bool IsPostGrapple() const { return bIsPostGrapplehooking; }		
+	UFUNCTION(BlueprintCallable)
+		bool IsGrapplingDynamicTarget() const { return bGrapplingDynamicTarget; }
+
 
 #pragma endregion //GrappleHook
 
@@ -767,6 +781,20 @@ public:
 
 
 	bool bAttackPress{};
+
+	/* SMACK DIRECTION 
+	 *  0. None of the below
+	 *  1. Based on input 
+	 *  2. Based on camera direction
+	 *  3. Mixture of both 
+	 * Currently no aiming method outside of this */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|SmackDirection", meta = (UIMin = "0", UIMax = "3"))
+		uint8 SmackDirectionType{ 1 };
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|SmackDirection", meta = (UIMin = "1.0", UIMax = "4.0", EditCondition = "SmackDirectionType == 2 || SmackDirectionType == 3", EditConditionHides))
+		float SmackDirection_CameraMultiplier	UMETA(DisplayName = "Camera Multiplier") { 1.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|SmackDirection", meta = (UIMin = "1.0", UIMax = "4.0", EditCondition = "SmackDirectionType == 1 || SmackDirectionType == 3", EditConditionHides))
+		float SmackDirection_InputMultiplier	UMETA(DisplayName = "Input Multiplier") { 1.f };
 
 	UFUNCTION(BlueprintCallable)
 		bool GetAttackPress() const { return bAttackPress; }

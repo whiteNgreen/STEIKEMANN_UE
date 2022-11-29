@@ -203,6 +203,8 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		{
 			InputVector.Normalize();
 		}
+		PRINTPAR("InputRaw: %s", *InputVectorRaw.ToString());
+		PRINTPAR("Controller: %s", *GetControlRotation().Vector().ToString());
 	}
 
 	/*		Resets Rotation Pitch and Roll		*/
@@ -283,6 +285,11 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		}
 	}
 
+	if (IsGrapplingDynamicTarget() && IsOnGround()) {
+		GrappleDynamicGuideCamera(DeltaTime);
+
+	}
+
 	GuideCamera(DeltaTime);
 
 	/* ----------------------- COMBAT TICKS ------------------------------ */
@@ -293,6 +300,8 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	if (bPreBasicAttackMoveCharacter || bSmackAttackMoveCharacter || bScoopAttackMoveCharacter) {	
 		CameraBoom->bDoCollisionTest = false;
 	} else { CameraBoom->bDoCollisionTest = true; }
+
+	IsAttacking() ? PRINTPAR("IsAttacking = True") : PRINTPAR("IsAttacking = False");
 }
 
 // Called to bind functionality to input
@@ -453,6 +462,7 @@ void ASteikemannCharacter::RightTriggerClick()
 			//if (GrappledTags.HasTag(Tag_GrappleTarget_Dynamic))	// Burde bruke denne taggen på fiendene
 			if (GrappledTags.HasTag(Tag::AubergineDoggo()))		// Også spesifisere videre med fiende type
 			{
+				GrappleDynamic_SLerpAlpha = 0.f;
 				bGrapplingDynamicTarget = true;
 			}
 			/* Grappling to Static Target */
@@ -793,6 +803,53 @@ void ASteikemannCharacter::GuideCamera(float DeltaTime)
 	//PRINTPAR("Fokuspoints: %i", mFocusPoints.Num());
 }
 
+void ASteikemannCharacter::GuideCameraTowardsVector(FVector vector, float alpha)
+{
+	FQuat target{ vector.Rotation() };
+
+	FQuat Rot{ GetPlayerController()->GetControlRotation()};
+	FQuat New{ FQuat::Slerp(Rot, target, alpha) };
+	FRotator Rot1 = New.Rotator();
+	Rot1.Roll = 0.f;
+	GetPlayerController()->SetControlRotation(Rot1);
+}
+
+void ASteikemannCharacter::GrappleDynamicGuideCamera(float deltatime)
+{
+	FVector input;
+	if (InputVector.IsNearlyZero())
+		input = GetActorForwardVector();
+	else
+		input = InputVector;
+
+	GrappleDynamic_SLerpAlpha = FMath::Clamp(GrappleDynamic_SLerpAlpha += deltatime, 0.f, 1.f);
+	FVector toGrapple = GrappledActor->GetActorLocation() - GetActorLocation();
+	toGrapple.Normalize();
+	//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + toGrapple, FColor::Red);
+	//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (input * 200.f), FColor::Blue);
+
+	// 
+	// Yaw
+	float Dot = FVector::DotProduct(toGrapple, input);
+	//Dot = (Dot + 1.f) / 2.f;
+	float diff = 1.f - ((Dot + 1.f) / 2.f);
+	float alpha = 1.f - ((diff * diff) / (GrappleDynamic_MaxAngle * GrappleDynamic_MaxAngle));
+	//PRINTPAR("Dot %f", Dot);
+	//PRINTPAR("alpha %f", alpha);
+
+
+	// Pitch
+	//float controlZ = GetControlRotation().Vector().Z;
+	//input.Z = FMath::Clamp(controlZ, -GrappleDynamic_MaxPitch, GrappleDynamic_MaxPitch);
+	//float alphapitch = toGrapple.GetSafeNormal().Z - controlZ;
+
+	FVector ortho = FVector::CrossProduct(toGrapple, FVector::CrossProduct(input, toGrapple));
+	FVector cameraAim = (cosf(acosf(GrappleDynamic_MaxAngle)) * toGrapple) + (sinf(acosf(GrappleDynamic_MaxAngle)) * ortho);
+
+	input.Normalize();
+	GuideCameraTowardsVector(cameraAim.GetSafeNormal(), alpha);
+}
+
 
 void ASteikemannCharacter::MoveForward(float value)
 {
@@ -803,6 +860,11 @@ void ASteikemannCharacter::MoveForward(float value)
 	if (IsCrouchSliding()) { return; }
 	if (IsAttacking()) { return; }
 	if (IsGrappling()) { return; }
+	if (IsGrapplingDynamicTarget() && IsOnGround()) { return; }
+	//{
+	//	AddControllerPitchInput(InputVectorRaw.X * -1.f * TurnRate * GetWorld()->GetDeltaSeconds());
+	//	return;
+	//}
 
 	float movement = value;
 	if (bSlipping)
@@ -831,6 +893,11 @@ void ASteikemannCharacter::MoveRight(float value)
 	if (IsCrouchSliding()) { return; }
 	if (IsAttacking()) { return; }
 	if (IsGrappling()) { return; }
+	if (IsGrapplingDynamicTarget() && IsOnGround()) { return; }
+	//{
+	//	AddControllerYawInput(InputVectorRaw.Y * TurnRate * GetWorld()->GetDeltaSeconds());
+	//	return;
+	//}
 
 	float movement = value;
 	if (bSlipping)
@@ -854,7 +921,6 @@ void ASteikemannCharacter::MoveRight(float value)
 void ASteikemannCharacter::TurnAtRate(float rate)
 {
 	AddControllerYawInput(rate * TurnRate * GetWorld()->GetDeltaSeconds());
-
 }
 
 void ASteikemannCharacter::LookUpAtRate(float rate)
@@ -2196,8 +2262,40 @@ void ASteikemannCharacter::Do_SmackAttack_Pure(IAttackInterface* OtherInterface,
 	{
 		FVector Direction{ OtherActor->GetActorLocation() - GetActorLocation() };
 		Direction = Direction.GetSafeNormal2D();
+
+		FVector cam;
+
+		if (SmackDirectionType == 1) 
+		{
+			if (InputVector.IsNearlyZero())
+				Direction = (Direction + (GetActorForwardVector() * SmackDirection_InputMultiplier)).GetSafeNormal2D();
+			else
+				Direction = (Direction + (InputVector * SmackDirection_InputMultiplier)).GetSafeNormal2D();
+		}
+		else if (SmackDirectionType == 2)
+		{
+			cam = GetControlRotation().Vector();
+			Direction = (Direction + (cam.GetSafeNormal2D() * SmackDirection_CameraMultiplier)).GetSafeNormal2D();
+		}
+		else if (SmackDirectionType == 3)
+		{
+			FVector input;
+			if (InputVector.IsNearlyZero())
+				input = GetActorForwardVector().GetSafeNormal2D();
+			else
+				input = InputVector.GetSafeNormal2D();
+
+			cam = GetControlRotation().Vector();
+
+			Direction = (Direction + (input * SmackDirection_InputMultiplier) + (cam.GetSafeNormal2D() * SmackDirection_CameraMultiplier)).GetSafeNormal2D();
+		}
+
 		float angle = FMath::DegreesToRadians(SmackUpwardAngle);
-		Direction = (cosf(angle) * Direction) + (sinf(angle) * FVector::UpVector);
+
+		if (SmackDirectionType == 0 || SmackDirectionType == 1)
+			Direction = (cosf(angle) * Direction) + (sinf(angle) * FVector::UpVector);
+		else
+			Direction.Z = FMath::Clamp((cam.Z + 1.f) + ((cam.Z + 1.f) / 4.f), 0.f, 1.f);
 		OtherInterface->Receive_SmackAttack_Pure(Direction, SmackAttackStrength);
 	}
 }
