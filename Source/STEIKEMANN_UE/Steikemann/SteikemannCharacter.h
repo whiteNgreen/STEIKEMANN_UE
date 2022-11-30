@@ -220,12 +220,32 @@ public:
 
 
 	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic", meta = (UIMin = "0", UIMax = "1"))
-		float GrappleDynamic_MaxAngle{ 0.3f };
-	//UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic", meta = (UIMin = "0", UIMax = "1"))
-		//float GrappleDynamic_MaxPitch{ 0.3f };
+		float GrappleDynamic_DefaultAlpha{ 0.3f };
+	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic", meta = (UIMin = "0", UIMax = "90"))
+		float GrappleDynamic_MaxYaw{ 30.f };
+	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic", meta = (UIMin = "0", UIMax = "1"))
+		float GrappleDynamic_YawAlpha{ 0.3f };
+	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic", meta = (UIMin = "0", UIMax = "1"))
+		float GrappleDynamic_MaxPitch{ 0.5f };
+	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic", meta = (UIMin = "0", UIMax = "1"))
+		float GrappleDynamic_PitchAlpha{ 0.2f };
+
+
+	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic|Pitch", meta = (UIMin = "0", UIMax = "1500"))
+		float GrappleDynamic_Pitch_DistanceMIN	 { 100.f };
+	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic|Pitch", meta = (UIMin = "0", UIMax = "500"))
+		float GrappleDynamic_Pitch_MIN{ 100.f };
+	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic|Pitch", meta = (UIMin = "0", UIMax = "5000"))
+		float GrappleDynamic_Pitch_MAX{ 100.f };
+	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic|Pitch", meta = (UIMin = "0", UIMax = "2"))
+		float GrappleDynamic_ZdiffMultiplier{ 1.f };
+
+	float InitialGrappleDynamicZ{};
 
 	float GrappleDynamic_SLerpAlpha{};
 	void GuideCameraTowardsVector(FVector vector, float alpha);
+	void GuideCameraPitch(float z, float alpha);
+	float GuideCameraPitchAdjustmentLookAt(FVector LookatLocation, float MinDistance, float MaxDistance, float PitchAtMin, float PitchAtMax, float ZdiffMultiplier);
 
 	void GrappleDynamicGuideCamera(float deltatime);
 
