@@ -482,7 +482,7 @@ void ASteikemannCharacter::RightTriggerClick()
 void ASteikemannCharacter::RightTriggerUn_Click()
 {
 	// Noe angående slapp grapple knappen
-	bGrapplingDynamicTarget = false;
+	//bGrapplingDynamicTarget = false;
 }
 
 void ASteikemannCharacter::Initial_GrappleHook()
@@ -853,11 +853,15 @@ float ASteikemannCharacter::GuideCameraPitchAdjustmentLookAt(FVector LookatLocat
 
 void ASteikemannCharacter::GrappleDynamicGuideCamera(float deltatime)
 {
+	if (!GrappledActor.Get()) return;
+
 	FVector input = InputVectorRaw;
 
 	FVector grappled = GrappledActor->GetActorLocation();
-	grappled.Z = InitialGrappleDynamicZ;
-	FVector toGrapple = (grappled - GetActorLocation()) - FVector(0, 0, GuideCameraPitchAdjustmentLookAt(grappled, GrappleDynamic_Pitch_DistanceMIN, GrappleHookRange, GrappleDynamic_Pitch_MIN, GrappleDynamic_Pitch_MAX, GrappleDynamic_ZdiffMultiplier));
+	grappled.Z = GetActorLocation().Z;
+	//grappled.Z = InitialGrappleDynamicZ;
+	//FVector toGrapple = (grappled - GetActorLocation()) - FVector(0, 0, GuideCameraPitchAdjustmentLookAt(grappled, GrappleDynamic_Pitch_DistanceMIN, GrappleHookRange, GrappleDynamic_Pitch_MIN, GrappleDynamic_Pitch_MAX, GrappleDynamic_ZdiffMultiplier));
+	FVector toGrapple = (grappled - GetActorLocation());
 	toGrapple.Normalize();
 	FVector toGrapple2D = toGrapple.GetSafeNormal2D();
 	
@@ -881,7 +885,7 @@ void ASteikemannCharacter::GrappleDynamicGuideCamera(float deltatime)
 
 	// Default Guide towards grappled target
 	GuideCameraTowardsVector(toGrapple, alphaY * GrappleDynamic_DefaultAlpha);
-	GuideCameraPitch(0.f, alphaX * GrappleDynamic_DefaultAlpha);
+	GuideCameraPitch(GrappleDynamic_DefaultPitch, alphaX * GrappleDynamic_DefaultAlpha);
 }
 
 
@@ -1883,10 +1887,15 @@ bool ASteikemannCharacter::DetectNearbyWall()
 		LinetraceVector.Z = 0.f;
 		LinetraceVector.Normalize();
 
+	FCollisionShape Shape = FCollisionShape::MakeBox(FVector( 50.f, 50.f, 70.f ));
+	FVector ActorLoc = GetActorLocation() + FVector(0, 0, 20.f);
+
 	for (int i = 0; i < 4; i++)
 	{
 			//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (LinetraceVector * WallDetectionRange), FColor::Yellow, false, 0.f, 0, 4.f);
-		bHit = GetWorld()->LineTraceSingleByChannel(WallHit, GetActorLocation(), GetActorLocation() + (LinetraceVector * WallDetectionRange), ECC_Visibility, Params);
+		//bHit = GetWorld()->LineTraceSingleByChannel(WallHit, GetActorLocation(), GetActorLocation() + (LinetraceVector * WallDetectionRange), ECC_Visibility, Params);
+		bHit = GetWorld()->SweepSingleByChannel(WallHit, ActorLoc, ActorLoc + (LinetraceVector * WallDetectionRange), FQuat(LinetraceVector.Rotation()), ECC_Visibility, Shape, Params);
+		DrawDebugBox(GetWorld(), ActorLoc + ((LinetraceVector * WallDetectionRange)/2.f), Shape.GetExtent(), FQuat(LinetraceVector.Rotation()), FColor::Red, false, 0.f, 0, 2.f);
 		LinetraceVector = LinetraceVector.RotateAngleAxis(90, FVector(0, 0, 1));
 		if (bHit) { 
 			StickingSpot = WallHit.ImpactPoint; 
@@ -1896,23 +1905,23 @@ bool ASteikemannCharacter::DetectNearbyWall()
 		}
 	}
 
-	if (!bHit)
-	{
-		/* Then do raytrace of the 45 degree angle between the 4 previous axis */
-		LinetraceVector = LinetraceVector.RotateAngleAxis(45.f, FVector(0, 0, 1));
-		for (int i = 0; i < 4; i++)
-		{
-				//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (LinetraceVector * WallDetectionRange), FColor::Red, false, 0.f, 0, 4.f);
-			bHit = GetWorld()->LineTraceSingleByChannel(WallHit, GetActorLocation(), GetActorLocation() + (LinetraceVector * WallDetectionRange), ECC_Visibility, Params);
-			LinetraceVector = LinetraceVector.RotateAngleAxis(90, FVector(0, 0, 1));
-			if (bHit) {
-				StickingSpot = WallHit.ImpactPoint;
-				Wall_Normal = WallHit.Normal;
-				//return bHit;
-				break;
-			}
-		}
-	}
+	//if (!bHit)
+	//{
+	//	/* Then do raytrace of the 45 degree angle between the 4 previous axis */
+	//	LinetraceVector = LinetraceVector.RotateAngleAxis(45.f, FVector(0, 0, 1));
+	//	for (int i = 0; i < 4; i++)
+	//	{
+	//			//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (LinetraceVector * WallDetectionRange), FColor::Red, false, 0.f, 0, 4.f);
+	//		bHit = GetWorld()->LineTraceSingleByChannel(WallHit, GetActorLocation(), GetActorLocation() + (LinetraceVector * WallDetectionRange), ECC_Visibility, Params);
+	//		LinetraceVector = LinetraceVector.RotateAngleAxis(90, FVector(0, 0, 1));
+	//		if (bHit) {
+	//			StickingSpot = WallHit.ImpactPoint;
+	//			Wall_Normal = WallHit.Normal;
+	//			//return bHit;
+	//			break;
+	//		}
+	//	}
+	//}
 
 	/*		Dette fungerer på flate vegger, men kommer til og føre til problemer på cylindriske- / mer avanserte- former	 */
 		/* Burde kjøre ekstra sjekker for å se om det er andre flater i nærheten som passer bedre */
@@ -2306,14 +2315,14 @@ void ASteikemannCharacter::Do_SmackAttack_Pure(IAttackInterface* OtherInterface,
 		if (InputVector.IsNearlyZero())
 			Direction = (Direction + (GetActorForwardVector() * SmackDirection_InputMultiplier)).GetSafeNormal2D();
 		else {
-			Direction = (Direction + (InputVector * SmackDirection_InputMultiplier)).GetSafeNormal2D();
+			Direction = (Direction + (InputVector * SmackDirection_InputMultiplier) + (GetControlRotation().Vector().GetSafeNormal2D() * SmackDirection_CameraMultiplier)).GetSafeNormal2D();
 		}
 
 		float angle = FMath::DegreesToRadians(SmackUpwardAngle);
-		angle = angle + angle * InputVectorRaw.X;
+		angle = angle + (angle * (InputVectorRaw.X * SmackAttack_InputAngleMultiplier));
 
 		Direction = (cosf(angle) * Direction) + (sinf(angle) * FVector::UpVector);
-		OtherInterface->Receive_SmackAttack_Pure(Direction, SmackAttackStrength + (SmackAttackStrength * (InputVectorRaw.X * 0.4f)));
+		OtherInterface->Receive_SmackAttack_Pure(Direction, SmackAttackStrength + (SmackAttackStrength * (InputVectorRaw.X * SmackAttack_InputStrengthMultiplier)));
 	}
 }
 

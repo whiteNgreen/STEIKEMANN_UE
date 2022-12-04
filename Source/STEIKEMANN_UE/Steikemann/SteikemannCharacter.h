@@ -229,6 +229,8 @@ public:
 		float GrappleDynamic_MaxPitch{ 0.5f };
 	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic", meta = (UIMin = "0", UIMax = "1"))
 		float GrappleDynamic_PitchAlpha{ 0.2f };
+	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic", meta = (UIMin = "-1", UIMax = "1"))
+		float GrappleDynamic_DefaultPitch{ 0.2f };
 
 
 	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic|Pitch", meta = (UIMin = "0", UIMax = "1500"))
@@ -836,6 +838,10 @@ public:
 		float SmackUpwardAngle{ 30.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
 		float SmackAttackStrength{ 1500.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks", meta = (UIMin = "0", UIMax = "1"))
+		float SmackAttack_InputAngleMultiplier			UMETA(DisplayName = "Input Angle Multiplier") { 0.2 };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks", meta = (UIMin = "0", UIMax = "1"))
+		float SmackAttack_InputStrengthMultiplier		UMETA(DisplayName = "Input Strength Multiplier") { 0.2 };
 
 	/* ---- Moving Character During SmackAttack ---- */
 	/* How far the character will move forward during Smack Attack. Happens during The Action when the collider is active */
