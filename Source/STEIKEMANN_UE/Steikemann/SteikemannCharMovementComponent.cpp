@@ -19,6 +19,7 @@ void USteikemannCharMovementComponent::BeginPlay()
 
 	GroundFriction = CharacterFriction;
 
+	//GravityScale = GravityScale
 }
 
 void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -32,20 +33,20 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 	}
 
 	/* -- Gravity -- */
-	if (GetCharOwner()->IsJumping() || MovementMode == MOVE_Walking /* || bWallJump*//* || bIsJumping*/){
-		GravityScale = FMath::FInterpTo(GravityScale, GravityScaleOverride, DeltaTime, GravityScaleOverride_InterpSpeed);
-	}
-	else if (bGP_PreLaunch || bGrappleHook_InitialState){
-		GravityScale = 0.f;
-		Velocity *= 0.f;
-	}
-
-	else if (bStickingToWall || bWallSlowDown){
-		GravityScale = FMath::FInterpTo(GravityScale, 0.f, GetWorld()->GetDeltaSeconds(), GravityScaleOverride_InterpSpeed);
-	}
-	else{
-		GravityScale = FMath::FInterpTo(GravityScale, GravityScaleOverride_Freefall, DeltaTime, GravityScaleOverride_InterpSpeed);
-	}
+	//if (GetCharOwner()->IsJumping() || MovementMode == MOVE_Walking /* || bWallJump*//* || bIsJumping*/){
+	//	GravityScale = FMath::FInterpTo(GravityScale, GravityScaleOverride, DeltaTime, GravityScaleOverride_InterpSpeed);
+	//}
+	//else if (bGP_PreLaunch || bGrappleHook_InitialState){
+	//	GravityScale = 0.f;
+	//	Velocity *= 0.f;
+	//}
+	//
+	//else if (bStickingToWall || bWallSlowDown){
+	//	GravityScale = FMath::FInterpTo(GravityScale, 0.f, GetWorld()->GetDeltaSeconds(), GravityScaleOverride_InterpSpeed);
+	//}
+	//else{
+	//	GravityScale = FMath::FInterpTo(GravityScale, GravityScaleOverride_Freefall, DeltaTime, GravityScaleOverride_InterpSpeed);
+	//}
 
 
 
@@ -56,7 +57,6 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 	}
 
 	/* Jump velocity */
-	//if (GetCharOwner()->IsJumping())
 	if (bIsJumping || bIsDoubleJumping)
 	{
 		DetermineJump(DeltaTime);
@@ -70,38 +70,57 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 
 	if (bJumpHeightHold){
 		AddForce(FVector(0, 0, 981.f * Mass * GravityScale));
-		//Velocity.Z += 50.f;
 		if (bIsJumping && bIsDoubleJumping && Velocity.Z > 0.f) {
 			Velocity.Z = FMath::FInterpTo(Velocity.Z, 0.f, DeltaTime, GetCharOwner()->JumpHeightHold_VelocityInterpSpeed);
 		}
 		
 	}
-	//PRINTPAR("Gravity Z = %f", GetGravityZ());
-	//PRINTPAR("Velocity Z = %f", Velocity.Z);
+	PRINTPAR("Gravity Z = %f", GetGravityZ());
+	PRINTPAR("Velocity Z = %f", Velocity.Z);
 
 	/* Wall Jump / Sticking to wall */
-	if (IsFalling())
+	switch (m_WallState)
 	{
-		if (GetCharOwner()->bOnWallActive)
-		{
-			if (bLedgeGrab) {
-				Update_LedgeGrab();
-			}
-			else
-			{
-				if (GetCharOwner()->bFoundStickableWall) 
-				{
-					bStickingToWall = StickToWall(DeltaTime);
-				}
-				else {
-					bWallSlowDown = false;
-				}
-			}
-		}
+	case EOnWallState::WALL_None:
+		break;
+	case EOnWallState::WALL_Hang:
+	{
+		OnWallHang_IMPL();
+		break;
 	}
-	else { 
-		GetCharOwner()->ResetWallJumpAndLedgeGrab(); 
+	case EOnWallState::WALL_Drag:
+	{
+		OnWallDrag_IMPL(DeltaTime);
+		break;
 	}
+	case EOnWallState::WALL_Leave:
+		break;
+	default:
+		break;
+	}
+
+	//if (IsFalling())
+	//{
+	//	if (GetCharOwner()->bOnWallActive)
+	//	{
+	//		if (bLedgeGrab) {
+	//			Update_LedgeGrab();
+	//		}
+	//		else
+	//		{
+	//			if (GetCharOwner()->bFoundStickableWall) 
+	//			{
+	//				bStickingToWall = StickToWall(DeltaTime);
+	//			}
+	//			else {
+	//				bWallSlowDown = false;
+	//			}
+	//		}
+	//	}
+	//}
+	//else { 
+	//	GetCharOwner()->ResetWallJumpAndLedgeGrab(); 
+	//}
 
 }
 
@@ -294,6 +313,43 @@ void USteikemannCharMovementComponent::DeactivateJumpMechanics()
 	GetCharOwner()->bJumping = false;
 	bJumpPrematureSlowdown = false;
 }
+
+
+void USteikemannCharMovementComponent::InitialOnWall(const WallData& wall, float time)
+{
+	m_Walldata = wall;
+
+	switch (m_WallState)
+	{
+	case EOnWallState::WALL_None:
+		InitialOnWall_IMPL(time);
+		break;
+	default:
+		break;
+	}
+}
+
+void USteikemannCharMovementComponent::InitialOnWall_IMPL(float time)
+{
+	PRINTLONG("ON WALL HANG");
+	m_WallState = EOnWallState::WALL_Hang;
+	Velocity *= 0.f;
+	FTimerHandle h;
+	GetCharOwner()->GetWorldTimerManager().SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, time, false);	// TODO: Change WALL_None to WALL_Drag
+}
+
+void USteikemannCharMovementComponent::OnWallHang_IMPL()
+{
+	//float extra = GetGravityZ() * (51.f / 6125.f);
+	//AddForce(FVector(0, 0, (GetGravityZ() * Mass/* + (extra * GravityCheat)*/) * -1.f));
+	Velocity.Z *= 0.f;
+	GravityScale = 0.f;
+}
+
+void USteikemannCharMovementComponent::OnWallDrag_IMPL(float deltatime)
+{
+}
+
 
 
 bool USteikemannCharMovementComponent::WallJump(const FVector& ImpactNormal, float JumpStrength)

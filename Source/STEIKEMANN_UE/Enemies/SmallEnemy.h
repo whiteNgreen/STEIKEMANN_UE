@@ -8,6 +8,7 @@
 #include "../Interfaces/GrappleTargetInterface.h"
 #include "../DebugMacros.h"
 #include "GameplayTagAssetInterface.h"
+#include "../WallDetectionComponent.h"
 //#include "../GameplayTags.h"
 
 #include "SmallEnemy.generated.h"
@@ -47,6 +48,12 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	void RotateActorYawToVector(FVector AimVector, float DeltaTime = 0);
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		UWallDetectionComponent* WallDetector{ nullptr };
+private:
+	WallData m_WallData;
 
 public: 
 	bool bCanBeGrappleHooked{ true };

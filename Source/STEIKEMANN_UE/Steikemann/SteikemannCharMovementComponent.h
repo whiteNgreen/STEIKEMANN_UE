@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "../DebugMacros.h"
-
+#include "../WallDetectionComponent.h"
 #include "SteikemannCharMovementComponent.generated.h"
 
 /**
@@ -20,6 +20,8 @@
 //	MOVECustom_WallSticking		UMETA(DisplayName = "Wallsticking"),
 //	MOVECustom_Grappling		UMETA(DisplayName = "Grappling"),
 //};
+
+// TODO: GRAVITY OVERRIDE ENUM
 
 UCLASS()
 class STEIKEMANN_UE_API USteikemannCharMovementComponent : public UCharacterMovementComponent
@@ -153,7 +155,20 @@ public:
 //#pragma endregion //Dash
 
 #pragma region Wall Jump
+	// NEW ON WALL
+	EOnWallState m_WallState = EOnWallState::WALL_None;
+	WallData m_Walldata;
+	void InitialOnWall(const WallData& wall, float time);
+private:
+	void InitialOnWall_IMPL(float time);
+	void OnWallHang_IMPL();
+	void OnWallDrag_IMPL(float deltatime);
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wall Jump", meta = (AllowPrivateAccess = "true"))
+		float GravityCheat{ 100.f };
+	//void OnWall(float deltatime);
+	//-----------------------------------------------
 
+public:
 	/* If the characters velocity exceeds this value, they cannot stick to a wall */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Wall Jump")
 		float WallJump_MaxStickingSpeed UMETA(DisplayName = "Max Stickable Speed") { 50.f };

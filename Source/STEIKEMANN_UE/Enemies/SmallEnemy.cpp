@@ -13,7 +13,7 @@ ASmallEnemy::ASmallEnemy()
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-
+	WallDetector = CreateDefaultSubobject<UWallDetectionComponent>(TEXT("Wall Detection Component"));
 
 }
 
@@ -35,6 +35,7 @@ void ASmallEnemy::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	WallDetector->DetectWall(m_WallData);
 }
 
 // Called to bind functionality to input

@@ -21,7 +21,6 @@
 #include "../StaticActors/PlayerRespawn.h"
 
 
-
 // Sets default values
 ASteikemannCharacter::ASteikemannCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<USteikemannCharMovementComponent>(ACharacter::CharacterMovementComponentName))
@@ -77,7 +76,7 @@ ASteikemannCharacter::ASteikemannCharacter(const FObjectInitializer& ObjectIniti
 		GroundPoundCollider->SetGenerateOverlapEvents(false);
 		GroundPoundCollider->SetSphereRadius(0.1f);
 
-
+	WallDetector = CreateDefaultSubobject<UWallDetectionComponent>(TEXT("Wall Detection Component"));
 }
 
 // Called when the game starts or when spawned
@@ -203,11 +202,9 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		{
 			InputVector.Normalize();
 		}
-		PRINTPAR("InputRaw: %s", *InputVectorRaw.ToString());
-		PRINTPAR("Input: %s , Size: %f", *InputVector.ToString(), InputVector.Size());
-		PRINTPAR("Controller: %s", *GetControlRotation().Vector().ToString());
-
-		PRINTPAR("Grappled Intial Z: %f", InitialGrappleDynamicZ);
+		//PRINTPAR("InputRaw: %s", *InputVectorRaw.ToString());
+		//PRINTPAR("Input: %s , Size: %f", *InputVector.ToString(), InputVector.Size());
+		//PRINTPAR("Controller: %s", *GetControlRotation().Vector().ToString());
 	}
 
 	/*		Resets Rotation Pitch and Roll		*/
@@ -233,25 +230,50 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		WallJump_NonStickTimer = 0.f;
 	}
 
+	if (IsOnGround())
+		m_State = EState::STATE_Idle;
+	if (GetMoveComponent()->IsFalling())
+		m_State = EState::STATE_InAir;
 
 
 	/*		Wall Jump & LedgeGrab		*/
-	if (GetMoveComponent()->IsFalling() && bOnWallActive)
+	if (WallDetector->DetectWall(m_WallData))
 	{
-		Do_OnWallMechanics(DeltaTime);
-	}
-	else if (!bOnWallActive)
-	{
-		if (WallJump_NonStickTimer < WallJump_MaxNonStickTimer)	
+		switch (m_State)
 		{
-			WallJump_NonStickTimer += DeltaTime;
-
-			ResetWallJumpAndLedgeGrab();
+		case EState::STATE_Idle:
+			break;
+		case EState::STATE_Running:
+			break;
+		case EState::STATE_InAir:
+			GetMoveComponent()->InitialOnWall(m_WallData, 1.f);
+			break;
+		case EState::STATE_OnWall:
+			break;
+		case EState::STATE_LedgeGrabbing:
+			break;
+		default:
+			break;
 		}
-		else {
-			bOnWallActive = true;
-		}
+		m_State = EState::STATE_OnWall;
 	}
+		// OLD: WallJump
+	//if (GetMoveComponent()->IsFalling() && bOnWallActive)
+	//{
+	//	Do_OnWallMechanics(DeltaTime);
+	//}
+	//else if (!bOnWallActive)
+	//{
+	//	if (WallJump_NonStickTimer < WallJump_MaxNonStickTimer)	
+	//	{
+	//		WallJump_NonStickTimer += DeltaTime;
+	//
+	//		ResetWallJumpAndLedgeGrab();
+	//	}
+	//	else {
+	//		bOnWallActive = true;
+	//	}
+	//}
 
 
 	/* --------- GRAPPLE TARGETING -------- */

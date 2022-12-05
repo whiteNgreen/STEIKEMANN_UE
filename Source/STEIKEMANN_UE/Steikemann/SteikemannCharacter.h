@@ -12,7 +12,7 @@
 #include "SteikeAnimInstance.h"
 #include "GameplayTagAssetInterface.h"
 #include "../StaticActors/Collectible.h"
-
+#include "../WallDetectionComponent.h"
 
 #include "SteikemannCharacter.generated.h"
 
@@ -23,6 +23,15 @@ class UNiagaraSystem;
 class UNiagaraComponent;
 class USoundBase;
 
+UENUM()
+enum class EState : int32
+{
+	STATE_Idle,
+	STATE_Running,
+	STATE_InAir,
+	STATE_OnWall,
+	STATE_LedgeGrabbing
+};
 
 UCLASS()
 class STEIKEMANN_UE_API ASteikemannCharacter : public ACharacter, 
@@ -258,6 +267,8 @@ public:
 #pragma region Basic_Movement
 public:/* ------------------- Basic Movement ------------------- */
 
+	EState m_State = EState::STATE_Idle;
+
 	UPROPERTY(EditAnywhere, Category = "Movement|Walk/Run", meta = (AllowPrivateAcces = "true"))
 	float TurnRate{ 50.f };
 
@@ -471,6 +482,13 @@ public:/* ------------------- Basic Movement ------------------- */
 
 /* ---------------------------------- ON WALL ----------------------------------- */
 #pragma region OnWall
+	// NEW WALL MECHANICS
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		UWallDetectionComponent* WallDetector{ nullptr };
+
+	WallData m_WallData;
+	//bool bOnWall{};
+	//--------------------------------------------------------------------------------
 
 	/* How far from the player walls will be detected */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall")
