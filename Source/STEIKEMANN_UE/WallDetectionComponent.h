@@ -17,11 +17,15 @@ struct WallData
 };
 
 UENUM()
-enum class EOnWallState : int32
+enum class EOnWallState : int8
 {
 	WALL_None,
+
 	WALL_Hang,
 	WALL_Drag,
+	
+	WALL_Ledgegrab,
+	
 	WALL_Leave
 };
 
@@ -55,7 +59,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Detection|Viable Angles")
 		float Angle_LowerLimit{ -0.7f };
 
-	bool DetectWall(WallData& data);
+
+	FCollisionShape capsule;
+
+	bool DetectWall(const AActor* actor, const FVector Location, const FVector ForwardVector, WallData& data);
 private:
 	bool DetermineValidPoints_IMPL(TArray<FHitResult>& hits);
 	void GetWallPoint_IMPL(WallData& data, const TArray<FHitResult>& hits);

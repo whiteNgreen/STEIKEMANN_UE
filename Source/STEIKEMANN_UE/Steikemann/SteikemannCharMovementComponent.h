@@ -22,6 +22,14 @@
 //};
 
 // TODO: GRAVITY OVERRIDE ENUM
+UENUM(BlueprintType)
+enum class EGravityMode : uint8
+{
+	Default,
+	LerpToDefault,
+	LerpToNone,
+	None
+};
 
 UCLASS()
 class STEIKEMANN_UE_API USteikemannCharMovementComponent : public UCharacterMovementComponent
@@ -44,6 +52,8 @@ public:
 
 
 #pragma region Gravity
+public:
+	EGravityMode m_GravityMode = EGravityMode::Default;
 
 	/* Gravity over time while character is in the air */
 		/* The Base gravity scale override */
@@ -55,11 +65,13 @@ public:
 		/* Interpolation speed between gravityscale override and freefall gravity */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|GravityOverride")
 		float GravityScaleOverride_InterpSpeed{ 2.f };
+private:
+	void SetGravityScale(float deltatime);
 
 #pragma endregion //Gravity
 
 #pragma region Crouch
-
+public:
 	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Crouch|CrouchSlide")
 
 	float CrouchSlideSpeed{};
@@ -155,17 +167,32 @@ public:
 //#pragma endregion //Dash
 
 #pragma region Wall Jump
+public:	// Variables
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wall Mechanics|Drag")
+		float WJ_DragSpeed{ 200.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wall Mechanics|Jump", meta = (UIMin = "0", UIMax = "2"))
+		float WallJump_StrenghtMulti{ 1.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wall Mechanics|Jump", meta = (UIMin = "0", UIMax = "1"))
+		float WallJump_SidewaysAngleLimit{ 0.5f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wall Mechanics|Jump", meta = (UIMin = "0", UIMax = "90"))
+		float WallJump_UpwardAngle{ 45.f };
+public:
 	// NEW ON WALL
 	EOnWallState m_WallState = EOnWallState::WALL_None;
 	WallData m_Walldata;
+
+
 	void InitialOnWall(const WallData& wall, float time);
+	void Initial_OnWall_Hang(const WallData& wall, float time);
+	void WallJump(FVector input, float JumpStrength);
+	void ExitWall();
 private:
+	FTimerHandle TH_WallHang;
+
+	void ExitWall_Air();
 	void InitialOnWall_IMPL(float time);
 	void OnWallHang_IMPL();
 	void OnWallDrag_IMPL(float deltatime);
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wall Jump", meta = (AllowPrivateAccess = "true"))
-		float GravityCheat{ 100.f };
-	//void OnWall(float deltatime);
 	//-----------------------------------------------
 
 public:
@@ -191,7 +218,7 @@ public:
 
 	bool bWallJump{};
 	FVector WallJump_VelocityDirection{};
-	bool WallJump(const FVector& ImpactNormal, float JumpStrength);
+	//bool WallJump(const FVector& ImpactNormal, float JumpStrength);
 	bool StickToWall(float DeltaTime);
 	bool ReleaseFromWall(const FVector& ImpactNormal);
 

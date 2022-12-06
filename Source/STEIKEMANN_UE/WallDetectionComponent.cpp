@@ -21,7 +21,7 @@ void UWallDetectionComponent::BeginPlay()
 	Super::BeginPlay();
 
 	// ...
-	
+	capsule = FCollisionShape::MakeCapsule(Capsule_Radius, Capsule_HalfHeight);
 }
 
 
@@ -33,15 +33,18 @@ void UWallDetectionComponent::TickComponent(float DeltaTime, ELevelTick TickType
 	// ...
 }
 
-bool UWallDetectionComponent::DetectWall(WallData& data)
+bool UWallDetectionComponent::DetectWall(const AActor* actor, const FVector Location, const FVector ForwardVector, WallData& data)
 {
-	FCollisionShape capsule = FCollisionShape::MakeCapsule(Capsule_Radius, Capsule_HalfHeight);
-	FVector Location = GetOwner()->GetActorLocation();
+	if (!actor) return false;
 	TArray<FHitResult> Hits;
-	FCollisionQueryParams Params = FCollisionQueryParams("", false, GetOwner());
-	bool b = GetWorld()->SweepMultiByChannel(Hits, Location, Location + GetOwner()->GetActorForwardVector(), FQuat(1.f, 0, 0, 0), ECC_WallDetection, capsule, Params);
+	FCollisionQueryParams Params = FCollisionQueryParams("", false, actor);
+	bool b = GetWorld()->SweepMultiByChannel(Hits, Location, Location + ForwardVector * Capsule_Radius, FQuat(1.f, 0, 0, 0), ECC_WallDetection, capsule, Params);
+		DrawDebugCapsule(GetWorld(), Location, capsule.GetCapsuleHalfHeight(), capsule.GetCapsuleRadius(), FQuat(1.f, 0, 0, 0), FColor(.3f, .3f, 1.f, 1.f), false, 0, 0, 1.f);
 	if (!b) 
 		return false;
+	// Debug
+		for (const auto& it : Hits)
+			DrawDebugPoint(GetWorld(), it.ImpactPoint, 5.f, FColor::Blue, false, 0, 1);
 
 	b = DetermineValidPoints_IMPL(Hits);
 	if (!b)
@@ -49,13 +52,10 @@ bool UWallDetectionComponent::DetectWall(WallData& data)
 
 	GetWallPoint_IMPL(data, Hits);
 
+
 	DrawDebugPoint(GetWorld(), data.Location, 12.f, FColor::Red, false, 0, 1);
 	DrawDebugLine(GetWorld(), data.Location, data.Location + data.Normal * 50.f, FColor::Purple, false, 0, 1, 4.f);
 
-	// Debug
-		DrawDebugCapsule(GetWorld(), Location, capsule.GetCapsuleHalfHeight(), capsule.GetCapsuleRadius(), FQuat(1.f, 0, 0, 0), FColor(.3f, .3f, 1.f, 1.f), false, 0, 0, 1.f);
-		for (const auto& it : Hits)
-			DrawDebugPoint(GetWorld(), it.ImpactPoint, 5.f, FColor::Blue, false, 0, 1);
 
 	return true;
 }
@@ -65,10 +65,11 @@ bool UWallDetectionComponent::DetermineValidPoints_IMPL(TArray<FHitResult>& hits
 	for (int32 i{}; i < hits.Num();)
 	{
 		float angle = hits[i].ImpactNormal.Z;
-		if (angle > Angle_UpperLimit || angle < Angle_LowerLimit)
+		if (angle > Angle_UpperLimit || angle < Angle_LowerLimit) {
 			hits.RemoveAt(i);
-		else 
-			i++;
+			continue;
+		}
+		i++;
 	}
 	if (hits.Num() == 0) return false;
 	return true;

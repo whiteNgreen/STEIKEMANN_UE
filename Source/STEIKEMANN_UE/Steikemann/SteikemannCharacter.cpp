@@ -230,32 +230,51 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		WallJump_NonStickTimer = 0.f;
 	}
 
-	if (IsOnGround())
-		m_State = EState::STATE_Idle;
-	if (GetMoveComponent()->IsFalling())
-		m_State = EState::STATE_InAir;
-
-
-	/*		Wall Jump & LedgeGrab		*/
-	if (WallDetector->DetectWall(m_WallData))
+	// Set Basic States
+	if (m_State != EState::STATE_OnWall)
 	{
-		switch (m_State)
+		if (IsOnGround())
+			m_State = EState::STATE_OnGround;
+		if (GetMoveComponent()->IsFalling())
+			m_State = EState::STATE_InAir;
+	}
+
+
+	/*------------ STATES ---------------*/
+	const bool wall = WallDetector->DetectWall(this, GetActorLocation(), GetActorForwardVector(), m_WallData);
+	switch (m_State)
+	{
+	case EState::STATE_OnGround:
+		break;
+	case EState::STATE_InAir:
+	{
+		// Check if there is valid ledge above, if not do regular wall
+		// DO WALL DETECTION HERE
+		//if (WallDetector->DetectWall(GetActorLocation(), GetActorForwardVector(), m_WallData) && ValidateWall())
+		if (wall)
 		{
-		case EState::STATE_Idle:
-			break;
-		case EState::STATE_Running:
-			break;
-		case EState::STATE_InAir:
-			GetMoveComponent()->InitialOnWall(m_WallData, 1.f);
-			break;
-		case EState::STATE_OnWall:
-			break;
-		case EState::STATE_LedgeGrabbing:
-			break;
-		default:
-			break;
+			if (m_WallState == EOnWallState::WALL_Leave) break;
+
+			// Detect ledge
+
+			GetMoveComponent()->Initial_OnWall_Hang(m_WallData, OnWall_HangTime);
+			m_State = EState::STATE_OnWall;
+			m_WallState = EOnWallState::WALL_Hang;
 		}
-		m_State = EState::STATE_OnWall;
+		break;
+	}
+	case EState::STATE_OnWall:
+	{
+		//if (WallDetector->DetectWall(m_WallData, true, GetRootComponent()->GetComponentLocation().Z + OnWall_Detection_HeightCriteria))
+		OnWall_IMPL(DeltaTime);
+		break;
+	}
+	case EState::STATE_Attacking:
+		break;
+	case EState::STATE_Grappling:
+		break;
+	default:
+		break;
 	}
 		// OLD: WallJump
 	//if (GetMoveComponent()->IsFalling() && bOnWallActive)
@@ -911,10 +930,17 @@ void ASteikemannCharacter::GrappleDynamicGuideCamera(float deltatime)
 }
 
 
+void ASteikemannCharacter::ReevaluateState()
+{
+	//if ()
+}
+
 void ASteikemannCharacter::MoveForward(float value)
 {
 	InputVectorRaw.X = value;
 
+	// Switch case
+	if (m_State == EState::STATE_OnWall) { return; }
 	if (IsStickingToWall()) { return; }
 	if (IsLedgeGrabbing()) { return; }
 	if (IsCrouchSliding()) { return; }
@@ -945,6 +971,7 @@ void ASteikemannCharacter::MoveRight(float value)
 {
 	InputVectorRaw.Y = value;
 
+	if (m_State == EState::STATE_OnWall) { return; }
 	if (IsStickingToWall()) { return; }
 	if (IsLedgeGrabbing())	{ return; }
 	if (IsCrouchSliding()) { return; }
@@ -1003,79 +1030,134 @@ void ASteikemannCharacter::Jump()
 		/* ------ VARIOUS TYPES OF JUMPS ------- */
 
 		/* ---- SLIDE JUMP ---- */
-		if (IsCrouchSliding())
+		//if (IsCrouchSliding())
+		//{
+		//	JumpCurrentCount++;
+		//	{
+		//		FVector CrouchSlideDirection = GetVelocity();
+		//		CrouchSlideDirection.Normalize();
+		//		/*bAddJumpVelocity = */GetMoveComponent()->CrouchSlideJump(CrouchSlideDirection, InputVector);
+		//	}
+		//	Anim_Activate_Jump();	// Anim_Activate_CrouchSlideJump()
+		//	return;
+		//}
+
+		///* ---- LEDGE JUMP ---- */
+		////if ((GetMoveComponent()->bLedgeGrab) && GetMoveComponent()->IsFalling())
+		//if (IsLedgeGrabbing() && GetMoveComponent()->IsFalling())
+		//{
+		//	JumpCurrentCount = 1;
+
+		//	ResetWallJumpAndLedgeGrab();
+		//	bOnWallActive = false;
+		//	WallJump_NonStickTimer = 0.f;
+
+		//	/*bAddJumpVelocity = */GetMoveComponent()->LedgeJump(LedgeLocation, JumpStrength);
+		//	Anim_Activate_Jump();	//	Anim_Activate_LedgeGrabJump
+		//	return;
+		//}
+
+		///* ---- WALL JUMP ---- */
+		//if ((GetMoveComponent()->bStickingToWall || bFoundStickableWall) && GetMoveComponent()->IsFalling() || 
+		//	(GetMoveComponent()->IsFalling() && Jump_DetectWall()))
+		//{
+		//	GetMoveComponent()->WallJump(Wall_Normal, JumpStrength);
+		//	Anim_Activate_Jump();	//	Anim_Activate_WallJump
+		//	return;
+		//}
+
+		///* If player walked off an edge with no jumpcount */
+		//if (GetMoveComponent()->IsFalling() && JumpCurrentCount == 0)
+		//{
+		//	/* and the post edge timer is valid */
+		//	if (bCanPostEdgeRegularJump)
+		//	{
+		//		JumpCurrentCount++;
+		//	}
+		//	/* after post edge timer is valid */
+		//	else 
+		//	{
+		//		JumpCurrentCount = 2;
+		//	}
+		//	GetMoveComponent()->Jump(JumpStrength);
+		//	Anim_Activate_Jump();
+		//	return;
+		//}
+
+
+		///* ---- DOUBLE JUMP ---- */
+		//if (CanDoubleJump())
+		//{
+		//	JumpCurrentCount++;
+		//	//GetMoveComponent()->Jump(JumpStrength);
+		//	GetMoveComponent()->DoubleJump(InputVector.GetSafeNormal(), JumpStrength * DoubleJump_MultiplicationFactor);
+		//	GetMoveComponent()->StartJumpHeightHold();
+		//	Anim_Activate_Jump();	// Anim DoubleJump
+		//	return;
+		//}
+
+		///* ---- REGULAR JUMP ---- */
+		//if (CanJump())
+		//{
+		//	JumpCurrentCount++;
+		//	GetMoveComponent()->Jump(JumpStrength);
+		//	Anim_Activate_Jump();
+		//	return;
+		//}
+		FTimerHandle h;
+		switch (m_State)	// TODO: Go to Sub-States eg: OnGround->Idle|Running|Slide
+		{
+		case EState::STATE_OnGround:	// Regular Jump
 		{
 			JumpCurrentCount++;
-			{
-				FVector CrouchSlideDirection = GetVelocity();
-				CrouchSlideDirection.Normalize();
-				/*bAddJumpVelocity = */GetMoveComponent()->CrouchSlideJump(CrouchSlideDirection, InputVector);
-			}
-			Anim_Activate_Jump();	// Anim_Activate_CrouchSlideJump()
-			return;
-		}
-
-		/* ---- LEDGE JUMP ---- */
-		//if ((GetMoveComponent()->bLedgeGrab) && GetMoveComponent()->IsFalling())
-		if (IsLedgeGrabbing() && GetMoveComponent()->IsFalling())
-		{
-			JumpCurrentCount = 1;
-
-			ResetWallJumpAndLedgeGrab();
-			bOnWallActive = false;
-			WallJump_NonStickTimer = 0.f;
-
-			/*bAddJumpVelocity = */GetMoveComponent()->LedgeJump(LedgeLocation, JumpStrength);
-			Anim_Activate_Jump();	//	Anim_Activate_LedgeGrabJump
-			return;
-		}
-
-		/* ---- WALL JUMP ---- */
-		if ((GetMoveComponent()->bStickingToWall || bFoundStickableWall) && GetMoveComponent()->IsFalling() || 
-			(GetMoveComponent()->IsFalling() && Jump_DetectWall()))
-		{
-			GetMoveComponent()->WallJump(Wall_Normal, JumpStrength);
-			Anim_Activate_Jump();	//	Anim_Activate_WallJump
-			return;
-		}
-
-		/* If player walked off an edge with no jumpcount */
-		if (GetMoveComponent()->IsFalling() && JumpCurrentCount == 0)
-		{
-			/* and the post edge timer is valid */
-			if (bCanPostEdgeRegularJump)
-			{
-				JumpCurrentCount++;
-			}
-			/* after post edge timer is valid */
-			else 
-			{
-				JumpCurrentCount = 2;
-			}
 			GetMoveComponent()->Jump(JumpStrength);
 			Anim_Activate_Jump();
 			return;
 		}
-
-
-		/* ---- DOUBLE JUMP ---- */
-		if (CanDoubleJump())
+		case EState::STATE_InAir:	// Double Jump
 		{
+			if (GetMoveComponent()->IsFalling() && JumpCurrentCount == 0)
+			{
+				/* and the post edge timer is valid */
+				if (bCanPostEdgeRegularJump)
+				{
+					JumpCurrentCount++;
+				}
+				/* after post edge timer is valid */
+				else 
+				{
+					JumpCurrentCount = 2;
+				}
+				GetMoveComponent()->Jump(JumpStrength);
+				Anim_Activate_Jump();
+				return;
+			}
 			JumpCurrentCount++;
-			//GetMoveComponent()->Jump(JumpStrength);
 			GetMoveComponent()->DoubleJump(InputVector.GetSafeNormal(), JumpStrength * DoubleJump_MultiplicationFactor);
 			GetMoveComponent()->StartJumpHeightHold();
-			Anim_Activate_Jump();	// Anim DoubleJump
+			Anim_Activate_Jump();//Anim DoubleJump
 			return;
 		}
-
-		/* ---- REGULAR JUMP ---- */
-		if (CanJump())
+		case EState::STATE_OnWall:	// Wall Jump
 		{
-			JumpCurrentCount++;
-			GetMoveComponent()->Jump(JumpStrength);
-			Anim_Activate_Jump();
+			m_State = EState::STATE_InAir;
+			m_WallState = EOnWallState::WALL_Leave;
+			if (InputVector.SizeSquared() > 0.5f)
+				RotateActorYawToVector(InputVector);
+			else
+				RotateActorYawToVector(m_WallData.Normal);
+
+			GetWorldTimerManager().SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, OnWall_Reset_OnWallJump_Timer, false);
+			GetMoveComponent()->WallJump(InputVector, JumpStrength);
+			Anim_Activate_Jump();//Anim_Activate_WallJump
 			return;
+		}
+		case EState::STATE_Attacking:
+			break;
+		case EState::STATE_Grappling:
+			break;
+		default:
+			break;
 		}
 	}
 }
@@ -1480,6 +1562,72 @@ void ASteikemannCharacter::Respawn()
 		return;
 	}
 	SetActorTransform(StartTransform, false, nullptr, ETeleportType::TeleportPhysics);
+}
+
+void ASteikemannCharacter::ExitOnWall(EState state)
+{
+	m_State = state;
+	m_WallState = EOnWallState::WALL_None;
+	//switch (state)
+	//{
+	//case EState::STATE_Idle:
+	//	break;
+	//case EState::STATE_Running:
+	//	break;
+	//case EState::STATE_InAir:
+	//	break;
+	//case EState::STATE_OnWall:
+	//	break;
+	//case EState::STATE_LedgeGrabbing:
+	//	break;
+	//default:
+	//	break;
+	//}
+}
+
+bool ASteikemannCharacter::ValidateWall()
+{
+	FVector start = GetActorLocation() + FVector(0, 0, Wall_HeightCriteria);
+	FHitResult hit;
+	FCollisionQueryParams Params("", false, this);
+	const bool b = GetWorld()->LineTraceSingleByChannel(hit, start, start + (m_WallData.Normal * 200.f * -1.f), ECC_WallDetection, Params);
+	return b;
+}
+
+void ASteikemannCharacter::OnWall_IMPL(float deltatime)
+{
+	switch (m_WallState)
+	{
+	case EOnWallState::WALL_None:
+		break;
+	case EOnWallState::WALL_Hang:
+		RotateActorYawToVector(m_WallData.Normal * -1.f);
+		break;
+	case EOnWallState::WALL_Drag:
+		GetMoveComponent()->m_Walldata = m_WallData;	// TODO: Change when this happens
+		OnWall_Drag_IMPL(deltatime, (GetMoveComponent()->Velocity.Z/GetMoveComponent()->WJ_DragSpeed) * -1.f);	// VelocityZ scale from 0->1
+		break;
+	case EOnWallState::WALL_Leave:
+		break;
+	default:
+		break;
+	}
+}
+
+void ASteikemannCharacter::OnWall_Drag_IMPL(float deltatime, float velocityZ)
+{
+	// Play particle effects
+	if (NS_WallSlide) {
+		Component_Niagara->SetAsset(NS_WallSlide);
+		Component_Niagara->SetNiagaraVariableInt("User.SpawnAmount", NS_WallSlide_ParticleAmount * deltatime * velocityZ);
+		Component_Niagara->SetWorldLocationAndRotation(GetMesh()->GetSocketLocation("Front"), GetMesh()->GetSocketRotation("Front"));
+		Component_Niagara->Activate(true);
+	}
+}
+
+void ASteikemannCharacter::ExitOnWall_GROUND()
+{
+	// Play animation, maybe sound -- EState being 'idle'
 }
 
 void ASteikemannCharacter::OnCapsuleComponentBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)

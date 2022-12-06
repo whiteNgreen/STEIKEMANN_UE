@@ -35,7 +35,7 @@ void ASmallEnemy::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	WallDetector->DetectWall(m_WallData);
+	WallDetector->DetectWall(this, GetActorLocation(), GetActorForwardVector(), m_WallData);
 }
 
 // Called to bind functionality to input

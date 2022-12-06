@@ -24,14 +24,29 @@ class UNiagaraComponent;
 class USoundBase;
 
 UENUM()
-enum class EState : int32
+enum class EState : int8
 {
-	STATE_Idle,
-	STATE_Running,
+	// Basic States
+	STATE_OnGround,
 	STATE_InAir,
+	
+	// Advanced States
+
 	STATE_OnWall,
-	STATE_LedgeGrabbing
+
+	STATE_Attacking,
+
+	STATE_Grappling
 };
+
+//UENUM()
+//enum class EWall : int8
+//{
+//	WALL_None,
+//	WALL_Hang,
+//	WALL_Drag,
+//	WALL_Leavue
+//};
 
 UCLASS()
 class STEIKEMANN_UE_API ASteikemannCharacter : public ACharacter, 
@@ -265,10 +280,15 @@ public:
 #pragma endregion //Camera
 
 #pragma region Basic_Movement
+public:	// States
+	EState GetState() const { return m_State; }
+	void SetState(EState state) { m_State = state; }
+	void ReevaluateState();
+private:
+	EState m_State = EState::STATE_OnGround;
+
 public:/* ------------------- Basic Movement ------------------- */
-
-	EState m_State = EState::STATE_Idle;
-
+public:
 	UPROPERTY(EditAnywhere, Category = "Movement|Walk/Run", meta = (AllowPrivateAcces = "true"))
 	float TurnRate{ 50.f };
 
@@ -482,14 +502,31 @@ public:/* ------------------- Basic Movement ------------------- */
 
 /* ---------------------------------- ON WALL ----------------------------------- */
 #pragma region OnWall
-	// NEW WALL MECHANICS
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+public:// NEW WALL MECHANICS
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall")
+		float Wall_HeightCriteria{ 20.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall")
+		float OnWall_HangTime{ 0.5f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall")
+		float OnWall_Reset_OnWallJump_Timer{ 1.f };
+
+	EOnWallState m_WallState = EOnWallState::WALL_None;
+
+	void ExitOnWall(EState state);
+private:
+	bool ValidateWall();
+
+	void OnWall_IMPL(float deltatime);
+	void OnWall_Drag_IMPL(float deltatime, float velocityZ);
+
+	UPROPERTY(EditAnywhere)
 		UWallDetectionComponent* WallDetector{ nullptr };
-
 	WallData m_WallData;
-	//bool bOnWall{};
-	//--------------------------------------------------------------------------------
+	void ExitOnWall_GROUND();
 
+
+
+public:	//OLD 
 	/* How far from the player walls will be detected */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall")
 		float WallDetectionRange		UMETA(DisplayName = "Wall Detection Range") { 200.f };

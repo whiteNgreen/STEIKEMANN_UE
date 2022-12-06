@@ -33,21 +33,8 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 	}
 
 	/* -- Gravity -- */
-	//if (GetCharOwner()->IsJumping() || MovementMode == MOVE_Walking /* || bWallJump*//* || bIsJumping*/){
-	//	GravityScale = FMath::FInterpTo(GravityScale, GravityScaleOverride, DeltaTime, GravityScaleOverride_InterpSpeed);
-	//}
-	//else if (bGP_PreLaunch || bGrappleHook_InitialState){
-	//	GravityScale = 0.f;
-	//	Velocity *= 0.f;
-	//}
-	//
-	//else if (bStickingToWall || bWallSlowDown){
-	//	GravityScale = FMath::FInterpTo(GravityScale, 0.f, GetWorld()->GetDeltaSeconds(), GravityScaleOverride_InterpSpeed);
-	//}
-	//else{
-	//	GravityScale = FMath::FInterpTo(GravityScale, GravityScaleOverride_Freefall, DeltaTime, GravityScaleOverride_InterpSpeed);
-	//}
-
+	SetGravityScale(DeltaTime);
+	PRINTPAR("___GravityScale : %f", GravityScale);
 
 
 	/* Crouch */
@@ -99,31 +86,34 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 		break;
 	}
 
-	//if (IsFalling())
-	//{
-	//	if (GetCharOwner()->bOnWallActive)
-	//	{
-	//		if (bLedgeGrab) {
-	//			Update_LedgeGrab();
-	//		}
-	//		else
-	//		{
-	//			if (GetCharOwner()->bFoundStickableWall) 
-	//			{
-	//				bStickingToWall = StickToWall(DeltaTime);
-	//			}
-	//			else {
-	//				bWallSlowDown = false;
-	//			}
-	//		}
-	//	}
-	//}
-	//else { 
-	//	GetCharOwner()->ResetWallJumpAndLedgeGrab(); 
-	//}
-
 }
 
+
+void USteikemannCharMovementComponent::SetGravityScale(float deltatime)
+{
+
+	switch (m_GravityMode)
+	{
+	case EGravityMode::Default:
+		GravityScale = GravityScaleOverride;
+		break;
+	case EGravityMode::LerpToDefault:
+		GravityScale = FMath::FInterpTo(GravityScale, GravityScaleOverride, deltatime, GravityScaleOverride_InterpSpeed);
+		if (GravityScale < GravityScaleOverride - 0.01f || GravityScale > GravityScaleOverride + 0.05f)
+			m_GravityMode = EGravityMode::Default;
+		break;
+	case EGravityMode::None:
+		GravityScale = 0.f;
+		break;
+	case EGravityMode::LerpToNone:
+		GravityScale = FMath::FInterpTo(GravityScale, 0.f, deltatime, GravityScaleOverride_InterpSpeed);
+		if (GravityScale < GravityScaleOverride - 0.01f || GravityScale > GravityScaleOverride + 0.05f)
+			m_GravityMode = EGravityMode::None;
+		break;
+	default:
+		break;
+	}
+}
 
 void USteikemannCharMovementComponent::Initiate_CrouchSlide(const FVector& SlideDirection)
 {
@@ -329,65 +319,139 @@ void USteikemannCharMovementComponent::InitialOnWall(const WallData& wall, float
 	}
 }
 
+void USteikemannCharMovementComponent::Initial_OnWall_Hang(const WallData& wall, float time)
+{
+	PRINTLONG("ON WALL HANG");
+
+	m_Walldata = wall;
+	m_WallState = EOnWallState::WALL_Hang;
+
+	Velocity *= 0.f;
+	GravityScaleOverride_InterpSpeed = 1.f / time;
+	m_GravityMode = EGravityMode::LerpToNone;
+
+	//FTimerHandle h;
+	GetCharOwner()->GetWorldTimerManager().SetTimer(TH_WallHang, [this]()
+		{
+			m_GravityMode = EGravityMode::LerpToDefault;
+			m_WallState = EOnWallState::WALL_Drag;
+			GetCharOwner()->m_WallState = EOnWallState::WALL_Drag;
+		}, time, false);	// TODO: Change WALL_None to WALL_Drag
+}
+
+void USteikemannCharMovementComponent::WallJump(FVector input, float JumpStrength)
+{
+	ExitWall_Air();
+
+	FVector normal = m_Walldata.Normal;
+	FVector Input;
+	(input.SizeSquared() > 0.5f) ? Input = input : Input = normal;
+
+	FVector OrthoUp = FVector::CrossProduct(normal, FVector::CrossProduct(FVector::UpVector, normal));
+	FVector Right = FVector::CrossProduct(FVector::UpVector, normal);
+
+	FVector direction = FVector::VectorPlaneProject(Input, OrthoUp);
+	direction.Normalize();
+
+	float dot = FVector::DotProduct(normal, direction);
+	if (dot < WallJump_SidewaysAngleLimit)
+	{
+		float r = FVector::DotProduct(Right, Input);
+		float angle = FMath::RadiansToDegrees(acosf(WallJump_SidewaysAngleLimit));
+		if (r < 0) angle *= -1.f;
+		direction = normal.RotateAngleAxis(angle, OrthoUp);
+	}
+
+	direction = (cosf(FMath::DegreesToRadians(WallJump_UpwardAngle)) * direction) + (sinf(FMath::DegreesToRadians(WallJump_UpwardAngle)) * FVector::UpVector);
+	direction.Normalize();
+	AddImpulse(direction * JumpStrength * WallJump_StrenghtMulti, true);
+}
+
+void USteikemannCharMovementComponent::ExitWall()
+{
+	m_WallState = EOnWallState::WALL_None;
+	m_GravityMode = EGravityMode::Default;
+	GetCharOwner()->ExitOnWall(EState::STATE_OnGround);
+}
+
+void USteikemannCharMovementComponent::ExitWall_Air()
+{
+	m_GravityMode = EGravityMode::LerpToDefault;
+	m_WallState = EOnWallState::WALL_None;
+	GetCharacterOwner()->GetWorldTimerManager().ClearTimer(TH_WallHang);
+	Velocity *= 0.f;
+}
+
 void USteikemannCharMovementComponent::InitialOnWall_IMPL(float time)
 {
 	PRINTLONG("ON WALL HANG");
 	m_WallState = EOnWallState::WALL_Hang;
+
 	Velocity *= 0.f;
+	GravityScaleOverride_InterpSpeed = 1.f / time;
+	m_GravityMode = EGravityMode::LerpToNone;
+
 	FTimerHandle h;
-	GetCharOwner()->GetWorldTimerManager().SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, time, false);	// TODO: Change WALL_None to WALL_Drag
+	GetCharOwner()->GetWorldTimerManager().SetTimer(h, [this]()
+		{
+			m_GravityMode = EGravityMode::LerpToDefault;
+			m_WallState = EOnWallState::WALL_Drag; 
+			GetCharOwner()->m_WallState = EOnWallState::WALL_Drag;
+		}, time, false);	// TODO: Change WALL_None to WALL_Drag
 }
 
 void USteikemannCharMovementComponent::OnWallHang_IMPL()
 {
-	//float extra = GetGravityZ() * (51.f / 6125.f);
-	//AddForce(FVector(0, 0, (GetGravityZ() * Mass/* + (extra * GravityCheat)*/) * -1.f));
-	Velocity.Z *= 0.f;
-	GravityScale = 0.f;
+	Velocity *= 0.f;	// TODO: Lerp to zero velocity in all directions?
 }
 
 void USteikemannCharMovementComponent::OnWallDrag_IMPL(float deltatime)
 {
+	Velocity.X = 0.f;
+	Velocity.Y = 0.f;
+	if (Velocity.Z < -WJ_DragSpeed)
+		Velocity.Z = -WJ_DragSpeed;
+	if (IsWalking())
+		ExitWall();
 }
 
 
-
-bool USteikemannCharMovementComponent::WallJump(const FVector& ImpactNormal, float JumpStrength)
-{
-	FVector InputDirection{ GetCharOwner()->InputVector };
-	float InputToForwardAngle{ 0.f };
-	if (InputDirection.SizeSquared() > 0.5f)
-	{
-		InputToForwardAngle = FMath::RadiansToDegrees(acosf(FVector::DotProduct(GetCharacterOwner()->GetActorForwardVector(), InputDirection)));
-		float InputAngleDirection = FVector::DotProduct(GetCharacterOwner()->GetActorRightVector(), InputDirection);
-		if (InputAngleDirection > 0.f) { InputToForwardAngle *= -1.f; }
-	}
-
-	FVector OrthoVector = FVector::CrossProduct(ImpactNormal, FVector::CrossProduct(FVector::UpVector, ImpactNormal));
-	OrthoVector.Normalize();
-
-	float radians = FMath::DegreesToRadians(WallJump_JumpAngle);
-	WallJump_VelocityDirection = (cosf(radians) * ImpactNormal) + (sinf(radians) * OrthoVector);
-	WallJump_VelocityDirection.Normalize();
-	
-	if (InputToForwardAngle > 20.f || InputToForwardAngle < -20.f)
-	{
-		if (InputToForwardAngle > 45.f) {
-			WallJump_VelocityDirection = WallJump_VelocityDirection.RotateAngleAxis(WallJump_SidewaysJumpAngle, OrthoVector);
-		}
-		else if (InputToForwardAngle < -45.f) {
-			WallJump_VelocityDirection = WallJump_VelocityDirection.RotateAngleAxis(-WallJump_SidewaysJumpAngle, OrthoVector);
-		}
-	}
-
-	AddImpulse(WallJump_VelocityDirection * JumpStrength, true);
-
-
-	GetCharOwner()->WallJump_NonStickTimer = 0.f;
-	GetCharOwner()->ResetWallJumpAndLedgeGrab();
-	GetCharOwner()->RotateActorYawToVector(WallJump_VelocityDirection);
-	return true;
-}
+//bool USteikemannCharMovementComponent::WallJump(const FVector& ImpactNormal, float JumpStrength)
+//{
+//	FVector InputDirection{ GetCharOwner()->InputVector };
+//	float InputToForwardAngle{ 0.f };
+//	if (InputDirection.SizeSquared() > 0.5f)
+//	{
+//		InputToForwardAngle = FMath::RadiansToDegrees(acosf(FVector::DotProduct(GetCharacterOwner()->GetActorForwardVector(), InputDirection)));
+//		float InputAngleDirection = FVector::DotProduct(GetCharacterOwner()->GetActorRightVector(), InputDirection);
+//		if (InputAngleDirection > 0.f) { InputToForwardAngle *= -1.f; }
+//	}
+//
+//	FVector OrthoVector = FVector::CrossProduct(ImpactNormal, FVector::CrossProduct(FVector::UpVector, ImpactNormal));
+//	OrthoVector.Normalize();
+//
+//	float radians = FMath::DegreesToRadians(WallJump_JumpAngle);
+//	WallJump_VelocityDirection = (cosf(radians) * ImpactNormal) + (sinf(radians) * OrthoVector);
+//	WallJump_VelocityDirection.Normalize();
+//	
+//	if (InputToForwardAngle > 20.f || InputToForwardAngle < -20.f)
+//	{
+//		if (InputToForwardAngle > 45.f) {
+//			WallJump_VelocityDirection = WallJump_VelocityDirection.RotateAngleAxis(WallJump_SidewaysJumpAngle, OrthoVector);
+//		}
+//		else if (InputToForwardAngle < -45.f) {
+//			WallJump_VelocityDirection = WallJump_VelocityDirection.RotateAngleAxis(-WallJump_SidewaysJumpAngle, OrthoVector);
+//		}
+//	}
+//
+//	AddImpulse(WallJump_VelocityDirection * JumpStrength, true);
+//
+//
+//	GetCharOwner()->WallJump_NonStickTimer = 0.f;
+//	GetCharOwner()->ResetWallJumpAndLedgeGrab();
+//	GetCharOwner()->RotateActorYawToVector(WallJump_VelocityDirection);
+//	return true;
+//}
 
 bool USteikemannCharMovementComponent::StickToWall(float DeltaTime)
 {
