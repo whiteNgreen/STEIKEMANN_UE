@@ -22,11 +22,10 @@ void ASmallEnemy::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	/*
-	* Adding GameplayTags to the GameplayTagsContainer
-	*/
-	//Enemy = &Tag_EnemyAubergineDoggo;
-	//GameplayTags.AddTag(GetTag_EnemyAubergineDoggo());
+	WallDetector->SetCapsuleSize(WDC_Capsule_Radius, WDC_Capsule_Halfheight);
+	WallDetector->SetDebugStatus(bWDC_Debug);
+
+	// Adding gameplay tags
 	GameplayTags.AddTag(Tag::AubergineDoggo());
 }
 

@@ -110,6 +110,10 @@ void USteikemannCharMovementComponent::SetGravityScale(float deltatime)
 		if (GravityScale < GravityScaleOverride - 0.01f || GravityScale > GravityScaleOverride + 0.05f)
 			m_GravityMode = EGravityMode::None;
 		break;
+	case EGravityMode::ForcedNone:
+		GravityScale = 0.f;
+		Velocity *= 0.f;
+		break;
 	default:
 		break;
 	}
@@ -305,7 +309,7 @@ void USteikemannCharMovementComponent::DeactivateJumpMechanics()
 }
 
 
-void USteikemannCharMovementComponent::InitialOnWall(const WallData& wall, float time)
+void USteikemannCharMovementComponent::InitialOnWall(const Wall::WallData& wall, float time)
 {
 	m_Walldata = wall;
 
@@ -319,7 +323,7 @@ void USteikemannCharMovementComponent::InitialOnWall(const WallData& wall, float
 	}
 }
 
-void USteikemannCharMovementComponent::Initial_OnWall_Hang(const WallData& wall, float time)
+void USteikemannCharMovementComponent::Initial_OnWall_Hang(const Wall::WallData& wall, float time)
 {
 	PRINTLONG("ON WALL HANG");
 
@@ -336,7 +340,7 @@ void USteikemannCharMovementComponent::Initial_OnWall_Hang(const WallData& wall,
 			m_GravityMode = EGravityMode::LerpToDefault;
 			m_WallState = EOnWallState::WALL_Drag;
 			GetCharOwner()->m_WallState = EOnWallState::WALL_Drag;
-		}, time, false);	// TODO: Change WALL_None to WALL_Drag
+		}, time, false);
 }
 
 void USteikemannCharMovementComponent::WallJump(FVector input, float JumpStrength)

@@ -28,7 +28,8 @@ enum class EGravityMode : uint8
 	Default,
 	LerpToDefault,
 	LerpToNone,
-	None
+	None,
+	ForcedNone
 };
 
 UCLASS()
@@ -179,11 +180,11 @@ public:	// Variables
 public:
 	// NEW ON WALL
 	EOnWallState m_WallState = EOnWallState::WALL_None;
-	WallData m_Walldata;
+	Wall::WallData m_Walldata;
 
 
-	void InitialOnWall(const WallData& wall, float time);
-	void Initial_OnWall_Hang(const WallData& wall, float time);
+	void InitialOnWall(const Wall::WallData& wall, float time);
+	void Initial_OnWall_Hang(const Wall::WallData& wall, float time);
 	void WallJump(FVector input, float JumpStrength);
 	void ExitWall();
 private:

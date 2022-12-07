@@ -67,16 +67,16 @@ ASteikemannCharacter::ASteikemannCharacter(const FObjectInitializer& ObjectIniti
 	Component_Niagara->SetupAttachment(RootComponent);
 
 
-		AttackCollider = CreateDefaultSubobject<UBoxComponent>(TEXT("AttackCollider"));
-		AttackCollider->SetupAttachment(GetMesh(), "Stav_CollisionSocket");
-		AttackCollider->SetGenerateOverlapEvents(false);
+	AttackCollider = CreateDefaultSubobject<UBoxComponent>(TEXT("AttackCollider"));
+	AttackCollider->SetupAttachment(GetMesh(), "Stav_CollisionSocket");
+	AttackCollider->SetGenerateOverlapEvents(false);
 
-		GroundPoundCollider = CreateDefaultSubobject<USphereComponent>(TEXT("GroundPoundCollider"));
-		GroundPoundCollider->SetupAttachment(RootComponent);
-		GroundPoundCollider->SetGenerateOverlapEvents(false);
-		GroundPoundCollider->SetSphereRadius(0.1f);
+	GroundPoundCollider = CreateDefaultSubobject<USphereComponent>(TEXT("GroundPoundCollider"));
+	GroundPoundCollider->SetupAttachment(RootComponent);
+	GroundPoundCollider->SetGenerateOverlapEvents(false);
+	GroundPoundCollider->SetSphereRadius(0.1f);
 
-	WallDetector = CreateDefaultSubobject<UWallDetectionComponent>(TEXT("Wall Detection Component"));
+	WallDetector = CreateDefaultSubobject<UWallDetectionComponent>(TEXT("WallDetector"));
 }
 
 // Called when the game starts or when spawned
@@ -93,45 +93,31 @@ void ASteikemannCharacter::BeginPlay()
 	StartTransform = GetActorTransform();
 
 	/* Creating Niagara Compnents */
-	{
-		NiComp_CrouchSlide = CreateNiagaraComponent("Niagara_CrouchSlide", RootComponent, FAttachmentTransformRules::SnapToTargetIncludingScale);
-		if (NiComp_CrouchSlide) {
-			NiComp_CrouchSlide->bAutoActivate = false;
-			if (NS_CrouchSlide) { NiComp_CrouchSlide->SetAsset(NS_CrouchSlide); }
-		}
-
+	NiComp_CrouchSlide = CreateNiagaraComponent("Niagara_CrouchSlide", RootComponent, FAttachmentTransformRules::SnapToTargetIncludingScale);
+	if (NiComp_CrouchSlide) {
+		NiComp_CrouchSlide->bAutoActivate = false;
+		if (NS_CrouchSlide) { NiComp_CrouchSlide->SetAsset(NS_CrouchSlide); }
 	}
 	
+	
 	/* Attack Collider */
-	{
-		AttackCollider->OnComponentBeginOverlap.AddDynamic(this, &ASteikemannCharacter::OnAttackColliderBeginOverlap);
-		AttackColliderScale = AttackCollider->GetRelativeScale3D();
-		AttackCollider->SetRelativeScale3D(FVector(0));
+	AttackCollider->OnComponentBeginOverlap.AddDynamic(this, &ASteikemannCharacter::OnAttackColliderBeginOverlap);
+	AttackColliderScale = AttackCollider->GetRelativeScale3D();
+	AttackCollider->SetRelativeScale3D(FVector(0));
 		
 
-		GroundPoundCollider->OnComponentBeginOverlap.AddDynamic(this, &ASteikemannCharacter::OnAttackColliderBeginOverlap);
-		//GroundPoundColliderScale = GroundPoundCollider->GetRelativeScale3D();
-
-	}
-
+	GroundPoundCollider->OnComponentBeginOverlap.AddDynamic(this, &ASteikemannCharacter::OnAttackColliderBeginOverlap);
+	//GroundPoundColliderScale = GroundPoundCollider->GetRelativeScale3D();
+	
 	/* Grapple Targeting Detection Sphere */
-	{
-		GrappleTargetingDetectionSphere->OnComponentBeginOverlap.AddDynamic(this, &ASteikemannCharacter::OnGrappleTargetDetectionBeginOverlap);
-		GrappleTargetingDetectionSphere->OnComponentEndOverlap.AddDynamic(this, &ASteikemannCharacter::OnGrappleTargetDetectionEndOverlap);
+	GrappleTargetingDetectionSphere->OnComponentBeginOverlap.AddDynamic(this, &ASteikemannCharacter::OnGrappleTargetDetectionBeginOverlap);
+	GrappleTargetingDetectionSphere->OnComponentEndOverlap.AddDynamic(this, &ASteikemannCharacter::OnGrappleTargetDetectionEndOverlap);
 
-		GrappleTargetingDetectionSphere->SetGenerateOverlapEvents(true);
-		GrappleTargetingDetectionSphere->SetSphereRadius(GrappleHookRange);
-	}
+	GrappleTargetingDetectionSphere->SetGenerateOverlapEvents(true);
+	GrappleTargetingDetectionSphere->SetSphereRadius(GrappleHookRange);
 
-	/* WHY DO I HAVE TO DO THIS??? WITH REQUEST TAG IN THE GETTAG FUNCTIONS AS WELL?? */
-	//Tag_Player = FGameplayTag::RequestGameplayTag("Pottit");
-	//Tag_Enemy = FGameplayTag::RequestGameplayTag("Enemy");
-	//Tag_EnemyAubergineDoggo = FGameplayTag::RequestGameplayTag("Enemy.AubergineDoggo");
-	//Tag_GrappleTarget = FGameplayTag::RequestGameplayTag("GrappleTarget");
-	//Tag_GrappleTarget_Static = FGameplayTag::RequestGameplayTag("GrappleTarget.Static");
-	//Tag_GrappleTarget_Dynamic = FGameplayTag::RequestGameplayTag("GrappleTarget.Dynamic");
-	//Tag_CameraVolume = FGameplayTag::RequestGameplayTag("CameraVolume");
-
+	WallDetector->SetCapsuleSize(WDC_Capsule_Radius, WDC_Capsule_Halfheight);
+	WallDetector->SetDebugStatus(bWDC_Debug);
 	/*
 	* Adding GameplayTags to the GameplayTagsContainer
 	*/
@@ -206,6 +192,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		//PRINTPAR("Input: %s , Size: %f", *InputVector.ToString(), InputVector.Size());
 		//PRINTPAR("Controller: %s", *GetControlRotation().Vector().ToString());
 	}
+	PRINTPAR("JumpCount = %i", JumpCurrentCount);
 
 	/*		Resets Rotation Pitch and Roll		*/
 	if (IsFalling() || GetMoveComponent()->IsWalking()) {
@@ -233,10 +220,11 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	// Set Basic States
 	if (m_State != EState::STATE_OnWall)
 	{
-		if (IsOnGround())
-			m_State = EState::STATE_OnGround;
-		if (GetMoveComponent()->IsFalling())
-			m_State = EState::STATE_InAir;
+		SetDefaultState();
+		//if (IsOnGround())
+		//	m_State = EState::STATE_OnGround;
+		//if (GetMoveComponent()->IsFalling())
+		//	m_State = EState::STATE_InAir;
 	}
 
 
@@ -248,25 +236,37 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		break;
 	case EState::STATE_InAir:
 	{
-		// Check if there is valid ledge above, if not do regular wall
-		// DO WALL DETECTION HERE
-		//if (WallDetector->DetectWall(GetActorLocation(), GetActorForwardVector(), m_WallData) && ValidateWall())
-		if (wall)
+		if (wall && m_WallState == EOnWallState::WALL_None)
 		{
-			if (m_WallState == EOnWallState::WALL_Leave) break;
+			// Detect ledge & Ledge Grab
+			if (WallDetector->DetectLedge(m_Ledgedata, this, GetActorLocation(), GetActorUpVector(), m_WallData, LedgeGrab_Height, LedgeGrab_Inwards))
+			{
+				m_State = EState::STATE_OnWall;
+				m_WallState = EOnWallState::WALL_Ledgegrab;
+				Initial_LedgeGrab();
+				break;	
+			}
 
-			// Detect ledge
-
-			GetMoveComponent()->Initial_OnWall_Hang(m_WallData, OnWall_HangTime);
-			m_State = EState::STATE_OnWall;
-			m_WallState = EOnWallState::WALL_Hang;
+			// Hang on wall -- Default
+			if (ValidateWall())
+			{
+				GetMoveComponent()->Initial_OnWall_Hang(m_WallData, OnWall_HangTime);
+				m_State = EState::STATE_OnWall;
+				m_WallState = EOnWallState::WALL_Hang;
+			}
 		}
 		break;
 	}
 	case EState::STATE_OnWall:
 	{
-		//if (WallDetector->DetectWall(m_WallData, true, GetRootComponent()->GetComponentLocation().Z + OnWall_Detection_HeightCriteria))
-		OnWall_IMPL(DeltaTime);
+		if (wall || WallDetector->DetectLedge(m_Ledgedata, this, GetActorLocation(), GetActorUpVector(), m_WallData, LedgeGrab_Height, LedgeGrab_Inwards))
+			OnWall_IMPL(DeltaTime);
+		else {
+			ExitOnWall(EState::STATE_InAir);
+			GetMoveComponent()->m_WallState = EOnWallState::WALL_None;
+			GetMoveComponent()->m_GravityMode = EGravityMode::LerpToDefault;
+		}
+
 		break;
 	}
 	case EState::STATE_Attacking:
@@ -532,7 +532,10 @@ void ASteikemannCharacter::Initial_GrappleHook()
 
 	/* Start GrappleHook */
 	bIsGrapplehooking = true;
-	GetMoveComponent()->bGrappleHook_InitialState = true;
+	m_State = EState::STATE_Grappling;
+	//GetMoveComponent()->bGrappleHook_InitialState = true;
+	GetMoveComponent()->m_GravityMode = EGravityMode::ForcedNone;
+	GetMoveComponent()->Velocity *= 0.f;
 
 	/* Rotate actor */
 	FVector Direction = Active_GrappledActor->GetActorLocation() - GetActorLocation();
@@ -576,8 +579,9 @@ void ASteikemannCharacter::Start_GrappleHook()
 		JumpCurrentCount = 1;
 	}
 
-	GetMoveComponent()->bGrappleHook_InitialState = false;
-	
+	//GetMoveComponent()->bGrappleHook_InitialState = false;
+	GetMoveComponent()->m_GravityMode = EGravityMode::LerpToDefault;
+
 	bIsGrapplehooking = false;
 	bIsPostGrapplehooking = true;
 	//Active_GrappledActor = nullptr;
@@ -618,6 +622,7 @@ void ASteikemannCharacter::Stop_GrappleHook()
 	Active_GrappledActor = nullptr;
 	bGrapplingStaticTarget = false;
 	bGrapplingDynamicTarget = false;
+	SetDefaultState();
 }
 
 
@@ -930,9 +935,13 @@ void ASteikemannCharacter::GrappleDynamicGuideCamera(float deltatime)
 }
 
 
-void ASteikemannCharacter::ReevaluateState()
+
+void ASteikemannCharacter::SetDefaultState()
 {
-	//if ()
+	if (IsOnGround())
+		m_State = EState::STATE_OnGround;
+	if (GetMoveComponent()->IsFalling())
+		m_State = EState::STATE_InAir;
 }
 
 void ASteikemannCharacter::MoveForward(float value)
@@ -1112,7 +1121,10 @@ void ASteikemannCharacter::Jump()
 			JumpCurrentCount++;
 			GetMoveComponent()->Jump(JumpStrength);
 			Anim_Activate_Jump();
-			return;
+
+			GetWorldTimerManager().SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, OnWallActivation_PostJumpingOnGround, false);
+			m_WallState = EOnWallState::WALL_Leave;
+			break;
 		}
 		case EState::STATE_InAir:	// Double Jump
 		{
@@ -1130,18 +1142,34 @@ void ASteikemannCharacter::Jump()
 				}
 				GetMoveComponent()->Jump(JumpStrength);
 				Anim_Activate_Jump();
-				return;
+				break;
 			}
-			JumpCurrentCount++;
-			GetMoveComponent()->DoubleJump(InputVector.GetSafeNormal(), JumpStrength * DoubleJump_MultiplicationFactor);
-			GetMoveComponent()->StartJumpHeightHold();
-			Anim_Activate_Jump();//Anim DoubleJump
-			return;
+			if (CanDoubleJump())
+			{
+				JumpCurrentCount++;
+				GetMoveComponent()->DoubleJump(InputVector.GetSafeNormal(), JumpStrength * DoubleJump_MultiplicationFactor);
+				GetMoveComponent()->StartJumpHeightHold();
+				Anim_Activate_Jump();//Anim DoubleJump
+			}
+			break;
 		}
 		case EState::STATE_OnWall:	// Wall Jump
 		{
+			// Ledgejump
+			if (m_WallState == EOnWallState::WALL_Ledgegrab)
+			{
+				m_State = EState::STATE_InAir;
+				m_WallState = EOnWallState::WALL_Leave;
+				GetMoveComponent()->m_GravityMode = EGravityMode::LerpToDefault;
+				GetWorldTimerManager().SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, 0.5f, false);
+				break;
+			}
+
+			// Walljump
 			m_State = EState::STATE_InAir;
 			m_WallState = EOnWallState::WALL_Leave;
+			
+			
 			if (InputVector.SizeSquared() > 0.5f)
 				RotateActorYawToVector(InputVector);
 			else
@@ -1150,7 +1178,7 @@ void ASteikemannCharacter::Jump()
 			GetWorldTimerManager().SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, OnWall_Reset_OnWallJump_Timer, false);
 			GetMoveComponent()->WallJump(InputVector, JumpStrength);
 			Anim_Activate_Jump();//Anim_Activate_WallJump
-			return;
+			break;
 		}
 		case EState::STATE_Attacking:
 			break;
@@ -1566,8 +1594,13 @@ void ASteikemannCharacter::Respawn()
 
 void ASteikemannCharacter::ExitOnWall(EState state)
 {
+
+	// TODO: Reevaluate m_State EState
 	m_State = state;
-	m_WallState = EOnWallState::WALL_None;
+	m_WallState = EOnWallState::WALL_Leave;
+	FTimerHandle h;
+	GetWorldTimerManager().SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, 0.5f, false);
+
 	//switch (state)
 	//{
 	//case EState::STATE_Idle:
@@ -1583,6 +1616,46 @@ void ASteikemannCharacter::ExitOnWall(EState state)
 	//default:
 	//	break;
 	//}
+}
+
+void ASteikemannCharacter::Initial_LedgeGrab()
+{
+	// ledge location - height + inward
+	PRINTLONG("LEDGE GRAB");
+	RotateActorYawToVector(m_WallData.Normal * -1.f);
+	// Draw point
+	// Actor location
+	DrawDebugPoint(GetWorld(), m_Ledgedata.ActorLocation, 15.f, FColor::Orange, false, 5.f, 0);
+	// Root location
+	DrawDebugPoint(GetWorld(), m_Ledgedata.ActorLocation + (FVector::DownVector * GetCapsuleComponent()->GetScaledCapsuleHalfHeight()), 15.f, FColor::Red, false, 5.f, 0);
+
+	// adjust to valid location
+	FVector location = m_Ledgedata.ActorLocation;
+
+	FHitResult hit;
+	FCollisionQueryParams Params("", false, this);
+	//const bool b = GetWorld()->LineTraceSingleByChannel(hit, m_Ledgedata.TraceLocation, m_Ledgedata.TraceLocation - (m_WallData.Normal * (GetCapsuleComponent()->GetScaledCapsuleRadius() + 3.f)), ECC_WallDetection, Params);
+	const bool b = GetWorld()->LineTraceSingleByChannel(hit, m_Ledgedata.TraceLocation, m_Ledgedata.TraceLocation - (m_WallData.Normal * 100.f), ECC_WallDetection, Params);
+	if (!b) {
+		// End ledgegrab
+		m_State = EState::STATE_InAir;
+		m_WallState = EOnWallState::WALL_None;
+	}
+	float length = FVector(m_Ledgedata.TraceLocation - hit.ImpactPoint).Size();
+	float radius = GetCapsuleComponent()->GetScaledCapsuleRadius() + 3.f;
+	if (length < radius)
+	{
+		float l = radius - length;
+		location += m_WallData.Normal * l;
+	}
+
+	// Set position
+	SetActorLocation(location, false, nullptr, ETeleportType::TeleportPhysics);
+	GetMoveComponent()->m_GravityMode = EGravityMode::ForcedNone;
+}
+
+void ASteikemannCharacter::LedgeGrab()
+{
 }
 
 bool ASteikemannCharacter::ValidateWall()
@@ -1606,6 +1679,8 @@ void ASteikemannCharacter::OnWall_IMPL(float deltatime)
 	case EOnWallState::WALL_Drag:
 		GetMoveComponent()->m_Walldata = m_WallData;	// TODO: Change when this happens
 		OnWall_Drag_IMPL(deltatime, (GetMoveComponent()->Velocity.Z/GetMoveComponent()->WJ_DragSpeed) * -1.f);	// VelocityZ scale from 0->1
+		break;
+	case EOnWallState::WALL_Ledgegrab:
 		break;
 	case EOnWallState::WALL_Leave:
 		break;

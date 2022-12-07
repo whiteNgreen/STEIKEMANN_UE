@@ -50,10 +50,17 @@ public:
 	void RotateActorYawToVector(FVector AimVector, float DeltaTime = 0);
 
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		UWallDetectionComponent* WallDetector{ nullptr };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall")
+		bool bWDC_Debug{};
+
+	UWallDetectionComponent* WallDetector{ nullptr };
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|WallDetection")
+		float WDC_Capsule_Radius{ 40.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|WallDetection")
+		float WDC_Capsule_Halfheight{ 90.f };
 private:
-	WallData m_WallData;
+	Wall::WallData m_WallData;
 
 public: 
 	bool bCanBeGrappleHooked{ true };
