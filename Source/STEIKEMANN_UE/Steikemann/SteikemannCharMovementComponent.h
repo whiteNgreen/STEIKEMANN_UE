@@ -120,6 +120,7 @@ public:
 	
 	float InitialJumpVelocity;
 	void Jump(const float& JumpStrength);
+	void Jump(const FVector& direction, const float& JumpStrength);
 	void DoubleJump(const FVector& Direction, const float& JumpStrength);
 
 	/* How far through the jump is the player? Determined by the current velocity */
@@ -167,8 +168,8 @@ public:
 	//void Grapplehook_Dash(float DashStrength, FVector DashDirection);
 //#pragma endregion //Dash
 
-#pragma region Wall Jump
-public:	// Variables
+#pragma region On Wall
+public:	// WallJump
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wall Mechanics|Drag")
 		float WJ_DragSpeed{ 200.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wall Mechanics|Jump", meta = (UIMin = "0", UIMax = "2"))
@@ -177,6 +178,14 @@ public:	// Variables
 		float WallJump_SidewaysAngleLimit{ 0.5f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wall Mechanics|Jump", meta = (UIMin = "0", UIMax = "90"))
 		float WallJump_UpwardAngle{ 45.f };
+public: // Ledge Jump
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wall Mechanics|LedgeJump", meta = (UIMin = "0", UIMax = "90"))
+		float LedgeJump_AngleLimit{ 20.f };
+	UPROPERTY(EditAnywhere, Category = "MyVariables|LedgeJump")
+		float LedgeJumpBoost_Multiplier{ 0.2f };
+private:
+
+
 public:
 	// NEW ON WALL
 	EOnWallState m_WallState = EOnWallState::WALL_None;
@@ -185,7 +194,10 @@ public:
 
 	void InitialOnWall(const Wall::WallData& wall, float time);
 	void Initial_OnWall_Hang(const Wall::WallData& wall, float time);
+
 	void WallJump(FVector input, float JumpStrength);
+	void LedgeJump(const FVector input, float JumpStrength);
+
 	void ExitWall();
 private:
 	FTimerHandle TH_WallHang;
@@ -194,63 +206,18 @@ private:
 	void InitialOnWall_IMPL(float time);
 	void OnWallHang_IMPL();
 	void OnWallDrag_IMPL(float deltatime);
-	//-----------------------------------------------
 
-public:
-	/* If the characters velocity exceeds this value, they cannot stick to a wall */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Wall Jump")
-		float WallJump_MaxStickingSpeed UMETA(DisplayName = "Max Stickable Speed") { 50.f };
-	/* How much the velocity is lowered each tick when they touch a wall at high speeds */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Wall Jump")
-		float WallJump_WalltouchSlow UMETA(DisplayName = "Velocity Slowdown") { 100.f };
-	
-	//bool bTouchingWall{};
-	bool bStickingToWall;
-	bool bWallSlowDown{};
-	FVector StickingSpot{};
+	FVector GetInputDirectionToNormal(FVector& input, const FVector& normal);
+	FVector GetInputDirectionToNormal(FVector& input, const FVector& normal, FVector& right, FVector& up);
+	FVector ClampDirectionToAngleFromVector(const FVector& direction, const FVector& clampVector, const float angle, const FVector& right, const FVector& up);
 
-	/* The angle from the walls normal that the character will jump from */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Wall Jump")
-		float WallJump_JumpAngle UMETA(DisplayName = "Jump Angle") { 45.f };
-	/* The angle the jump vector will be rotated when the character walljumps towards the left or right */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Wall Jump")
-		float WallJump_SidewaysJumpAngle UMETA(DisplayName = "Jump Angle Sideways") { 45.f };
-	
-
-	bool bWallJump{};
-	FVector WallJump_VelocityDirection{};
-	//bool WallJump(const FVector& ImpactNormal, float JumpStrength);
-	bool StickToWall(float DeltaTime);
-	bool ReleaseFromWall(const FVector& ImpactNormal);
-
-#pragma endregion //Wall Jump
-
-#pragma region LedgeGrab
-
-	bool bLedgeGrab{};
-	bool bLedgeJump{};
-
-	FVector LedgeJumpDirection{};
-
-	UPROPERTY(EditAnywhere, Category = "MyVariables|LedgeJump")
-		float LedgeJump_AngleClamp{ 45.f };
-	UPROPERTY(EditAnywhere, Category = "MyVariables|LedgeJump")
-		float LedgeJump_ImpulseStrength{ 300.f };
-	UPROPERTY(EditAnywhere, Category = "MyVariables|LedgeJump")
-		float LedgeJumpBoost_Multiplier{ 0.2f };
-	float LedgeJumpBoost{};
-
-	void Start_LedgeGrab();
-	void Update_LedgeGrab();
-
-	bool LedgeJump(const FVector& LedgeLocation, float JumpStrength);
-
-#pragma endregion //LedgeGrab
+#pragma endregion //On Wall
 
 #pragma region GroundPound
+public:
 	bool bGP_PreLaunch{};
 	void GP_PreLaunch();
-	void GP_Launch();
+	void GP_Launch(float strength);
 #pragma endregion //GroundPound
 
 public: // Slipping

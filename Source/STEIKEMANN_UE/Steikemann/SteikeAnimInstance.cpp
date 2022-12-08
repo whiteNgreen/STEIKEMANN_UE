@@ -47,8 +47,9 @@ void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 		/* Wall Sticking */
 		bOnWall = SteikeOwner->IsOnWall();
-		bStickingToWall = SteikeOwner->IsStickingToWall();
-		OnWallRotation = FMath::FInterpTo(OnWallRotation,FMath::Clamp(SteikeOwner->InputAngleToForward * -1.f, -90.f, 90.f), DeltaSeconds, SteikeOwner->OnWall_InterpolationSpeed);
+		
+		// Input angle on wall
+		//InputToActorForwardAngle // TODO: IMPLEMENT
 
 		/* Ledge Grab */
 		bLedgeGrab = SteikeOwner->IsLedgeGrabbing();

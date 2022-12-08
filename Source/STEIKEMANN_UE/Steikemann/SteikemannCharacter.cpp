@@ -185,14 +185,8 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		InputVector = InputVector.RotateAngleAxis(Rot.Yaw, FVector::UpVector);
 
 		if (InputVectorRaw.Size() > 1.f || InputVector.Size() > 1.f)
-		{
 			InputVector.Normalize();
-		}
-		//PRINTPAR("InputRaw: %s", *InputVectorRaw.ToString());
-		//PRINTPAR("Input: %s , Size: %f", *InputVector.ToString(), InputVector.Size());
-		//PRINTPAR("Controller: %s", *GetControlRotation().Vector().ToString());
 	}
-	PRINTPAR("JumpCount = %i", JumpCurrentCount);
 
 	/*		Resets Rotation Pitch and Roll		*/
 	if (IsFalling() || GetMoveComponent()->IsWalking()) {
@@ -212,21 +206,13 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	}
 	if (GetCharacterMovement()->IsWalking()) { PostEdge_JumpTimer = 0.f; }
 
-	/* Resetting Wall Jump & Ledge Grab when player is on the ground */
-	if (GetMoveComponent()->IsWalking()) {
-		WallJump_NonStickTimer = 0.f;
-	}
 
+	/*------------ BASIC STATES ---------------*/
 	// Set Basic States
 	if (m_State != EState::STATE_OnWall)
 	{
 		SetDefaultState();
-		//if (IsOnGround())
-		//	m_State = EState::STATE_OnGround;
-		//if (GetMoveComponent()->IsFalling())
-		//	m_State = EState::STATE_InAir;
 	}
-
 
 	/*------------ STATES ---------------*/
 	const bool wall = WallDetector->DetectWall(this, GetActorLocation(), GetActorForwardVector(), m_WallData);
@@ -241,8 +227,8 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 			// Detect ledge & Ledge Grab
 			if (WallDetector->DetectLedge(m_Ledgedata, this, GetActorLocation(), GetActorUpVector(), m_WallData, LedgeGrab_Height, LedgeGrab_Inwards))
 			{
-				m_State = EState::STATE_OnWall;
-				m_WallState = EOnWallState::WALL_Ledgegrab;
+				//if (Validate_Ledge()) break;
+				GetMoveComponent()->m_Walldata = m_WallData;
 				Initial_LedgeGrab();
 				break;	
 			}
@@ -276,23 +262,6 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	default:
 		break;
 	}
-		// OLD: WallJump
-	//if (GetMoveComponent()->IsFalling() && bOnWallActive)
-	//{
-	//	Do_OnWallMechanics(DeltaTime);
-	//}
-	//else if (!bOnWallActive)
-	//{
-	//	if (WallJump_NonStickTimer < WallJump_MaxNonStickTimer)	
-	//	{
-	//		WallJump_NonStickTimer += DeltaTime;
-	//
-	//		ResetWallJumpAndLedgeGrab();
-	//	}
-	//	else {
-	//		bOnWallActive = true;
-	//	}
-	//}
 
 
 	/* --------- GRAPPLE TARGETING -------- */
@@ -698,8 +667,6 @@ void ASteikemannCharacter::GuideCamera(float DeltaTime)
 			bCamLerpBackToPosition = true;
 			CurrentCameraGuide = EPointType::NONE;
 		}
-
-
 		return; 
 	}
 
@@ -950,8 +917,8 @@ void ASteikemannCharacter::MoveForward(float value)
 
 	// Switch case
 	if (m_State == EState::STATE_OnWall) { return; }
-	if (IsStickingToWall()) { return; }
-	if (IsLedgeGrabbing()) { return; }
+	//if (IsStickingToWall()) { return; }
+	//if (IsLedgeGrabbing()) { return; }
 	if (IsCrouchSliding()) { return; }
 	if (IsAttacking()) { return; }
 	if (IsGrappling()) { return; }
@@ -981,8 +948,8 @@ void ASteikemannCharacter::MoveRight(float value)
 	InputVectorRaw.Y = value;
 
 	if (m_State == EState::STATE_OnWall) { return; }
-	if (IsStickingToWall()) { return; }
-	if (IsLedgeGrabbing())	{ return; }
+	//if (IsStickingToWall()) { return; }
+	//if (IsLedgeGrabbing())	{ return; }
 	if (IsCrouchSliding()) { return; }
 	if (IsAttacking()) { return; }
 	if (IsGrappling()) { return; }
@@ -1029,7 +996,7 @@ void ASteikemannCharacter::Jump()
 {
 	/* Don't Jump if player is Grappling */
 	if (IsGrappling() && GetMoveComponent()->IsFalling()) { return; }
-	if (bPostWallJump) { return; }
+	//if (bPostWallJump) { return; }
 
 	if (!bJumpClick)
 	{
@@ -1160,6 +1127,7 @@ void ASteikemannCharacter::Jump()
 			{
 				m_State = EState::STATE_InAir;
 				m_WallState = EOnWallState::WALL_Leave;
+				GetMoveComponent()->LedgeJump(InputVector, JumpStrength);
 				GetMoveComponent()->m_GravityMode = EGravityMode::LerpToDefault;
 				GetWorldTimerManager().SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, 0.5f, false);
 				break;
@@ -1261,25 +1229,25 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 			}
 
 			/* If player is LedgeGrabbing */
-			if ((GetMoveComponent()->bLedgeGrab) && GetMoveComponent()->IsFalling())
-			{
-				JumpCurrentCount = 1;
-				/*bAddJumpVelocity = */GetMoveComponent()->LedgeJump(LedgeLocation, JumpStrength);
-				ResetWallJumpAndLedgeGrab();
-				Anim_Activate_Jump();	//	Anim_Activate_LedgeGrabJump
-				return;
-			}
+			//if ((GetMoveComponent()->bLedgeGrab) && GetMoveComponent()->IsFalling())
+			//{
+			//	JumpCurrentCount = 1;
+			//	/*bAddJumpVelocity = */GetMoveComponent()->LedgeJump(LedgeLocation, JumpStrength);
+			//	ResetWallJumpAndLedgeGrab();
+			//	Anim_Activate_Jump();	//	Anim_Activate_LedgeGrabJump
+			//	return;
+			//}
 
-			/* If player is sticking to a wall */
-			if ((GetMoveComponent()->bStickingToWall || bFoundStickableWall ) && GetMoveComponent()->IsFalling())
-			{	
-				if (JumpCurrentCount == 2)
-				{
-					//JumpCurrentCount++;
-				}
-				Anim_Activate_Jump();	//	Anim_Activate_WallJump
-				return;
-			}
+			///* If player is sticking to a wall */
+			//if ((GetMoveComponent()->bStickingToWall || bFoundStickableWall ) && GetMoveComponent()->IsFalling())
+			//{	
+			//	if (JumpCurrentCount == 2)
+			//	{
+			//		//JumpCurrentCount++;
+			//	}
+			//	Anim_Activate_Jump();	//	Anim_Activate_WallJump
+			//	return;
+			//}
 
 
 			/* If player walks off edge with no jumpcount and the post edge timer is valid */
@@ -1348,7 +1316,7 @@ bool ASteikemannCharacter::IsJumping() const
 bool ASteikemannCharacter::IsFalling() const
 {
 	if (!GetMoveComponent().IsValid()) { return false; }
-	return  GetMoveComponent()->MovementMode == MOVE_Falling  && ( !IsGrappling()/* && !IsDashing()*/ && !IsStickingToWall() && !IsOnWall() && !IsJumping() );
+	return  GetMoveComponent()->MovementMode == MOVE_Falling  && ( !IsGrappling()/* && !IsDashing()*//* && !IsStickingToWall() && !IsOnWall()*/ && !IsJumping() );
 }
 
 bool ASteikemannCharacter::IsOnGround() const
@@ -1618,29 +1586,43 @@ void ASteikemannCharacter::ExitOnWall(EState state)
 	//}
 }
 
+bool ASteikemannCharacter::IsOnWall() const
+{
+	return m_State == EState::STATE_OnWall && m_WallState == EOnWallState::WALL_Drag;
+}
+
+bool ASteikemannCharacter::IsLedgeGrabbing() const
+{
+	return m_State == EState::STATE_OnWall && m_WallState == EOnWallState::WALL_Ledgegrab;
+}
+
+bool ASteikemannCharacter::Validate_Ledge(FHitResult& hit)
+{
+	FHitResult h;
+	FCollisionQueryParams param("", false, this);
+	const bool b1 = GetWorld()->LineTraceSingleByChannel(h, m_Ledgedata.ActorLocation, m_Ledgedata.ActorLocation + (FVector::DownVector * (GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 5.f)), ECC_WallDetection, param);
+	if (b1)
+		return false;
+	const bool b2 = GetWorld()->LineTraceSingleByChannel(hit, m_Ledgedata.TraceLocation, m_Ledgedata.TraceLocation - (m_WallData.Normal * 100.f), ECC_WallDetection, param);
+	if (!b2)
+		return false;
+
+	return true;
+}
+
 void ASteikemannCharacter::Initial_LedgeGrab()
 {
-	// ledge location - height + inward
-	PRINTLONG("LEDGE GRAB");
-	RotateActorYawToVector(m_WallData.Normal * -1.f);
-	// Draw point
-	// Actor location
-	DrawDebugPoint(GetWorld(), m_Ledgedata.ActorLocation, 15.f, FColor::Orange, false, 5.f, 0);
-	// Root location
-	DrawDebugPoint(GetWorld(), m_Ledgedata.ActorLocation + (FVector::DownVector * GetCapsuleComponent()->GetScaledCapsuleHalfHeight()), 15.f, FColor::Red, false, 5.f, 0);
+	FHitResult hit;
+	const bool b = Validate_Ledge(hit);
+	if (!b)
+		return;
+
+	m_State = EState::STATE_OnWall;
+	m_WallState = EOnWallState::WALL_Ledgegrab;
 
 	// adjust to valid location
 	FVector location = m_Ledgedata.ActorLocation;
 
-	FHitResult hit;
-	FCollisionQueryParams Params("", false, this);
-	//const bool b = GetWorld()->LineTraceSingleByChannel(hit, m_Ledgedata.TraceLocation, m_Ledgedata.TraceLocation - (m_WallData.Normal * (GetCapsuleComponent()->GetScaledCapsuleRadius() + 3.f)), ECC_WallDetection, Params);
-	const bool b = GetWorld()->LineTraceSingleByChannel(hit, m_Ledgedata.TraceLocation, m_Ledgedata.TraceLocation - (m_WallData.Normal * 100.f), ECC_WallDetection, Params);
-	if (!b) {
-		// End ledgegrab
-		m_State = EState::STATE_InAir;
-		m_WallState = EOnWallState::WALL_None;
-	}
 	float length = FVector(m_Ledgedata.TraceLocation - hit.ImpactPoint).Size();
 	float radius = GetCapsuleComponent()->GetScaledCapsuleRadius() + 3.f;
 	if (length < radius)
@@ -1649,8 +1631,10 @@ void ASteikemannCharacter::Initial_LedgeGrab()
 		location += m_WallData.Normal * l;
 	}
 
-	// Set position
+	// Set Transforms
 	SetActorLocation(location, false, nullptr, ETeleportType::TeleportPhysics);
+	RotateActorYawToVector(m_WallData.Normal * -1.f);
+
 	GetMoveComponent()->m_GravityMode = EGravityMode::ForcedNone;
 }
 
@@ -1681,6 +1665,7 @@ void ASteikemannCharacter::OnWall_IMPL(float deltatime)
 		OnWall_Drag_IMPL(deltatime, (GetMoveComponent()->Velocity.Z/GetMoveComponent()->WJ_DragSpeed) * -1.f);	// VelocityZ scale from 0->1
 		break;
 	case EOnWallState::WALL_Ledgegrab:
+		DrawDebugArms(0.f);
 		break;
 	case EOnWallState::WALL_Leave:
 		break;
@@ -1754,80 +1739,9 @@ void ASteikemannCharacter::OnCapsuleComponentEndOverlap(UPrimitiveComponent* Ove
 	}
 }
 
-
-bool ASteikemannCharacter::DetectLedge(FVector& Out_IntendedPlayerLedgeLocation, const FHitResult& In_WallHit, FHitResult& Out_Ledge, float Vertical_GrabLength, float Horizontal_GrabLength)
-{
-	FCollisionQueryParams Params(FName(""), false, this);
-
-	/* Finds the orthogonal vector from the players forward axis(which matches wall.normal * -1.f) towards the UpVector */
-	FVector OrthoPlayerToUp{ FVector::CrossProduct(In_WallHit.Normal * -1.f, FVector::CrossProduct(FVector::UpVector, In_WallHit.Normal * -1.f)) };
-
-	/* Common locations */
-	FVector LocationFromWallHit	{ In_WallHit.ImpactPoint + (In_WallHit.Normal * (GetCapsuleComponent()->GetUnscaledCapsuleRadius() + 5.f))};	// What would be the players location from the wall itself
-
-	FVector FirstTracePoint_Start{ LocationFromWallHit + (OrthoPlayerToUp * Vertical_GrabLength) };
-	FVector FirstTracePoint_End	 { LocationFromWallHit + (OrthoPlayerToUp * Vertical_GrabLength) + (In_WallHit.Normal * -1.f * Horizontal_GrabLength) };
-
-	/* Do a raytrace above the In_WallHit to check if there is a ledge nearby */
-	FHitResult FirstHit{};
-	const bool bFirstCheck = GetWorld()->LineTraceSingleByChannel(FirstHit,
-		FirstTracePoint_Start,
-		FirstTracePoint_End,	
-		ECC_Visibility, Params);
-
-
-	/* Potential ledge above */
-	if (!bFirstCheck)
-	{
-		float ContingencyLength{ 10.f };	// Trace a little inward of the edge just to make sure that the linetrace hits
-		FVector SecondTracePoint_Start { FirstTracePoint_Start + (In_WallHit.Normal * -1.f * (GetCapsuleComponent()->GetUnscaledCapsuleRadius() + ContingencyLength)) };
-		FVector SecondTracePoint_End   { SecondTracePoint_Start + ((OrthoPlayerToUp * -1.f) * Horizontal_GrabLength) };
-		
-		FHitResult SecondHit{};
-		const bool bSecondHit = GetWorld()->LineTraceSingleByChannel(SecondHit,
-			SecondTracePoint_Start,
-			SecondTracePoint_End,
-			ECC_Visibility, Params);
-
-
-		/* Found Ledge */
-		if (bSecondHit)
-		{
-			Out_Ledge = SecondHit;	// Returning ledge hitresult
-
-			LengthToLedge = FVector(SecondTracePoint_Start - SecondHit.ImpactPoint).Size();
-
-			/* Find the players intended position in relation to the ledge */
-			Out_IntendedPlayerLedgeLocation =
-				SecondHit.ImpactPoint
-				+ (In_WallHit.Normal * GetCapsuleComponent()->GetUnscaledCapsuleRadius());			// From Wall
-			Out_IntendedPlayerLedgeLocation.Z = SecondHit.ImpactPoint.Z - LedgeGrab_HoldLength;		// Downward
-
-			return true;
-		}
-	}
-
-	return false;
-}
-
-void ASteikemannCharacter::MoveActorToLedge(float DeltaTime)
-{
-	/*		Move actor toward PlayersLedgeLocation	  */
-	FVector Position{};
-	if (FVector(GetActorLocation() - PlayersLedgeLocation).Size() > 50.f)
-	{
-		Position = FMath::Lerp(GetActorLocation(), PlayersLedgeLocation, PositionLerpAlpha);
-	}
-	else 
-	{
-		Position = PlayersLedgeLocation;
-	}
-	SetActorLocation(Position, false, nullptr, ETeleportType::TeleportPhysics);
-}
-
 void ASteikemannCharacter::DrawDebugArms(const float& InputAngle)
 {
-	FVector Ledge{ LedgeHit.ImpactPoint };
+	FVector Ledge{ m_Ledgedata.TraceLocation };
 	FRotator Rot{ GetActorRotation() };
 	float Angle = FMath::Clamp(InputAngle, -90.f, 90.f);
 
@@ -1858,20 +1772,6 @@ void ASteikemannCharacter::DrawDebugArms(const float& InputAngle)
 	}
 }
 
-
-void ASteikemannCharacter::ResetWallJumpAndLedgeGrab()
-{
-	GetMoveComponent()->bWallSlowDown	= false;
-	GetMoveComponent()->bStickingToWall	= false;
-	bFoundStickableWall					= false;
-	InputAngleToForward					= 0.f;
-	InputDotProdToForward				= 1.f;
-
-	bIsLedgeGrabbing					= false;
-	bFoundLedge							= false;
-	GetMoveComponent()->bLedgeGrab		= false;
-	GetMoveComponent()->bLedgeJump		= false;
-}
 
 void ASteikemannCharacter::ResetActorRotationPitchAndRoll(float DeltaTime)
 {
@@ -1994,302 +1894,6 @@ void ASteikemannCharacter::OnGrappleTargetDetectionEndOverlap(UPrimitiveComponen
 }
 
 
-void ASteikemannCharacter::Do_OnWallMechanics(float DeltaTime)
-{
-	if (GetMoveComponent()->IsWalking())
-	{
-		ResetWallJumpAndLedgeGrab();
-		return;
-	}
-
-	/*		Detect Wall		 */
-	static float PostWallJumpTimer{};	//	Post WallJump Timer		 
-	if (GetMoveComponent()->bWallJump || GetMoveComponent()->bLedgeJump)
-	{
-		static float TimerLength{};
-		if (GetMoveComponent()->bWallJump)	TimerLength = 0.25f;
-		if (GetMoveComponent()->bLedgeJump)	TimerLength = 0.75f;
-		PostWallJumpTimer += DeltaTime;
-		if (PostWallJumpTimer > TimerLength) // Venter 0.25 sekunder før den skal kunne fortsette med å søke etter nære vegger 
-		{
-			PostWallJumpTimer = 0.f;
-			bFoundWall = DetectNearbyWall();
-		}
-	}
-	else {
-		PostWallJumpTimer = 0.f;
-		bFoundWall = DetectNearbyWall();
-
-	}
-	if (!bFoundWall) {
-		bFoundLedge = false; bIsLedgeGrabbing = false;	// Ledgegrab bools
-		bFoundStickableWall = false;					// Wall-Jump/Slide bool
-	}
-	(ActorToWall_Length < WallJump_ActivationRange) ? bFoundStickableWall = true : bFoundStickableWall = false;	// If the detected wall is within range for wall-jump/slide
-
-
-	/*			Detect Ledge		  */
-	if (!IsLedgeGrabbing() && (ActorToWall_Length < LedgeGrab_ActivationRange))
-	{
-		if (bFoundWall)
-		{
-			/*		Find Ledge 		 */
-			bFoundLedge = DetectLedge(PlayersLedgeLocation, WallHit, LedgeHit, LedgeGrab_VerticalGrabLength, LedgeGrab_HorizontalGrabLength);
-		}
-	}
-
-	/*			Ledge Grab			*/
-	if (bFoundLedge)
-	{
-		bool b{};
-		/* Only activate LedgeGrab if the actor is below the ledge */
-		if ((GetActorLocation().Z - GetCapsuleComponent()->GetScaledCapsuleHalfHeight()) < LedgeHit.ImpactPoint.Z)
-		{
-			bIsLedgeGrabbing = true;
-			if (LengthToLedge < GetVelocity().Z)
-			{
-				/* What do, if the velocity is higher than the grablength */
-			}
-			if (GetVelocity().Z >= 0.f)
-			{
-				if (GetVelocity().Z < 200.f)
-				{
-					b = Do_LedgeGrab(DeltaTime);
-				}
-			}
-			else if (GetVelocity().Z < 0.f)
-			{
-				b = Do_LedgeGrab(DeltaTime);
-			}
-		}
-	}
-
-
-	/*			Wall Jump / Wall Slide			 */
-	if (bFoundStickableWall && !bFoundLedge/* && (ActorToWall_Length < WallJump_ActivationRange)*/)
-	{
-		/* If the player is sticking to the wall */
-		if (GetMoveComponent()->bStickingToWall)
-		{
-			//if (JumpCurrentCount == 2) { JumpCurrentCount = 1; }	// Resets DoubleJump
-
-			/* Release from wall if they have stuck to it for the max duration */
-			WallJump_StickTimer += DeltaTime;
-			if (WallJump_StickTimer > WallJump_MaxStickTimer)
-			{
-				bOnWallActive = false;
-				WallJump_NonStickTimer = 0.f;
-				GetMoveComponent()->ReleaseFromWall(Wall_Normal);
-				return;
-			}
-		}
-		else { WallJump_StickTimer = 0.f; }
-
-		/*		Rotating and moving actor to wall	  */
-		if (GetMoveComponent()->bStickingToWall || GetMoveComponent()->bWallSlowDown)
-		{
-			SetActorLocation_WallJump(DeltaTime);
-			RotateActorYawToVector(Wall_Normal * -1.f);
-			RotateActorPitchToVector(Wall_Normal * -1.f);
-
-			CalcAngleFromActorForwardToInput();
-
-			if (InputDotProdToForward < -0.5f)	// Drop down
-			{
-				bOnWallActive = false;
-				WallJump_NonStickTimer = 0.f;
-				GetMoveComponent()->ReleaseFromWall(WallHit.Normal);
-				return;
-			}
-		}
-		// Wall Slow Down	(On way down)
-		if (GetMoveComponent()->bWallSlowDown)
-		{
-			// Play particle effects
-			if (NS_WallSlide) {
-				Component_Niagara->SetAsset(NS_WallSlide);
-				Component_Niagara->SetNiagaraVariableInt("User.SpawnAmount", NS_WallSlide_ParticleAmount * DeltaTime);
-				Component_Niagara->SetWorldLocationAndRotation(GetMesh()->GetSocketLocation("Front"), GetMesh()->GetSocketRotation("Front"));
-				Component_Niagara->Activate(true);
-			}
-
-			// Play Sound
-
-		}
-	// Do adjustments to the actor rotation acording to animation
-	}
-}
-
-bool ASteikemannCharacter::DetectNearbyWall()
-{
-	bool bHit{};
-	FCollisionQueryParams Params = FCollisionQueryParams(FName(""), false, this);
-
-	/* Raytrace in a total of 8 directions around the player */
-	
-	/* Raytrace first in the Forward/Backwards axis and Right/Left */
-	FVector LinetraceVector = GetControlRotation().Vector();
-		LinetraceVector.Z = 0.f;
-		LinetraceVector.Normalize();
-
-	FCollisionShape Shape = FCollisionShape::MakeBox(FVector( 50.f, 50.f, 70.f ));
-	FVector ActorLoc = GetActorLocation() + FVector(0, 0, 20.f);
-
-	for (int i = 0; i < 4; i++)
-	{
-			//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (LinetraceVector * WallDetectionRange), FColor::Yellow, false, 0.f, 0, 4.f);
-		//bHit = GetWorld()->LineTraceSingleByChannel(WallHit, GetActorLocation(), GetActorLocation() + (LinetraceVector * WallDetectionRange), ECC_Visibility, Params);
-		bHit = GetWorld()->SweepSingleByChannel(WallHit, ActorLoc, ActorLoc + (LinetraceVector * WallDetectionRange), FQuat(LinetraceVector.Rotation()), ECC_Visibility, Shape, Params);
-		DrawDebugBox(GetWorld(), ActorLoc + ((LinetraceVector * WallDetectionRange)/2.f), Shape.GetExtent(), FQuat(LinetraceVector.Rotation()), FColor::Red, false, 0.f, 0, 2.f);
-		LinetraceVector = LinetraceVector.RotateAngleAxis(90, FVector(0, 0, 1));
-		if (bHit) { 
-			StickingSpot = WallHit.ImpactPoint; 
-			Wall_Normal = WallHit.Normal; 
-			//return bHit; 
-			break;
-		}
-	}
-
-	//if (!bHit)
-	//{
-	//	/* Then do raytrace of the 45 degree angle between the 4 previous axis */
-	//	LinetraceVector = LinetraceVector.RotateAngleAxis(45.f, FVector(0, 0, 1));
-	//	for (int i = 0; i < 4; i++)
-	//	{
-	//			//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (LinetraceVector * WallDetectionRange), FColor::Red, false, 0.f, 0, 4.f);
-	//		bHit = GetWorld()->LineTraceSingleByChannel(WallHit, GetActorLocation(), GetActorLocation() + (LinetraceVector * WallDetectionRange), ECC_Visibility, Params);
-	//		LinetraceVector = LinetraceVector.RotateAngleAxis(90, FVector(0, 0, 1));
-	//		if (bHit) {
-	//			StickingSpot = WallHit.ImpactPoint;
-	//			Wall_Normal = WallHit.Normal;
-	//			//return bHit;
-	//			break;
-	//		}
-	//	}
-	//}
-
-	/*		Dette fungerer på flate vegger, men kommer til og føre til problemer på cylindriske- / mer avanserte- former	 */
-		/* Burde kjøre ekstra sjekker for å se om det er andre flater i nærheten som passer bedre */
-	if (bHit)
-	{
-		FromActorToWall = WallHit.Normal * -1.f;
-
-		//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (FromActorToWall * 200.f), FColor::White, false, 0.f, 0.f, 6.f);
-
-		const bool b = GetWorld()->LineTraceSingleByChannel(WallHit, GetActorLocation(), GetActorLocation() + (FromActorToWall * 200.f), ECC_Visibility, Params);
-		if (b)
-		{
-			ActorToWall_Length = FVector(GetActorLocation() - WallHit.ImpactPoint).Size();
-			return b;
-		}
-	}
-		/* Hvordan håndtere hjørner? 
-				Sjekke om veggen som er truffet har en passende vinkel i forhold til playercontroller? 
-				Er det den eneste veggen vi treffer? (TArray kanskje for å samle alle nære vegger) */
-	ActorToWall_Length = WallDetectionRange;
-	return false;
-}
-
-void ASteikemannCharacter::CalcAngleFromActorForwardToInput()
-{
-	/* Checks the angle between the actors forward axis and the input vector. Used in animations*/
-	if (InputVector.SizeSquared() > 0.2f)
-	{
-		InputAngleToForward = FMath::RadiansToDegrees(acosf(FVector::DotProduct(GetActorForwardVector(), InputVector)));
-		float InputAngleDirection = FVector::DotProduct(GetActorRightVector(), InputVector);
-		if (InputAngleDirection > 0.f) { InputAngleToForward *= -1.f; }
-
-		InputDotProdToForward = FVector::DotProduct(GetActorForwardVector(), InputVector);
-	}
-	else { InputAngleToForward = 0.f; }
-}
-
-void ASteikemannCharacter::SetActorLocation_WallJump(float DeltaTime)
-{
-	float CapsuleRadius = GetCapsuleComponent()->GetScaledCapsuleRadius() + OnWall_ExtraCharacterLengthFromWall;
-	if (ActorToWall_Length > CapsuleRadius) 
-	{
-		float Move{};
-		if ((ActorToWall_Length - CapsuleRadius) > 5.f) {
-			Move = FMath::FInterpTo(Move, ActorToWall_Length - CapsuleRadius, DeltaTime, 10.f);
-		}
-		else {
-			Move = ActorToWall_Length - CapsuleRadius;
-		}
-		SetActorRelativeLocation(GetActorLocation() + (FromActorToWall * Move), false, nullptr, ETeleportType::TeleportPhysics);
-	}
-}
-
-bool ASteikemannCharacter::IsStickingToWall() const
-{
-	if (GetMoveComponent().IsValid()) {
-		return GetMoveComponent()->bStickingToWall;
-	}
-	return false;
-}
-
-bool ASteikemannCharacter::Jump_DetectWall()
-{
-	//PRINTLONG("DETECTING JUMP WALL");
-	bool b{};
-	FTimerHandle h;
-	//auto func = [](FTimerHandle h){
-		//return true;
-		//GetWorldTimerManager().SetTimer(h, this, &ASteikemannCharacter::WallJump_Reset, PostWallJumpTimer);
-	//}
-
-	bFoundWall = DetectNearbyWall();
-
-	(ActorToWall_Length < WallJump_JumpWallActivation) ?
-		b = true:
-		b = false;
-
-	if (b) { GetWorldTimerManager().SetTimer(h, this, &ASteikemannCharacter::WallJump_Reset, fPostWallJumpTimer); }
-
-	bPostWallJump = b;
-	return b;
-}
-
-void ASteikemannCharacter::WallJump_Reset()
-{
-	bPostWallJump = false;
-}
-
-bool ASteikemannCharacter::IsOnWall() const
-{
-	if (GetMoveComponent().IsValid()) {
-		return GetMoveComponent()->bWallSlowDown;
-	}
-	return false;
-}
-
-bool ASteikemannCharacter::Do_LedgeGrab(float DeltaTime)
-{
-	bIsLedgeGrabbing = true;
-
-	GetMoveComponent()->Start_LedgeGrab();
-	MoveActorToLedge(DeltaTime);
-	RotateActorYawToVector(Wall_Normal * -1.f);
-	RotateActorPitchToVector(Wall_Normal * -1.f);
-
-	CalcAngleFromActorForwardToInput();
-
-	/* Tmp DebugArms */
-	DrawDebugArms(InputAngleToForward);
-
-
-	if (InputDotProdToForward < -0.5f)	// Drop down
-	{
-		bOnWallActive = false;
-		WallJump_NonStickTimer = 0.f;
-		GetMoveComponent()->ReleaseFromWall(WallHit.Normal);
-		ResetWallJumpAndLedgeGrab();
-		return false;
-	}
-
-	return true;
-}
-
 bool ASteikemannCharacter::IsGrappling() const
 {
 	return bGrapple_PreLaunch || bGrapple_Launch || bIsGrapplehooking;
@@ -2362,8 +1966,8 @@ void ASteikemannCharacter::Click_Attack()
 	if (bAttackPress) { return; }
 	if (!bCanAttack) { return; }
 	if (bAttacking) { return; }
-	if (IsLedgeGrabbing()) { return; }
-	if (IsOnWall() || IsStickingToWall()) { return; }
+	//if (IsLedgeGrabbing()) { return; }
+	//if (IsOnWall() || IsStickingToWall()) { return; }
 	if (IsGrappling()) 
 	{ 
 		/* Buffer Attack if Grappling to Dynamic Target */
@@ -2624,7 +2228,7 @@ void ASteikemannCharacter::UnClick_GroundPound()
 
 void ASteikemannCharacter::Launch_GroundPound()
 {
-	GetMoveComponent()->GP_Launch();
+	GetMoveComponent()->GP_Launch(GP_LaunchStrength);
 }
 
 void ASteikemannCharacter::Start_GroundPound()

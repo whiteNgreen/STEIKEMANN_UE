@@ -512,7 +512,6 @@ public:
 
 /* ---------------------------------- ON WALL ----------------------------------- */
 #pragma region OnWall
-	//-------------NEW-------------------------------------
 public:// Capsule
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall")
 		bool bWDC_Debug{};
@@ -550,10 +549,17 @@ public: // General
 	EOnWallState m_WallState = EOnWallState::WALL_None;
 
 	void ExitOnWall(EState state);
+public: // Is funcitons
+	bool IsOnWall() const;
+	bool IsLedgeGrabbing() const;
+
 private:
 	Wall::WallData m_WallData;
 	Wall::LedgeData m_Ledgedata;
 
+	void DrawDebugArms(const float& InputAngle);
+
+	bool Validate_Ledge(FHitResult& hit);
 	void Initial_LedgeGrab();
 	void LedgeGrab();
 
@@ -564,134 +570,7 @@ private:
 
 	void ExitOnWall_GROUND();
 
-
-
-public:	//OLD -------------------------------------------------------------------
-	/* How far from the player walls will be detected */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Wall")
-		float WallDetectionRange		UMETA(DisplayName = "Wall Detection Range") { 200.f };
-	
-	/* If the player is within this length from the wall, WallJump / WallSlide mechanics are enabled. Should NOT be higher than Wall Detection Range */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Wall")
-		float WallJump_ActivationRange	UMETA(DisplayName = "Wall-Jump/Slide Activation Length") { 80.f };
-	
-	/* Activate ledgegrab if a wall + ledge is detected and the player is within this range */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Wall")
-		float LedgeGrab_ActivationRange		UMETA(DisplayName = " Ledgegrab Activation Length") { 120.f };
-
-	/* How far, including the capsule radius, should the character be from the wall during OnWall mechanics 
-	 * Functions more as a contingency */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Wall")
-		float OnWall_ExtraCharacterLengthFromWall UMETA(DisplayName = "Length from wall") { 10.f };
-
-	void Do_OnWallMechanics(float DeltaTime);
-
-	FVector Wall_Normal{};
-	FHitResult WallHit{};
-	bool DetectNearbyWall();
-	bool bFoundWall{};
-
-
-	FVector FromActorToWall{};
-	float ActorToWall_Length{};
-
-	/* The angle between the actors forward axis and the players input during OnWall Mechanics */
-	float InputAngleToForward{};
-	/* The angle between the actors forward axis and the players input during OnWall Mechanics */
-	float InputDotProdToForward{};
-
-	void CalcAngleFromActorForwardToInput();
-
-	void ResetWallJumpAndLedgeGrab();
-
-	#pragma region Wall Jump
-		/* ------------------------ Wall Jump --------------------- */
-
-		/* The maximum time the character can hold on to the wall they stick to during wall jump */
-		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Wall|Wall Jump")
-			float WallJump_MaxStickTimer UMETA(DisplayName = "Max Sticking Time") { 1.f };
-		float WallJump_StickTimer{};
-
-		/* Time until character can stick to wall again */
-		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Wall|Wall Jump")
-			float WallJump_MaxNonStickTimer UMETA(DisplayName = "No Stick Timer") { 0.5f };
-		float WallJump_NonStickTimer{};
-
-		bool bStickingToWall{};
-		bool bFoundStickableWall{};
-		bool bCanStickToWall{ true };
-		bool bOnWallActive{ true };
-		FVector StickingSpot{};
-
-		void SetActorLocation_WallJump(float DeltaTime);
-
-		bool bPostWallJump{};
-		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Wall|Wall Jump")
-			float fPostWallJumpTimer{ 0.2f };
-
-		/* WallJump activation range on Jump, different from the passive activation range of On_Wall mechanics */
-		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Wall|Wall Jump")
-			float WallJump_JumpWallActivation{ 200.f };
-
-		bool Jump_DetectWall();
-		void WallJump_Reset();
-
-		/* Is currently sticking to a wall */
-		bool IsStickingToWall() const;
-		/* Is in contact with a wall and slowing down */
-		bool IsOnWall() const;
-
-		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Wall|Wall Jump|Animation")
-			float OnWall_InterpolationSpeed{ 10.f };
-
-	#pragma endregion //Wall Jump
-
-	#pragma region LedgeGrab
-
-		UPROPERTY(BlueprintReadOnly)
-			bool bFoundLedge{};
-		UPROPERTY(BlueprintReadOnly)
-			bool bIsLedgeGrabbing{};
-		//UPROPERTY(BlueprintReadOnly)
-			//bool bShouldLedgeGrabNextFrame{};
-
-
-		FHitResult LedgeHit{};
-		FVector LedgeLocation{};
-		float LengthToLedge{};
-		FVector PlayersLedgeLocation{};
-		bool DetectLedge(FVector& Out_IntendedPlayerLedgeLocation, const FHitResult& In_WallHit, FHitResult& Out_Ledge, float Vertical_GrabLength, float Horizontal_GrabLength);
-	
-
-		bool IsLedgeGrabbing() const { return bIsLedgeGrabbing; }
-
-		bool Do_LedgeGrab(float DeltaTime);
-
-		/* How far above ifself the character will be able to grab a ledge */
-		//UPROPERTY(EditAnywhere, Category = "Movement|OnWall|LedgeGrab")
-			//float LedgeGrab_GrabLength				UMETA(DisplayName = "GrabLength")	{ 100.f };
-		/* Vertical Grab length */
-		UPROPERTY(EditAnywhere, Category = "Movement|Wall|LedgeGrab")
-			float LedgeGrab_VerticalGrabLength		UMETA(DisplayName = "Vertical GrabLength") { 100.f };
-		/* Horizontal Grab length */
-		UPROPERTY(EditAnywhere, Category = "Movement|Wall|LedgeGrab")
-			float LedgeGrab_HorizontalGrabLength	UMETA(DisplayName = "Horizontal GrabLength") { 100.f };
-		/* How far below from the ledge will the character hold itself */
-		UPROPERTY(EditAnywhere, Category = "Movement|Wall|LedgeGrab")
-			float LedgeGrab_HoldLength				UMETA(DisplayName = "HoldLength")	{ 100.f };
-
-		/* The positional interpolation alpha for each frame between the actors location and the intended ledgegrab location */
-		UPROPERTY(EditAnywhere, Category = "Movement|Wall|LedgeGrab")
-			float PositionLerpAlpha{ 0.5f };
-		void MoveActorToLedge(float DeltaTime);
-
-		void DrawDebugArms(const float& InputAngle);
-
-	#pragma endregion //LedgeGrab
-
 #pragma endregion //OnWall
-
-
 
 
 	/* ----------------------- Actor Rotation Functions ---------------------------------- */

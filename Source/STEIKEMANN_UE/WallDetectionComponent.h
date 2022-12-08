@@ -24,12 +24,6 @@ namespace Wall {
 		FVector ActorLocation;
 	};
 }
-//struct WallDetectionCapsule
-//{
-//	float m_Radius{ 40.f };
-//	float m_HalfHeight{ 90.f };
-//};
-
 
 
 UENUM()

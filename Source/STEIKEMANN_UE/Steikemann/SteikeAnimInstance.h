@@ -72,10 +72,7 @@ public:
 		bool bOnWall{};
 
 	UPROPERTY(BlueprintReadOnly)
-		bool bStickingToWall{};
-
-	UPROPERTY(BlueprintReadOnly)
-		float OnWallRotation{};
+		float InputToActorForwardAngle{};
 
 #pragma endregion //WallSticking
 
