@@ -13,6 +13,7 @@
 namespace Wall {
 	struct WallData
 	{
+		bool valid;
 		FVector Location;
 		FVector Normal;
 	};
@@ -60,21 +61,33 @@ public:
 	void SetDebugStatus(bool b) { bShowDebug = b; }
 
 	// Capusle size
-	void SetCapsuleSize(float radius, float halfheight) { capsule.SetCapsule(radius, halfheight); }
+	void SetCapsuleSize(float radius, float halfheight) { m_capsule.SetCapsule(radius, halfheight); }
+	
+	void SetHeight(float minHeight, float playerCapsuleHalfHeight) { m_MinHeight = minHeight, m_OwnerHalfHeight = playerCapsuleHalfHeight; }
+	void SetMinLengthToWall(float length) { m_MinLengthToWall = length; }
+
 private:
 	bool bShowDebug{};
-	FCollisionShape capsule;
+	FCollisionShape m_capsule;
+	float Angle_UpperLimit{  0.7f };
+	float Angle_LowerLimit{ -0.7f };
+	float m_MinLengthToWall{ 40.f };
 
 public:	// Wall Detection
 	// Viable wall angles between upper and lower limit. 
-	float Angle_UpperLimit{  0.7f };
-	float Angle_LowerLimit{ -0.7f };
 
-	bool DetectWall(const AActor* actor, const FVector Location, const FVector ForwardVector, Wall::WallData& data);
+	bool DetectWall(const AActor* actor, const FVector Location, const FVector ForwardVector, Wall::WallData& walldata, Wall::WallData& WallJumpData);
 
 private:
+	float m_OwnerHalfHeight{};
+	float m_MinHeight{ 40.f };	// from root
+
 	bool DetermineValidPoints_IMPL(TArray<FHitResult>& hits, const FVector& Location);
+	bool Valid_WallJumpPoints(TArray<FHitResult>& hits, const FVector& Location);
 	void GetWallPoint_IMPL(Wall::WallData& data, const TArray<FHitResult>& hits);
+
+	float GetMinHeight(float z);
+	bool ValidLengthToCapsule(FVector Hit, FVector capsuleLocation, float capsuleHeight);
 
 public:	// Ledge detection
 	float Ledge_Anglelimit{ 0.8f };

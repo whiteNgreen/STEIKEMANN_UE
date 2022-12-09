@@ -316,7 +316,7 @@ void USteikemannCharMovementComponent::DeactivateJumpMechanics()
 
 void USteikemannCharMovementComponent::InitialOnWall(const Wall::WallData& wall, float time)
 {
-	m_Walldata = wall;
+	m_WallJumpData = wall;
 
 	switch (m_WallState)
 	{
@@ -332,7 +332,7 @@ void USteikemannCharMovementComponent::Initial_OnWall_Hang(const Wall::WallData&
 {
 	PRINTLONG("ON WALL HANG");
 
-	m_Walldata = wall;
+	m_WallJumpData = wall;
 	m_WallState = EOnWallState::WALL_Hang;
 
 	Velocity *= 0.f;
@@ -353,7 +353,7 @@ void USteikemannCharMovementComponent::WallJump(FVector input, float JumpStrengt
 	ExitWall_Air();
 
 	FVector Input = input;
-	FVector normal = m_Walldata.Normal;
+	FVector normal = m_WallJumpData.Normal;
 	FVector Right, OrthoUp;
 	FVector direction = GetInputDirectionToNormal(Input, normal, Right, OrthoUp);		
 
@@ -374,7 +374,7 @@ void USteikemannCharMovementComponent::LedgeJump(const FVector input, float Jump
 
 	// Clamp direction to not go towards vector (wall.normal)
 	FVector i = mInput.GetSafeNormal();
-	float dot = FVector::DotProduct(m_Walldata.Normal * -1.f, i);
+	float dot = FVector::DotProduct(m_WallJumpData.Normal * -1.f, i);
 	float alpha = mInput.Size();
 	if (dot <= 1.f && dot >= 0.95f) {
 		Jump(JumpStrength * (1.f + LedgeJumpBoost_Multiplier));
@@ -382,7 +382,7 @@ void USteikemannCharMovementComponent::LedgeJump(const FVector input, float Jump
 	}
 	if (dot > 0.f)	// Clamp direction
 	{
-		FVector p = i.ProjectOnTo(m_Walldata.Normal * -1);
+		FVector p = i.ProjectOnTo(m_WallJumpData.Normal * -1);
 		i -= p;
 		i.Normalize();
 		i *= input.Size();
@@ -480,7 +480,7 @@ FVector USteikemannCharMovementComponent::ClampDirectionToAngleFromVector(const 
 	float a = FMath::RadiansToDegrees(acosf(angle));
 	if (r < 0) a *= -1.f;
 	d = clampVector.RotateAngleAxis(a, up);
-		DrawDebugLine(GetWorld(), m_Walldata.Location, m_Walldata.Location + (direction * 100.f), FColor::Black, false, 2.f, 0, 5.f);
+		DrawDebugLine(GetWorld(), m_WallJumpData.Location, m_WallJumpData.Location + (direction * 100.f), FColor::Black, false, 2.f, 0, 5.f);
 	return d;
 }
 

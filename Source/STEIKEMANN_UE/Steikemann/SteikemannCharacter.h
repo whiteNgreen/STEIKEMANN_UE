@@ -518,13 +518,23 @@ public:// Capsule
 
 	UWallDetectionComponent* WallDetector{ nullptr };
 	
+	// Wall Decetion
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|WallDetection")
 		float WDC_Capsule_Radius{ 40.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|WallDetection")
 		float WDC_Capsule_Halfheight{ 90.f };
-public: // OnWall
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|WallDetection")
 		float Wall_HeightCriteria{ 20.f };
+	// On Wall
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|WallDetection|WallJump")
+		float WDC_Length{ 40.f };
+	// Ledge Grab
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|WallDetection|Ledge")
+		float LedgeGrab_Height{ 100.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|WallDetection|Ledge")
+		float LedgeGrab_Inwards{ 50.f };
+
+public: // OnWall
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall")
 		float OnWall_HangTime{ 0.5f };
@@ -538,10 +548,6 @@ public: // Walljump
 		float OnWallActivation_PostJumpingOnGround{ 0.5f };
 
 public:	// Ledge grab
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|Ledgegrab")
-		float LedgeGrab_Height{ 100.f };
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|Ledgegrab")
-		float LedgeGrab_Inwards{ 50.f };
 
 
 	
@@ -554,7 +560,8 @@ public: // Is funcitons
 	bool IsLedgeGrabbing() const;
 
 private:
-	Wall::WallData m_WallData;
+	Wall::WallData m_Walldata;
+	Wall::WallData m_WallJumpData;
 	Wall::LedgeData m_Ledgedata;
 
 	void DrawDebugArms(const float& InputAngle);

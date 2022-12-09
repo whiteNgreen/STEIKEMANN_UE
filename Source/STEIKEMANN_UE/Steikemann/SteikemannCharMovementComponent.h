@@ -189,7 +189,7 @@ private:
 public:
 	// NEW ON WALL
 	EOnWallState m_WallState = EOnWallState::WALL_None;
-	Wall::WallData m_Walldata;
+	Wall::WallData m_WallJumpData;
 
 
 	void InitialOnWall(const Wall::WallData& wall, float time);

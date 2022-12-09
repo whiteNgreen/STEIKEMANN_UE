@@ -118,6 +118,8 @@ void ASteikemannCharacter::BeginPlay()
 
 	WallDetector->SetCapsuleSize(WDC_Capsule_Radius, WDC_Capsule_Halfheight);
 	WallDetector->SetDebugStatus(bWDC_Debug);
+	WallDetector->SetHeight(Wall_HeightCriteria, GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
+	WallDetector->SetMinLengthToWall(WDC_Length);
 	/*
 	* Adding GameplayTags to the GameplayTagsContainer
 	*/
@@ -215,7 +217,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	}
 
 	/*------------ STATES ---------------*/
-	const bool wall = WallDetector->DetectWall(this, GetActorLocation(), GetActorForwardVector(), m_WallData);
+	const bool wall = WallDetector->DetectWall(this, GetActorLocation(), GetActorForwardVector(), m_Walldata, m_WallJumpData);
 	switch (m_State)
 	{
 	case EState::STATE_OnGround:
@@ -225,18 +227,18 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		if (wall && m_WallState == EOnWallState::WALL_None)
 		{
 			// Detect ledge & Ledge Grab
-			if (WallDetector->DetectLedge(m_Ledgedata, this, GetActorLocation(), GetActorUpVector(), m_WallData, LedgeGrab_Height, LedgeGrab_Inwards))
+			if (WallDetector->DetectLedge(m_Ledgedata, this, GetActorLocation(), GetActorUpVector(), m_Walldata, LedgeGrab_Height, LedgeGrab_Inwards))
 			{
 				//if (Validate_Ledge()) break;
-				GetMoveComponent()->m_Walldata = m_WallData;
+				GetMoveComponent()->m_WallJumpData = m_WallJumpData;
 				Initial_LedgeGrab();
 				break;	
 			}
 
 			// Hang on wall -- Default
-			if (ValidateWall())
+			if (ValidateWall() && m_WallJumpData.valid)
 			{
-				GetMoveComponent()->Initial_OnWall_Hang(m_WallData, OnWall_HangTime);
+				GetMoveComponent()->Initial_OnWall_Hang(m_WallJumpData, OnWall_HangTime);
 				m_State = EState::STATE_OnWall;
 				m_WallState = EOnWallState::WALL_Hang;
 			}
@@ -245,7 +247,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	}
 	case EState::STATE_OnWall:
 	{
-		if (wall || WallDetector->DetectLedge(m_Ledgedata, this, GetActorLocation(), GetActorUpVector(), m_WallData, LedgeGrab_Height, LedgeGrab_Inwards))
+		if (wall || WallDetector->DetectLedge(m_Ledgedata, this, GetActorLocation(), GetActorUpVector(), m_Walldata, LedgeGrab_Height, LedgeGrab_Inwards))
 			OnWall_IMPL(DeltaTime);
 		else {
 			ExitOnWall(EState::STATE_InAir);
@@ -1141,7 +1143,7 @@ void ASteikemannCharacter::Jump()
 			if (InputVector.SizeSquared() > 0.5f)
 				RotateActorYawToVector(InputVector);
 			else
-				RotateActorYawToVector(m_WallData.Normal);
+				RotateActorYawToVector(m_WallJumpData.Normal);
 
 			GetWorldTimerManager().SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, OnWall_Reset_OnWallJump_Timer, false);
 			GetMoveComponent()->WallJump(InputVector, JumpStrength);
@@ -1603,7 +1605,7 @@ bool ASteikemannCharacter::Validate_Ledge(FHitResult& hit)
 	const bool b1 = GetWorld()->LineTraceSingleByChannel(h, m_Ledgedata.ActorLocation, m_Ledgedata.ActorLocation + (FVector::DownVector * (GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 5.f)), ECC_WallDetection, param);
 	if (b1)
 		return false;
-	const bool b2 = GetWorld()->LineTraceSingleByChannel(hit, m_Ledgedata.TraceLocation, m_Ledgedata.TraceLocation - (m_WallData.Normal * 100.f), ECC_WallDetection, param);
+	const bool b2 = GetWorld()->LineTraceSingleByChannel(hit, m_Ledgedata.TraceLocation, m_Ledgedata.TraceLocation - (m_Walldata.Normal * 100.f), ECC_WallDetection, param);
 	if (!b2)
 		return false;
 
@@ -1625,15 +1627,16 @@ void ASteikemannCharacter::Initial_LedgeGrab()
 
 	float length = FVector(m_Ledgedata.TraceLocation - hit.ImpactPoint).Size();
 	float radius = GetCapsuleComponent()->GetScaledCapsuleRadius() + 3.f;
-	if (length < radius)
+	if (length < radius || length > radius + 2.f)
 	{
 		float l = radius - length;
-		location += m_WallData.Normal * l;
+		location += m_Walldata.Normal * l;
 	}
+
 
 	// Set Transforms
 	SetActorLocation(location, false, nullptr, ETeleportType::TeleportPhysics);
-	RotateActorYawToVector(m_WallData.Normal * -1.f);
+	RotateActorYawToVector(m_Walldata.Normal * -1.f);
 
 	GetMoveComponent()->m_GravityMode = EGravityMode::ForcedNone;
 }
@@ -1647,7 +1650,7 @@ bool ASteikemannCharacter::ValidateWall()
 	FVector start = GetActorLocation() + FVector(0, 0, Wall_HeightCriteria);
 	FHitResult hit;
 	FCollisionQueryParams Params("", false, this);
-	const bool b = GetWorld()->LineTraceSingleByChannel(hit, start, start + (m_WallData.Normal * 200.f * -1.f), ECC_WallDetection, Params);
+	const bool b = GetWorld()->LineTraceSingleByChannel(hit, start, start + (m_WallJumpData.Normal * 200.f * -1.f), ECC_WallDetection, Params);
 	return b;
 }
 
@@ -1658,10 +1661,10 @@ void ASteikemannCharacter::OnWall_IMPL(float deltatime)
 	case EOnWallState::WALL_None:
 		break;
 	case EOnWallState::WALL_Hang:
-		RotateActorYawToVector(m_WallData.Normal * -1.f);
+		RotateActorYawToVector(m_WallJumpData.Normal * -1.f);
 		break;
 	case EOnWallState::WALL_Drag:
-		GetMoveComponent()->m_Walldata = m_WallData;	// TODO: Change when this happens
+		GetMoveComponent()->m_WallJumpData = m_WallJumpData;	// TODO: Change when this happens
 		OnWall_Drag_IMPL(deltatime, (GetMoveComponent()->Velocity.Z/GetMoveComponent()->WJ_DragSpeed) * -1.f);	// VelocityZ scale from 0->1
 		break;
 	case EOnWallState::WALL_Ledgegrab:
@@ -1741,7 +1744,7 @@ void ASteikemannCharacter::OnCapsuleComponentEndOverlap(UPrimitiveComponent* Ove
 
 void ASteikemannCharacter::DrawDebugArms(const float& InputAngle)
 {
-	FVector Ledge{ m_Ledgedata.TraceLocation };
+	FVector Ledge{ GetActorLocation() + FVector::UpVector * (LedgeGrab_Height/2.f) + GetActorForwardVector() * 30.f };
 	FRotator Rot{ GetActorRotation() };
 	float Angle = FMath::Clamp(InputAngle, -90.f, 90.f);
 

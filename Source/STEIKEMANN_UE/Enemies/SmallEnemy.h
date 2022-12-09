@@ -61,6 +61,7 @@ public:
 		float WDC_Capsule_Halfheight{ 90.f };
 private:
 	Wall::WallData m_WallData;
+	Wall::WallData m_WallJumpData;
 
 public: 
 	bool bCanBeGrappleHooked{ true };
