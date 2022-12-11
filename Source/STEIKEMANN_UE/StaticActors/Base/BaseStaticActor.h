@@ -21,7 +21,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Root")
 		USceneComponent* Root { nullptr };
 
-	FGameplayTagContainer GTagContainer;
+	UPROPERTY(BlueprintReadWrite, Category = "GameplayTags")
+		FGameplayTagContainer GTagContainer;
 	void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override { TagContainer = GTagContainer; }
 
 

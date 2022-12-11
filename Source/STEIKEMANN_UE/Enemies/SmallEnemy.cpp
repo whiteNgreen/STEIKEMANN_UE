@@ -23,18 +23,44 @@ void ASmallEnemy::BeginPlay()
 	Super::BeginPlay();
 	
 	WallDetector->SetCapsuleSize(WDC_Capsule_Radius, WDC_Capsule_Halfheight);
+	WallDetector->SetHeight(WDC_MinHeight, GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
 	WallDetector->SetDebugStatus(bWDC_Debug);
 
 	// Adding gameplay tags
 	GameplayTags.AddTag(Tag::AubergineDoggo());
+
+	auto i = Cast<UCharacterMovementComponent>(GetMovementComponent());
+	GravityScale = i->GravityScale;
 }
 
 // Called every frame
 void ASmallEnemy::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	
+	SetDefaultState();
 
-	WallDetector->DetectWall(this, GetActorLocation(), GetActorForwardVector(), m_WallData, m_WallJumpData);
+	const bool wall = WallDetector->DetectStickyWall(this, GetActorLocation(), m_WallData);
+	if (wall && m_State == EEnemyState::STATE_InAir)
+	{
+		m_State = EEnemyState::STATE_OnWall;
+		m_WallState = EWall::WALL_Stuck;
+	}
+
+	switch (m_State)
+	{
+	case EEnemyState::STATE_None:
+		break;
+	case EEnemyState::STATE_OnGround:
+		break;
+	case EEnemyState::STATE_InAir:
+		break;
+	case EEnemyState::STATE_OnWall:
+		StickToWall();
+		break;
+	default:
+		break;
+	}
 }
 
 // Called to bind functionality to input
@@ -42,6 +68,32 @@ void ASmallEnemy::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
+}
+
+void ASmallEnemy::SetDefaultState()
+{
+	switch (m_State)
+	{
+	case EEnemyState::STATE_None:
+		break;
+	case EEnemyState::STATE_OnGround:
+		break;
+	case EEnemyState::STATE_InAir:
+		break;
+	case EEnemyState::STATE_OnWall:
+		return;
+	default:
+		break;
+	}
+
+	//auto i = Cast<UCharacterMovementComponent>(GetMovementComponent());
+	auto i = GetMovementComponent();
+	if (i->IsFalling()) {
+		m_State = EEnemyState::STATE_InAir;
+		return;
+	}
+	// Default Case
+	m_State = EEnemyState::STATE_OnGround;
 }
 
 void ASmallEnemy::RotateActorYawToVector(FVector AimVector, float DeltaTime)
@@ -61,6 +113,14 @@ void ASmallEnemy::RotateActorYawToVector(FVector AimVector, float DeltaTime)
 	if (RightDotProduct < 0.f) { Yaw *= -1.f; }
 
 	SetActorRotation(FRotator(GetActorRotation().Pitch, Yaw, 0.f), ETeleportType::TeleportPhysics);
+}
+
+void ASmallEnemy::StickToWall()
+{
+	PRINTPAR("STUCK TO WALL: %s", *GetName());
+	auto i = Cast<UCharacterMovementComponent>(GetMovementComponent());
+	i->Velocity *= 0.f;
+	i->GravityScale = 0;
 }
 
 void ASmallEnemy::TargetedPure()

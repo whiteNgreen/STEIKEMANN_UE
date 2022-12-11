@@ -192,18 +192,19 @@ public:
 	Wall::WallData m_WallJumpData;
 
 
-	void InitialOnWall(const Wall::WallData& wall, float time);
+	//void InitialOnWall(const Wall::WallData& wall, float time);
 	void Initial_OnWall_Hang(const Wall::WallData& wall, float time);
 
 	void WallJump(FVector input, float JumpStrength);
 	void LedgeJump(const FVector input, float JumpStrength);
 
 	void ExitWall();
+	void CancelOnWall();
 private:
 	FTimerHandle TH_WallHang;
 
 	void ExitWall_Air();
-	void InitialOnWall_IMPL(float time);
+	//void InitialOnWall_IMPL(float time);
 	void OnWallHang_IMPL();
 	void OnWallDrag_IMPL(float deltatime);
 

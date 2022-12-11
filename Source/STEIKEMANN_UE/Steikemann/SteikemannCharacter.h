@@ -41,10 +41,17 @@ enum class EState : int8
 	
 	// Advanced States
 	STATE_OnWall,
-
 	STATE_Attacking,
-
 	STATE_Grappling
+};
+
+UENUM()
+enum class EAirState : int8
+{
+	AIR_None,
+	AIR_Freefall,
+	AIR_Jump,
+	AIR_Pogo
 };
 
 UENUM()
@@ -329,6 +336,7 @@ public:	// States
 	virtual void AllowActionCancelationWithInput() override;
 private:
 	EState m_State = EState::STATE_OnGround;
+	EAirState m_AirState = EAirState::AIR_None;
 
 public:/* ------------------- Basic Movement ------------------- */
 public:
@@ -417,7 +425,8 @@ public:
 		//float Jump_TopFloatTime{ 1.f };
 
 
-
+#pragma endregion //Basic_Movement
+#pragma region Pogo
 	/*
 	* -------------------- Player Pogo Jumping on enemy --------------------------
 	*/
@@ -429,6 +438,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce")
 		float PogoContingency{ 50.f };
 
+	// Minimum time the pogo state lasts - Will disable some mechanics while in that state
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce")
+		float Pogo_StateTimer{ 0.5f };
+	FTimerHandle TH_Pogo;
 
 	void CheckIfEnemyBeneath(const FHitResult& Hit);
 	UFUNCTION(BlueprintCallable)
@@ -441,7 +454,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 		void PogoBounce(const FVector& EnemyLocation);
 
-#pragma endregion //Basic_Movement
+#pragma endregion //Pogo
 	
 	/* Includes all actions related to the crouch button */
 #pragma region Crouch		
@@ -936,8 +949,7 @@ public:
 	#pragma region GroundPound
 
 	bool bGroundPoundPress{};
-	bool bCanGroundPound{ true };
-	bool bIsGroundPounding{};
+	bool IsGroundPounding() const { return m_State == EState::STATE_Attacking && m_AttackState == EAttackState::GroundPound; }
 
 	void Click_GroundPound();
 	void UnClick_GroundPound();
@@ -945,6 +957,10 @@ public:
 	/* Movement */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GroundPound")
 		float GP_PrePoundAirtime{ 0.3f };
+	/* How fast, visually, the player will launch */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|GroundPound")
+		float GP_VisualLaunchStrength{ 2500.f };
+	/* The launch strength the enemies will recieve */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|GroundPound")
 		float GP_LaunchStrength{ 2500.f };
 	FTimerHandle THandle_GPHangTime;

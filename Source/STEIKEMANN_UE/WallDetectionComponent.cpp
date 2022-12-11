@@ -79,6 +79,51 @@ bool UWallDetectionComponent::DetectWall(const AActor* actor, const FVector Loca
 	return true;
 }
 
+bool UWallDetectionComponent::DetectStickyWall(const AActor* actor, const FVector Location, Wall::WallData& walldata)
+{
+	TArray<FHitResult> Hits;
+	FCollisionQueryParams Params = FCollisionQueryParams("", false, actor);
+	bool b = GetWorld()->SweepMultiByChannel(Hits, Location, Location + FVector::ForwardVector, FQuat(1.f, 0, 0, 0), ECC_WallDetection, m_capsule, Params);
+
+	if (bShowDebug)
+		DrawDebugCapsule(GetWorld(), Location, m_capsule.GetCapsuleHalfHeight(), m_capsule.GetCapsuleRadius(), FQuat(1.f, 0, 0, 0), FColor(.3f, .3f, 1.f, 1.f), false, 0, 0, 1.f);
+
+	if (!b) return false;
+
+	if (bShowDebug)// Debug
+		for (const auto& it : Hits)
+			DrawDebugPoint(GetWorld(), it.ImpactPoint, 5.f, FColor::Blue, false, 1, 1);
+
+	// Get Valid point on wall, used for WallJump and Ledgegrab
+	b = DetermineValidPoints_IMPL(Hits, Location);
+	if (!b) return false;
+	GetWallPoint_IMPL(walldata, Hits);
+
+	if (bShowDebug) {// Debug
+		DrawDebugPoint(GetWorld(), walldata.Location, 12.f, FColor::Red, false, 0, 1);
+		DrawDebugLine(GetWorld(), walldata.Location, walldata.Location + walldata.Normal * 50.f, FColor::Purple, false, 0, 1, 4.f);
+	}
+
+	FHitResult Hit;
+	FVector Direction = walldata.Location - Location;
+	b = GetWorld()->LineTraceSingleByChannel(Hit, Location, Location + (Direction * 1.1f), ECC_WallDetection, Params);
+
+	if (b)
+	{
+		DrawDebugLine(GetWorld(), Location, Location + (Direction * 1.1f), FColor::Purple, false, 0, 1, 5.f);
+
+		IGameplayTagAssetInterface* tag = Cast<IGameplayTagAssetInterface>(Hit.GetActor());
+		if (!tag) return false;
+
+		FGameplayTagContainer con;
+		tag->GetOwnedGameplayTags(con);
+		if (con.HasTag(Tag::StickingWall()))
+			return true;
+	}
+
+	return false;
+}
+
 bool UWallDetectionComponent::DetermineValidPoints_IMPL(TArray<FHitResult>& hits, const FVector& Location)
 {
 	// Get Capsule height
@@ -165,13 +210,11 @@ float UWallDetectionComponent::GetMinHeight(float z)
 bool UWallDetectionComponent::ValidLengthToCapsule(FVector Hit, FVector capsuleLocation, float capsuleHeight)
 {
 	// Get point along capsule line
-	FVector capTopPoint = capsuleLocation * capsuleHeight;
 	float zCapMin = capsuleLocation.Z;
-	float zCapMax = FVector(capTopPoint).Z;
+	float zCapMax = capsuleHeight;
 	
-	float zLine = FMath::Clamp(Hit.Z, zCapMin, zCapMax);
+	float zLine = FMath::Clamp(Hit.Z - zCapMin, 0.f, zCapMax);
 	float alpha = zLine / zCapMax;
-
 	FVector Point = capsuleLocation + (FVector::UpVector * (capsuleHeight * alpha));
 
 	float length = FVector(Hit - Point).Size();

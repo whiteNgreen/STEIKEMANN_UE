@@ -314,19 +314,19 @@ void USteikemannCharMovementComponent::DeactivateJumpMechanics()
 }
 
 
-void USteikemannCharMovementComponent::InitialOnWall(const Wall::WallData& wall, float time)
-{
-	m_WallJumpData = wall;
-
-	switch (m_WallState)
-	{
-	case EOnWallState::WALL_None:
-		InitialOnWall_IMPL(time);
-		break;
-	default:
-		break;
-	}
-}
+//void USteikemannCharMovementComponent::InitialOnWall(const Wall::WallData& wall, float time)
+//{
+//	m_WallJumpData = wall;
+//
+//	switch (m_WallState)
+//	{
+//	case EOnWallState::WALL_None:
+//		InitialOnWall_IMPL(time);
+//		break;
+//	default:
+//		break;
+//	}
+//}
 
 void USteikemannCharMovementComponent::Initial_OnWall_Hang(const Wall::WallData& wall, float time)
 {
@@ -408,6 +408,12 @@ void USteikemannCharMovementComponent::ExitWall()
 	GetCharOwner()->ExitOnWall(EState::STATE_OnGround);
 }
 
+void USteikemannCharMovementComponent::CancelOnWall()
+{
+	m_WallState = EOnWallState::WALL_None;
+	GetCharOwner()->GetWorldTimerManager().ClearTimer(TH_WallHang);
+}
+
 void USteikemannCharMovementComponent::ExitWall_Air()
 {
 	m_GravityMode = EGravityMode::LerpToDefault;
@@ -416,23 +422,23 @@ void USteikemannCharMovementComponent::ExitWall_Air()
 	Velocity *= 0.f;
 }
 
-void USteikemannCharMovementComponent::InitialOnWall_IMPL(float time)
-{
-	PRINTLONG("ON WALL HANG");
-	m_WallState = EOnWallState::WALL_Hang;
-
-	Velocity *= 0.f;
-	GravityScaleOverride_InterpSpeed = 1.f / time;
-	m_GravityMode = EGravityMode::LerpToNone;
-
-	FTimerHandle h;
-	GetCharOwner()->GetWorldTimerManager().SetTimer(h, [this]()
-		{
-			m_GravityMode = EGravityMode::LerpToDefault;
-			m_WallState = EOnWallState::WALL_Drag; 
-			GetCharOwner()->m_WallState = EOnWallState::WALL_Drag;
-		}, time, false);	// TODO: Change WALL_None to WALL_Drag
-}
+//void USteikemannCharMovementComponent::InitialOnWall_IMPL(float time)
+//{
+//	PRINTLONG("ON WALL HANG");
+//	m_WallState = EOnWallState::WALL_Hang;
+//
+//	Velocity *= 0.f;
+//	GravityScaleOverride_InterpSpeed = 1.f / time;
+//	m_GravityMode = EGravityMode::LerpToNone;
+//
+//	FTimerHandle h;
+//	GetCharOwner()->GetWorldTimerManager().SetTimer(h, [this]()
+//		{
+//			m_GravityMode = EGravityMode::LerpToDefault;
+//			m_WallState = EOnWallState::WALL_Drag; 
+//			GetCharOwner()->m_WallState = EOnWallState::WALL_Drag;
+//		}, time, false);	// TODO: Change WALL_None to WALL_Drag
+//}
 
 void USteikemannCharMovementComponent::OnWallHang_IMPL()
 {
@@ -487,12 +493,14 @@ FVector USteikemannCharMovementComponent::ClampDirectionToAngleFromVector(const 
 
 void USteikemannCharMovementComponent::GP_PreLaunch()
 {
-	bGP_PreLaunch = true;
+	//bGP_PreLaunch = true;
+	m_GravityMode = EGravityMode::ForcedNone;
 }
 
 void USteikemannCharMovementComponent::GP_Launch(float strength)
 {
-	bGP_PreLaunch = false;
+	//bGP_PreLaunch = false;
 	//const float LaunchStrength = GetCharOwner()->GP_LaunchStrength;
-	AddImpulse(FVector(0, 0, strength), true);
+	m_GravityMode = EGravityMode::Default;
+	AddImpulse(FVector(0, 0, -strength), true);
 }

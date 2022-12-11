@@ -13,6 +13,29 @@
 
 #include "SmallEnemy.generated.h"
 
+/************************ ENUMS *****************************/
+// State
+UENUM()
+enum class EEnemyState : int8
+{
+	STATE_None,
+
+	STATE_OnGround,
+	STATE_InAir,
+
+	STATE_OnWall
+};
+// Wall Mechanic
+UENUM()
+enum class EWall : int8
+{
+	WALL_None,
+
+	WALL_Stuck,
+
+	WALL_Leaving
+};
+
 UCLASS()
 class STEIKEMANN_UE_API ASmallEnemy : public ACharacter,
 	public IAttackInterface,
@@ -20,49 +43,65 @@ class STEIKEMANN_UE_API ASmallEnemy : public ACharacter,
 	public IGrappleTargetInterface
 {
 	GENERATED_BODY()
-
+#pragma region Base
 public:
 	// Sets default values for this character's properties
 	ASmallEnemy();
-
-	/*
-	GameplayTags
-	*/
-
-	UPROPERTY(BlueprintReadOnly, Category = "GameplayTags")
-		FGameplayTagContainer GameplayTags;
-	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GameplayTags")
-		//FGameplayTag* Enemy{ nullptr };
-
-	virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override { TagContainer = GameplayTags; return; }
-
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+#pragma endregion //Base
 
+#pragma region GameplayTags
+	UPROPERTY(BlueprintReadOnly, Category = "GameplayTags")
+		FGameplayTagContainer GameplayTags;
+
+	virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override { TagContainer = GameplayTags; return; }
+#pragma endregion //GameplayTags
+
+#pragma region States
+public:	// STATES
+	EEnemyState m_State = EEnemyState::STATE_None;
+	void SetDefaultState();
+
+private: // Gravity
+	float GravityScale;
+
+#pragma endregion //States
 	void RotateActorYawToVector(FVector AimVector, float DeltaTime = 0);
+
+#pragma region Wall Mechanics
+public:
+	UWallDetectionComponent* WallDetector{ nullptr };
+	EWall m_WallState = EWall::WALL_None;
+public:
+	void StickToWall();
+	virtual bool IsStuck_Pure() override { return m_State == EEnemyState::STATE_OnWall; }
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall")
 		bool bWDC_Debug{};
 
-	UWallDetectionComponent* WallDetector{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|WallDetection")
 		float WDC_Capsule_Radius{ 40.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|WallDetection")
 		float WDC_Capsule_Halfheight{ 90.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|WallDetection")
+		float WDC_MinHeight{ 20.f };
 private:
 	Wall::WallData m_WallData;
 	Wall::WallData m_WallJumpData;
 
+#pragma endregion //Wall Mechanics
+
+
+#pragma region GrappleHooked
 public: 
 	bool bCanBeGrappleHooked{ true };
 	/* The internal cooldown before enemy can be grapplehooked again */
@@ -103,7 +142,9 @@ public:
 	virtual void UnHookedPure() override;
 
 	//virtual FGameplayTag GetGrappledGameplayTag_Pure() const override { return Enemy; }
+#pragma endregion //GrappleHooked
 
+#pragma region GettingSmacked
 public:
 	bool bCanBeSmackAttacked{ true };
 
@@ -132,4 +173,6 @@ public:
 
 	void Do_GroundPound_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override {}
 	void Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength) override;
+
+#pragma endregion //GettingSmacked
 };
