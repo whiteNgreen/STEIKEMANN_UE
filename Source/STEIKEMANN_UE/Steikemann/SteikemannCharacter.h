@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "../AbstractClasses/AbstractCharacter.h"
 #include "../Interfaces/GrappleTargetInterface.h"
 #include "../Interfaces/AttackInterface.h"
 #include "../Interfaces/CameraGuideInterface.h"
@@ -24,14 +25,21 @@ class UNiagaraComponent;
 class USoundBase;
 
 UENUM()
+enum class EMovementInput : int8
+{
+	Open,
+	Locked
+};
+UENUM()
 enum class EState : int8
 {
-	// Basic States
+	STATE_None, // Used when leaving a state and reevaluating the next state
+
+	// Default States
 	STATE_OnGround,
 	STATE_InAir,
 	
 	// Advanced States
-
 	STATE_OnWall,
 
 	STATE_Attacking,
@@ -48,6 +56,27 @@ enum class EGrappleState : int8
 	Post_Launch
 };
 
+UENUM()
+enum class EAttackState : int8
+{
+	None,
+
+	Smack,
+	Scoop,
+	GroundPound
+};
+
+UENUM()
+enum class ESmackAttackState : int8
+{
+	None,
+
+	Attack,
+	Hold,
+
+	Leave
+};
+
 //UENUM()
 //enum class EWall : int8
 //{
@@ -58,7 +87,7 @@ enum class EGrappleState : int8
 //};
 
 UCLASS()
-class STEIKEMANN_UE_API ASteikemannCharacter : public ACharacter, 
+class STEIKEMANN_UE_API ASteikemannCharacter : public AAbstractCharacter, 
 	public IGrappleTargetInterface,
 	public IAttackInterface,
 	public IGameplayTagAssetInterface,
@@ -104,6 +133,7 @@ public:
 	/* Input vector rotated to match the playercontrollers rotation */
 	FVector InputVector;
 
+	EMovementInput m_MovementInputState = EMovementInput::Open;
 
 	TWeakObjectPtr<class USteikemannCharMovementComponent> MovementComponent;
 	/* Returns the custom MovementComponent. A TWeakPtr<class USteikemannCharMovementComponent> */
@@ -293,7 +323,10 @@ public:	// States
 	EState GetState() const { return m_State; }
 	void SetState(EState state) { m_State = state; }
 	//void ReevaluateState();
+	void ResetState();
 	void SetDefaultState();
+
+	virtual void AllowActionCancelationWithInput() override;
 private:
 	EState m_State = EState::STATE_OnGround;
 
@@ -301,6 +334,8 @@ public:/* ------------------- Basic Movement ------------------- */
 public:
 	UPROPERTY(EditAnywhere, Category = "Movement|Walk/Run", meta = (AllowPrivateAcces = "true"))
 	float TurnRate{ 50.f };
+
+	bool BreakMovementInput(float value);
 
 	void MoveForward(float value);
 	void MoveRight(float value);
@@ -704,6 +739,16 @@ public:
 
 /* ----------------------------------------- ATTACKS ----------------------------------------------- */
 #pragma region Attacks
+	EAttackState m_AttackState = EAttackState::None;
+	FTimerHandle TH_BufferAttack;
+
+
+	UFUNCTION(BlueprintCallable)
+		void Activate_AttackCollider() override;
+
+	UFUNCTION(BlueprintCallable)
+		void Deactivate_AttackCollider() override;
+
 
 	bool CanBeAttacked() override;
 
@@ -722,12 +767,6 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 		void Stop_Attack();
-
-	UFUNCTION(BlueprintCallable)
-		void Activate_AttackCollider();
-
-	UFUNCTION(BlueprintCallable)
-		void Deactivate_AttackCollider();
 
 	UFUNCTION(BlueprintPure)
 		bool DecideAttackType();
@@ -781,9 +820,11 @@ public:
 
 	/* --------------------------------- SMACK ATTACK ----------------------------- */
 	#pragma region SmackAttack
-
+	ESmackAttackState m_SmackAttackState = ESmackAttackState::None;
+	virtual void StartAttackBufferPeriod() override;
 
 	bool bAttackPress{};
+
 
 	/* SMACK DIRECTION 
 	 *  0. None of the below
@@ -799,13 +840,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|SmackDirection", meta = (UIMin = "1.0", UIMax = "4.0", EditCondition = "SmackDirectionType == 1 || SmackDirectionType == 3", EditConditionHides))
 		float SmackDirection_InputMultiplier	UMETA(DisplayName = "Input Multiplier") { 1.f };
 
-	UFUNCTION(BlueprintCallable)
-		bool GetAttackPress() const { return bAttackPress; }
-	/* When the button can be pressed again */
-	bool bCanAttack{ true };
-	/* Related to collider and locking movement */
-	bool bAttacking{};
-	bool IsAttacking() const { return bAttacking; }
 	
 	/* When TRUE the characters rotation is decided by the players input direction 
 	 * When FALSE the characters rotation is decided by the direction of the camera */
@@ -832,7 +866,10 @@ public:
 	bool bSmackAttackMoveCharacter{};
 	void SmackAttackMoveCharacter(float DeltaTime);
 
-
+	// Combo
+	int AttackComboCount{};
+	UFUNCTION(BlueprintImplementableEvent)
+		void ComboAttack(int combo);
 
 	UFUNCTION(BlueprintCallable)
 		void Activate_SmackAttack();

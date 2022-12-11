@@ -111,6 +111,8 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|SmackAttack")
 		float SmackAttack_OnGroundMultiplication{ 0.1f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|SmackAttack")
+		float SmackAttack_InternalTimer{ 0.5f };
 
 	/**
 	*	Sets a timer before character can be damaged again 
