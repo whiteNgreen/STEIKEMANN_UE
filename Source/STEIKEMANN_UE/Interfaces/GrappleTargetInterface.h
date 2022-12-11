@@ -62,4 +62,8 @@ public:
 	virtual void UnHookedPure() = 0;
 
 
+	// Dynamic Object is Stuck - Use as a static target
+	UFUNCTION(BlueprintNativeEvent, Category = "GrappleHook Targeting")
+		bool IsStuck();
+	virtual bool IsStuck_Pure() { return false; }
 };
