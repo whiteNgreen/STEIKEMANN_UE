@@ -61,6 +61,26 @@ void ASmallEnemy::Tick(float DeltaTime)
 	default:
 		break;
 	}
+
+	auto i = Cast<UCharacterMovementComponent>(GetMovementComponent());
+	switch (m_Gravity)
+	{
+	case EGravityState::Default:
+		i->GravityScale = GravityScale;
+		break;
+	case EGravityState::LerpToDefault:
+		break;
+	case EGravityState::None:
+		break;
+	case EGravityState::LerpToNone:
+		break;
+	case EGravityState::ForcedNone:
+		i->GravityScale = 0.f;
+		i->Velocity *= 0.f;
+		break;
+	default:
+		break;
+	}
 }
 
 // Called to bind functionality to input
@@ -149,13 +169,14 @@ void ASmallEnemy::HookedPure()
 	Execute_Hooked(this);
 }
 
-void ASmallEnemy::HookedPure(const FVector InstigatorLocation, bool PreAction /*=false*/)
+void ASmallEnemy::HookedPure(const FVector InstigatorLocation, bool OnGround, bool PreAction /*=false*/)
 {
 	/* During Pre Action, Rotate Actor towards instigator - Yaw */
 	if (PreAction)
 	{
 		FVector Direction = InstigatorLocation - GetActorLocation();
 		RotateActorYawToVector(Direction.GetSafeNormal());
+		m_Gravity = EGravityState::ForcedNone;
 		return;
 	}
 
@@ -178,17 +199,22 @@ void ASmallEnemy::HookedPure(const FVector InstigatorLocation, bool PreAction /*
 		/* 2nd method */
 		else
 		{
-			//PRINTLONG("Second Method Launch");
-			//FVector Direction3D = InstigatorLocation - GetActorLocation();
+			m_Gravity = EGravityState::Default;
+			GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 			FVector Direction2D = Direction3D;
 			Direction3D.Z = 0.f;
-			//Direction2D.Normalize();
 
 			FVector Velocity = Direction2D / GrappledLaunchTime;
 
-			Velocity.Z = 0.5f * GetCharacterMovement()->GetGravityZ() * GrappledLaunchTime * -1.f;
+			//Velocity.Z = 0.5f * GetCharacterMovement()->GetGravityZ() * GrappledLaunchTime * -1.f;
+			float z{};
+			OnGround ? z = (InstigatorLocation.Z - GetActorLocation().Z) : z = ((InstigatorLocation.Z + GrappledZInstigator) - GetActorLocation().Z);
 
+			Velocity.Z = (z / GrappledLaunchTime) + (0.5 * GetCharacterMovement()->GetGravityZ() * GrappledLaunchTime * -1.f);
 			GetCharacterMovement()->AddImpulse(Velocity, true);
+
+			FTimerHandle h;
+			GetWorldTimerManager().SetTimer(h, [this](){ GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics); }, FMath::Clamp(GrappledLaunchTime-0.05f, 0.f, GrappledLaunchTime), false);
 		}
 
 		bCanBeGrappleHooked = false;

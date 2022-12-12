@@ -14,6 +14,16 @@
 #include "SmallEnemy.generated.h"
 
 /************************ ENUMS *****************************/
+UENUM()
+enum class EGravityState : int8
+{
+	Default,
+	LerpToDefault,
+
+	None,
+	LerpToNone,
+	ForcedNone
+};
 // State
 UENUM()
 enum class EEnemyState : int8
@@ -67,6 +77,7 @@ public:
 #pragma region States
 public:	// STATES
 	EEnemyState m_State = EEnemyState::STATE_None;
+	EGravityState m_Gravity = EGravityState::Default;
 	void SetDefaultState();
 
 private: // Gravity
@@ -116,16 +127,18 @@ public:
 		bool bUseFirstGrappleLaunchMethod{ true };
 
 	/* When grapplehooked by the player, launch towards them with this strength : 1st method */	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook", meta = (EditCondition = "bUseFirstGrappleLaunchMethod", EditConditionHides))
 		float GrappledLaunchStrength{ 1000.f };
 
 	/* When grapplehooked by the player, launch them upwards of this angle : 1st method*/	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook", meta = (EditCondition = "bUseFirstGrappleLaunchMethod", EditConditionHides))
 		float GrappledLaunchAngle{ 45.f };
 
 	/* Time it should take to reach the Grappled Instigator : 2nd method */	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook", meta = (EditCondition = "!bUseFirstGrappleLaunchMethod", EditConditionHides))
 		float GrappledLaunchTime{ 1.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook", meta = (EditCondition = "!bUseFirstGrappleLaunchMethod", EditConditionHides))
+		float GrappledZInstigator{ 50.f };
 
 	/* ----- Grapple Interface ------ */
 	virtual void TargetedPure() override;
@@ -137,7 +150,7 @@ public:
 	virtual void OutofReach_Pure() override;
 
 	virtual void HookedPure() override;
-	virtual void HookedPure(const FVector InstigatorLocation, bool PreAction = false) override;
+	virtual void HookedPure(const FVector InstigatorLocation, bool OnGround,bool PreAction = false) override;
 
 	virtual void UnHookedPure() override;
 
