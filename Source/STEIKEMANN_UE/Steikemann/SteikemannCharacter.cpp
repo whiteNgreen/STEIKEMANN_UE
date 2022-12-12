@@ -531,7 +531,6 @@ void ASteikemannCharacter::Initial_GrappleHook()
 	/* Start GrappleHook */
 	bIsGrapplehooking = true;
 	m_State = EState::STATE_Grappling;
-	//GetMoveComponent()->bGrappleHook_InitialState = true;
 	GetMoveComponent()->m_GravityMode = EGravityMode::ForcedNone;
 	GetMoveComponent()->Velocity *= 0.f;
 
@@ -547,8 +546,9 @@ void ASteikemannCharacter::Initial_GrappleHook()
 	{
 		GrappleInterface->HookedPure();
 		if (bGrapplingDynamicTarget)
-			GrappleInterface->HookedPure(GetActorLocation(), true);	// To Rotate dynamic targets towards player 
+			GrappleInterface->HookedPure(GetActorLocation(), GetMoveComponent()->IsWalking(), true);	// To Rotate dynamic targets towards player 
 	}
+
 
 	/* Pre Launch/Grapple Timer before the GrappleHook is called */
 	GetWorldTimerManager().SetTimer(TH_Grapplehook_Start, this, &ASteikemannCharacter::Start_GrappleHook, GrappleDrag_PreLaunch_Timer_Length);
@@ -569,7 +569,7 @@ void ASteikemannCharacter::Start_GrappleHook()
 	if (GrappledTags.HasTag(Tag::AubergineDoggo()))		// Også spesifisere videre med fiende type
 	{
 		if (bGrapplingDynamicTarget)
-			GrappleInterface->HookedPure(GetActorLocation());
+			GrappleInterface->HookedPure(GetActorLocation(), GetMoveComponent()->IsWalking());
 		else if (bGrapplingStaticTarget)
 		{
 			Launch_GrappleHook();

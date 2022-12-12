@@ -36,7 +36,7 @@ public:
 	virtual void OutofReach_Pure() override;
 
 	virtual void HookedPure() override;
-	virtual void HookedPure(const FVector InstigatorLocation, bool PreAction = false) override{}
+	virtual void HookedPure(const FVector InstigatorLocation, bool OnGround, bool PreAction = false) override{}
 
 	virtual void UnHookedPure() override;
 };
