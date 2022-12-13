@@ -29,15 +29,16 @@ void ASmallEnemy::BeginPlay()
 	// Adding gameplay tags
 	GameplayTags.AddTag(Tag::AubergineDoggo());
 
-	auto i = Cast<UCharacterMovementComponent>(GetMovementComponent());
+	auto i = GetCharacterMovement();
 	GravityScale = i->GravityScale;
+	GravityZ = i->GetGravityZ();
 }
 
 // Called every frame
 void ASmallEnemy::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	
+
 	SetDefaultState();
 
 	const bool wall = WallDetector->DetectStickyWall(this, GetActorLocation(), m_WallData);
@@ -47,6 +48,7 @@ void ASmallEnemy::Tick(float DeltaTime)
 		m_WallState = EWall::WALL_Stuck;
 	}
 
+	// State 
 	switch (m_State)
 	{
 	case EEnemyState::STATE_None:
@@ -62,7 +64,8 @@ void ASmallEnemy::Tick(float DeltaTime)
 		break;
 	}
 
-	auto i = Cast<UCharacterMovementComponent>(GetMovementComponent());
+	// Gravity State
+	auto i = GetCharacterMovement();
 	switch (m_Gravity)
 	{
 	case EGravityState::Default:
@@ -71,6 +74,7 @@ void ASmallEnemy::Tick(float DeltaTime)
 	case EGravityState::LerpToDefault:
 		break;
 	case EGravityState::None:
+		i->GravityScale = 0.f;
 		break;
 	case EGravityState::LerpToNone:
 		break;
@@ -100,8 +104,7 @@ void ASmallEnemy::SetDefaultState()
 		break;
 	case EEnemyState::STATE_InAir:
 		break;
-	case EEnemyState::STATE_OnWall:
-		return;
+	case EEnemyState::STATE_OnWall: return;
 	default:
 		break;
 	}
@@ -137,10 +140,7 @@ void ASmallEnemy::RotateActorYawToVector(FVector AimVector, float DeltaTime)
 
 void ASmallEnemy::StickToWall()
 {
-	PRINTPAR("STUCK TO WALL: %s", *GetName());
-	auto i = Cast<UCharacterMovementComponent>(GetMovementComponent());
-	i->Velocity *= 0.f;
-	i->GravityScale = 0;
+	m_Gravity = EGravityState::ForcedNone;
 }
 
 void ASmallEnemy::TargetedPure()
@@ -200,17 +200,23 @@ void ASmallEnemy::HookedPure(const FVector InstigatorLocation, bool OnGround, bo
 		else
 		{
 			m_Gravity = EGravityState::Default;
+			auto i = Cast<UCharacterMovementComponent>(GetMovementComponent());
+			if (!OnGround) i->SetMovementMode(EMovementMode::MOVE_Falling);
 			GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
 			FVector Direction2D = Direction3D;
 			Direction3D.Z = 0.f;
 
 			FVector Velocity = Direction2D / GrappledLaunchTime;
 
-			//Velocity.Z = 0.5f * GetCharacterMovement()->GetGravityZ() * GrappledLaunchTime * -1.f;
 			float z{};
-			OnGround ? z = (InstigatorLocation.Z - GetActorLocation().Z) : z = ((InstigatorLocation.Z + GrappledZInstigator) - GetActorLocation().Z);
+			OnGround ? 
+				z = (InstigatorLocation.Z - GetActorLocation().Z) : z = 
+				((InstigatorLocation.Z + GrappledZInstigator) - GetActorLocation().Z);
 
-			Velocity.Z = (z / GrappledLaunchTime) + (0.5 * GetCharacterMovement()->GetGravityZ() * GrappledLaunchTime * -1.f);
+			OnGround ? 
+				Velocity.Z = 0.5f * GravityZ * GrappledLaunchTime * -1.f : 
+				Velocity.Z = (z / GrappledLaunchTime) + (0.5 * GetCharacterMovement()->GetGravityZ() * GrappledLaunchTime * -1.f);
 			GetCharacterMovement()->AddImpulse(Velocity, true);
 
 			FTimerHandle h;
