@@ -337,6 +337,7 @@ public:	// States
 private:
 	EState m_State = EState::STATE_OnGround;
 	EAirState m_AirState = EAirState::AIR_None;
+	float m_BaseGravity{};
 
 public:/* ------------------- Basic Movement ------------------- */
 public:
@@ -594,6 +595,9 @@ public: // Walljump
 	/* How long after a regular jump before OnWall mechanics are activated */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall")
 		float OnWallActivation_PostJumpingOnGround{ 0.5f };
+	/* After grapplehooking to a stuck enemy, disable wall jump for 'time' + time to stuck enemy */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall")
+		float OnWallActivation_PostStuckEnemyGrappled{ 0.5f };
 
 public:	// Ledge grab
 
@@ -698,9 +702,12 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		bool bIsPostGrapplehooking{};
 
+
+
 	void Initial_GrappleHook();
 	void Start_GrappleHook();
 	void Launch_GrappleHook();
+	void Launch_GrappleHook_OnStuckEnemy();
 	void Stop_GrappleHook();
 
 	UPROPERTY(BlueprintReadOnly)
@@ -725,6 +732,12 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
 		float GrappleDrag_PreLaunch_Timer_Length UMETA(DisplayName = "PreLaunch Timer")  { 0.25f };
 
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Grappling Hook|StuckEnemy")
+		float GrappleHook_Time_ToStuckEnemy UMETA(DisplayName = "Time To Stuck Enemy") { 0.3f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Grappling Hook|StuckEnemy")
+		float GrappleHook_AboveStuckEnemy UMETA(DisplayName = "Z Above Stuck Enemy") { 50.f };
+
 	/* -- GRAPPLE CAMERA VARIABLES -- */
 	/* Interpolation speed of the camera rotation during grapplehook Drag */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag|Camera Rotation")
@@ -739,6 +752,7 @@ public:
 
 	bool bGrapplingStaticTarget{};
 	bool bGrapplingDynamicTarget{};
+	bool bGrapplingDynamicTarget_CameraGuide{};
 
 	UFUNCTION(BlueprintCallable)
 		bool IsGrappling() const;

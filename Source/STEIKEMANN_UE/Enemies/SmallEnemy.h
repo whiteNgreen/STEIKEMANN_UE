@@ -82,6 +82,7 @@ public:	// STATES
 
 private: // Gravity
 	float GravityScale;
+	float GravityZ;
 
 #pragma endregion //States
 	void RotateActorYawToVector(FVector AimVector, float DeltaTime = 0);
