@@ -91,11 +91,15 @@ private: // Gravity
 public:
 	UWallDetectionComponent* WallDetector{ nullptr };
 	EWall m_WallState = EWall::WALL_None;
+	FTimerHandle TH_LeavingWall;
+
 public:
 	void StickToWall();
 	virtual bool IsStuck_Pure() override { return m_State == EEnemyState::STATE_OnWall; }
-
+	void LeaveWall();
 public:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|WallDetection")
+		float WDC_LeavingWallTimer{ 0.5f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall")
 		bool bWDC_Debug{};
 
@@ -107,8 +111,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|WallDetection")
 		float WDC_MinHeight{ 20.f };
 private:
-	Wall::WallData m_WallData;
-	Wall::WallData m_WallJumpData;
+	Wall::WallData m_E_WallData;
+	//Wall::WallData m_WallJumpData;
 
 #pragma endregion //Wall Mechanics
 
@@ -123,23 +127,19 @@ public:
 	FTimerHandle Handle_GrappledCooldown;
 	void ResetCanBeGrappleHooked() { bCanBeGrappleHooked = true; }
 
-	/* Choice between the first and second grapplelaunch method */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook")
-		bool bUseFirstGrappleLaunchMethod{ true };
-
-	/* When grapplehooked by the player, launch towards them with this strength : 1st method */	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook", meta = (EditCondition = "bUseFirstGrappleLaunchMethod", EditConditionHides))
-		float GrappledLaunchStrength{ 1000.f };
-
-	/* When grapplehooked by the player, launch them upwards of this angle : 1st method*/	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook", meta = (EditCondition = "bUseFirstGrappleLaunchMethod", EditConditionHides))
-		float GrappledLaunchAngle{ 45.f };
 
 	/* Time it should take to reach the Grappled Instigator : 2nd method */	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook", meta = (EditCondition = "!bUseFirstGrappleLaunchMethod", EditConditionHides))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook")
 		float GrappledLaunchTime{ 1.f };
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook", meta = (EditCondition = "!bUseFirstGrappleLaunchMethod", EditConditionHides))
-		float GrappledZInstigator{ 50.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook")
+		float GrappledLaunchTime_CollisionActivation{ 0.1f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook")
+		float GrappledInstigatorOffset{ 50.f };
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook|PulledFree", meta = (UIMin = "0", UIMax = "3"))
+		float Grappled_PulledFreeStrengthMultiplier{ 1.5f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook|PulledFree")
+		float Grappled_PulledFreeNoCollisionTimer{ 0.5f };
 
 	/* ----- Grapple Interface ------ */
 	virtual void TargetedPure() override;
@@ -154,6 +154,8 @@ public:
 	virtual void HookedPure(const FVector InstigatorLocation, bool OnGround,bool PreAction = false) override;
 
 	virtual void UnHookedPure() override;
+
+	virtual void PullFree_Pure(const FVector InstigatorLocation);
 
 	//virtual FGameplayTag GetGrappledGameplayTag_Pure() const override { return Enemy; }
 #pragma endregion //GrappleHooked

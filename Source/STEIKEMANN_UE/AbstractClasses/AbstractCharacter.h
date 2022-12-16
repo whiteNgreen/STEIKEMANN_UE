@@ -34,5 +34,6 @@ public:
 	virtual void Deactivate_AttackCollider	(){}
 
 	virtual void StartAttackBufferPeriod	(){}
+	virtual void ExecuteAttackBuffer		(){}
 	virtual void EndAttackBufferPeriod		(){}
 };

@@ -77,7 +77,7 @@ public:	// Wall Detection
 	// Viable wall angles between upper and lower limit. 
 
 	bool DetectWall(const AActor* actor, const FVector Location, const FVector ForwardVector, Wall::WallData& walldata, Wall::WallData& WallJumpData);
-	bool DetectStickyWall(const AActor* actor, const FVector Location, Wall::WallData& walldata);
+	bool DetectStickyWall(const AActor* actor, const FVector Location, const FVector Forward, Wall::WallData& walldata);
 
 private:
 	float m_OwnerHalfHeight{};

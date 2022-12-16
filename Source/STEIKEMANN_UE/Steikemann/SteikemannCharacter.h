@@ -60,7 +60,21 @@ enum class EGrappleState : int8
 	None,
 
 	Pre_Launch,
-	Post_Launch
+	Post_Launch,
+	Leave
+};
+
+UENUM()
+enum class EGrappleType : int8
+{
+	None, 
+
+	Static,
+	Static_StuckEnemy_Air,
+	Static_StuckEnemy_Ground,
+	
+	Dynamic_Air,
+	Dynamic_Ground
 };
 
 UENUM()
@@ -80,18 +94,13 @@ enum class ESmackAttackState : int8
 
 	Attack,
 	Hold,
+	Buffer,
+	Ready,
 
 	Leave
 };
 
-//UENUM()
-//enum class EWall : int8
-//{
-//	WALL_None,
-//	WALL_Hang,
-//	WALL_Drag,
-//	WALL_Leavue
-//};
+
 
 UCLASS()
 class STEIKEMANN_UE_API ASteikemannCharacter : public AAbstractCharacter, 
@@ -584,6 +593,9 @@ public:// Capsule
 		float LedgeGrab_Inwards{ 50.f };
 
 public: // OnWall
+	FTimerHandle TH_OnWall_Cancel;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall")
+		float OnWall_CancelTimer{ 0.5f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall")
 		float OnWall_HangTime{ 0.5f };
@@ -629,6 +641,8 @@ private:
 
 	void ExitOnWall_GROUND();
 
+	void CancelOnWall();
+
 #pragma endregion //OnWall
 
 
@@ -642,6 +656,35 @@ private:
 
 /* -------------------------------- GRAPPLEHOOK ----------------------------- */
 #pragma region GrappleHook
+	//NEW--------------------------------------------
+public:
+	void RightTriggerClick();
+	void RightTriggerUn_Click();
+	void GH_SetGrappleType(IGameplayTagAssetInterface* ITag, IGrappleTargetInterface* IGrapple);
+
+	bool IsGrappling() const { return m_State == EState::STATE_Grappling; }
+public:	// Launch Functions
+	void GH_PreLaunch();
+	void GH_PreLaunch_Static(void(ASteikemannCharacter::* LaunchFunction)(), IGrappleTargetInterface* IGrapple);
+	void GH_PreLaunch_Dynamic(IGrappleTargetInterface* IGrapple, bool OnGround);
+
+	void GH_Launch_Static();
+	void GH_Launch_Static_StuckEnemy();
+
+	void GH_Stop();
+
+private:
+	EGrappleState m_GrappleState = EGrappleState::None;
+	EGrappleType m_GrappleType = EGrappleType::None;
+	TWeakObjectPtr<AActor> GrappledActor{ nullptr };
+	TWeakObjectPtr<AActor> Active_GrappledActor{ nullptr };
+
+public:	// UPROPERTY Variables
+	// How long movement input will be disabled after pulling a dynamic target free from being stuck
+	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
+		float GH_PostPullingTargetFreeTime{ 0.5f };
+	//-----------------------------------------------
+
 public: 
 	/* ------- GrappleTargetInterface ------ */
 	virtual void TargetedPure() override {}
@@ -653,18 +696,10 @@ public:
 
 	virtual void UnHookedPure() override {}
 
-	//virtual FGameplayTag GetGrappledGameplayTag_Pure() const override { return Player; }
-
 	/* ------- Native Variables and functions -------- */
-	void RightTriggerClick();
-	void RightTriggerUn_Click();
 	void LeftTriggerClick();
 	void LeftTriggerUn_Click();
 
-	UPROPERTY(BlueprintReadOnly)
-		TWeakObjectPtr<AActor> GrappledActor{ nullptr };
-	UPROPERTY(BlueprintReadOnly)
-		TWeakObjectPtr<AActor> Active_GrappledActor{ nullptr };
 
 	UPROPERTY(BlueprintReadOnly)
 		FGameplayTag GpT_GrappledActorTag;
@@ -692,28 +727,11 @@ public:
 		float GrappleAimYChange_Base UMETA(DisplayName = "GrappleAimYDifference") { 4.f };
 	float GrappleAimYChange{};
 
-	void GetGrappleTarget();
+	void GH_GrappleAiming();
 
 	FTimerHandle TH_Grapplehook_Start;
+	FTimerHandle TH_Grapplehook_Pre_Launch;
 	FTimerHandle TH_Grapplehook_End_Launch;
-
-	UPROPERTY(BlueprintReadOnly)
-		bool bIsGrapplehooking{};
-	UPROPERTY(BlueprintReadOnly)
-		bool bIsPostGrapplehooking{};
-
-
-
-	void Initial_GrappleHook();
-	void Start_GrappleHook();
-	void Launch_GrappleHook();
-	void Launch_GrappleHook_OnStuckEnemy();
-	void Stop_GrappleHook();
-
-	UPROPERTY(BlueprintReadOnly)
-		bool bGrapple_PreLaunch{};
-	UPROPERTY(BlueprintReadOnly)
-		bool bGrapple_Launch{};
 	
 	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
 		float GrappleHook_LaunchSpeed{ 2000.f };
@@ -747,21 +765,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag|Camera Rotation")
 		float GrappleDrag_Camera_PitchPoint				UMETA(DisplayName = "Pitch Point")				{ 20.f };
 
-	void GrappleHook_Drag_RotateCamera(float DeltaTime);
-	void RotateActor_GrappleHook_Drag(float DeltaTime);
-
-	bool bGrapplingStaticTarget{};
-	bool bGrapplingDynamicTarget{};
-	bool bGrapplingDynamicTarget_CameraGuide{};
-
-	UFUNCTION(BlueprintCallable)
-		bool IsGrappling() const;
-	UFUNCTION(BlueprintCallable)
-		bool IsPostGrapple() const { return bIsPostGrapplehooking; }		
-	UFUNCTION(BlueprintCallable)
-		bool IsGrapplingDynamicTarget() const { return bGrapplingDynamicTarget; }
-
-
 #pragma endregion //GrappleHook
 
 /* ----------------------------------------- ATTACKS ----------------------------------------------- */
@@ -769,6 +772,9 @@ public:
 	EAttackState m_AttackState = EAttackState::None;
 	FTimerHandle TH_BufferAttack;
 
+	// Time removed from
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|SmackAttack")
+		float SmackAttack_GH_TimerRemoval{ 0.1f };
 
 	UFUNCTION(BlueprintCallable)
 		void Activate_AttackCollider() override;
@@ -776,6 +782,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 		void Deactivate_AttackCollider() override;
 
+	void StartAttackBufferPeriod() override;
+	void ExecuteAttackBuffer() override;
+	//void EndAttackBufferPeriod() override;
 
 	bool CanBeAttacked() override;
 
@@ -788,15 +797,13 @@ public:
 
 
 	UFUNCTION(BlueprintImplementableEvent)
-		void Start_Attack();
+		void AttackSmack_Start();
 	UFUNCTION(BlueprintCallable)
-		void Start_Attack_Pure();
+		void AttackSmack_Start_Pure();
 
 	UFUNCTION(BlueprintCallable)
 		void Stop_Attack();
 
-	UFUNCTION(BlueprintPure)
-		bool DecideAttackType();
 
 	void RotateToAttack();
 
@@ -848,7 +855,6 @@ public:
 	/* --------------------------------- SMACK ATTACK ----------------------------- */
 	#pragma region SmackAttack
 	ESmackAttackState m_SmackAttackState = ESmackAttackState::None;
-	virtual void StartAttackBufferPeriod() override;
 
 	bool bAttackPress{};
 
@@ -868,13 +874,6 @@ public:
 		float SmackDirection_InputMultiplier	UMETA(DisplayName = "Input Multiplier") { 1.f };
 
 	
-	/* When TRUE the characters rotation is decided by the players input direction 
-	 * When FALSE the characters rotation is decided by the direction of the camera */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
-		bool bSmackDirectionDecidedByInput{ true };
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
-		bool bDisableMovementDuringAttack{ true };
-
 	/* The angle from the ground the enemy will be smacked. 0 degrees: Is parallel to the ground. 90 degrees: Is directly upwards */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
 		float SmackUpwardAngle{ 30.f };
@@ -897,19 +896,19 @@ public:
 	int AttackComboCount{};
 	UFUNCTION(BlueprintImplementableEvent)
 		void ComboAttack(int combo);
+	void ComboAttack_Pure();
 
 	UFUNCTION(BlueprintCallable)
 		void Activate_SmackAttack();
 	UFUNCTION(BlueprintCallable)
 		void Deactivate_SmackAttack();
 
-	bool bIsSmackAttacking{};
+	//bool bIsSmackAttacking{};
 
 	bool bCanBeSmackAttacked{ true };
 
 
 
-	//void Do_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength) override;
 	void Do_SmackAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override;
 	void Receive_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength) override;
 

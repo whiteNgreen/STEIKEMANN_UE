@@ -44,8 +44,7 @@ bool UWallDetectionComponent::DetectWall(const AActor* actor, const FVector Loca
 	if (bShowDebug)
 		DrawDebugCapsule(GetWorld(), Location, m_capsule.GetCapsuleHalfHeight(), m_capsule.GetCapsuleRadius(), FQuat(1.f, 0, 0, 0), FColor(.3f, .3f, 1.f, 1.f), false, 0, 0, 1.f);
 
-	if (!b) 
-		return false;
+	if (!b) return false;
 	
 	if (bShowDebug)// Debug
 		for (const auto& it : Hits)
@@ -79,11 +78,11 @@ bool UWallDetectionComponent::DetectWall(const AActor* actor, const FVector Loca
 	return true;
 }
 
-bool UWallDetectionComponent::DetectStickyWall(const AActor* actor, const FVector Location, Wall::WallData& walldata)
+bool UWallDetectionComponent::DetectStickyWall(const AActor* actor, const FVector Location, const FVector Forward, Wall::WallData& walldata)
 {
 	TArray<FHitResult> Hits;
 	FCollisionQueryParams Params = FCollisionQueryParams("", false, actor);
-	bool b = GetWorld()->SweepMultiByChannel(Hits, Location, Location + FVector::ForwardVector, FQuat(1.f, 0, 0, 0), ECC_WallDetection, m_capsule, Params);
+	bool b = GetWorld()->SweepMultiByChannel(Hits, Location, Location + Forward, FQuat(1.f, 0, 0, 0), ECC_WallDetection, m_capsule, Params);
 
 	if (bShowDebug)
 		DrawDebugCapsule(GetWorld(), Location, m_capsule.GetCapsuleHalfHeight(), m_capsule.GetCapsuleRadius(), FQuat(1.f, 0, 0, 0), FColor(.3f, .3f, 1.f, 1.f), false, 0, 0, 1.f);

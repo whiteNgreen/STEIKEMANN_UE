@@ -15,12 +15,19 @@ enum class EActorType : int8
 	AubergineDoggo
 };
 
-//void CallOwnerFunction(class USkeletalMeshComponent* MeshComp, void(AAbstractCharacter::*func)())
-//{
-//	AAbstractCharacter* owner = Cast<AAbstractCharacter>(MeshComp->GetOwner());
-//	if (owner)
-//		std::bind(&AAbstractCharacter::*func)
-//}
+DECLARE_DELEGATE(AnimDelegate);
+
+inline void CallOwnerFunction(USkeletalMeshComponent* MeshComp, void(AAbstractCharacter::* func)())
+{
+	AAbstractCharacter* owner = Cast<AAbstractCharacter>(MeshComp->GetOwner());
+	AnimDelegate del;
+	if (owner)
+	{
+		del.BindUObject(owner, func);
+		del.ExecuteIfBound();
+	}
+}
+															
 
 // ----------------------------------------------------- ANIM CANCEL -----------------------------------------------------------------
 UCLASS()
@@ -64,6 +71,18 @@ public:
 // ----------------------------------------------------- ATTACK BUFFER -----------------------------------------------------------------
 UCLASS()
 class STEIKEMANN_UE_API UANStartAttackBufferPeriod : public UAnimNotify
+{
+	GENERATED_BODY()
+
+public:
+	virtual void Notify(class USkeletalMeshComponent* MeshComp, class UAnimSequenceBase* Animation) override;
+
+	UPROPERTY(EditAnywhere)
+		EActorType m_ActorType;
+};
+
+UCLASS()
+class STEIKEMANN_UE_API UANExecuteAttackBuffer : public UAnimNotify
 {
 	GENERATED_BODY()
 
