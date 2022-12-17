@@ -662,7 +662,10 @@ public:
 	void RightTriggerUn_Click();
 	void GH_SetGrappleType(IGameplayTagAssetInterface* ITag, IGrappleTargetInterface* IGrapple);
 
-	bool IsGrappling() const { return m_State == EState::STATE_Grappling; }
+	UFUNCTION(BlueprintCallable)
+		bool IsGrappling() const { return m_State == EState::STATE_Grappling; }
+	UFUNCTION(BlueprintCallable)
+		bool Is_GH_PreLaunch() const { return IsGrappling() && m_GrappleState == EGrappleState::Pre_Launch; }
 public:	// Launch Functions
 	void GH_PreLaunch();
 	void GH_PreLaunch_Static(void(ASteikemannCharacter::* LaunchFunction)(), IGrappleTargetInterface* IGrapple);
@@ -673,6 +676,9 @@ public:	// Launch Functions
 
 	void GH_Stop();
 
+public:
+	UPROPERTY(BlueprintReadOnly)
+		FVector Active_GrappledActor_Location{};
 private:
 	EGrappleState m_GrappleState = EGrappleState::None;
 	EGrappleType m_GrappleType = EGrappleType::None;

@@ -495,8 +495,10 @@ void ASteikemannCharacter::RightTriggerClick()
 	default:
 		break;
 	}
+
 	if (!GrappledActor.IsValid()) return;
 	Active_GrappledActor = GrappledActor;
+	Active_GrappledActor_Location = Active_GrappledActor->GetActorLocation();
 
 	IGameplayTagAssetInterface* ITag = Cast<IGameplayTagAssetInterface>(Active_GrappledActor.Get());
 	IGrappleTargetInterface* IGrapple = Cast<IGrappleTargetInterface>(Active_GrappledActor.Get());
