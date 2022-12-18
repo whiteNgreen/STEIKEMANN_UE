@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "../AbstractClasses/AbstractCharacter.h"
 #include "../Interfaces/AttackInterface.h"
 #include "../Interfaces/GrappleTargetInterface.h"
 #include "../DebugMacros.h"
@@ -47,7 +48,7 @@ enum class EWall : int8
 };
 
 UCLASS()
-class STEIKEMANN_UE_API ASmallEnemy : public ACharacter,
+class STEIKEMANN_UE_API ASmallEnemy : public AAbstractCharacter,
 	public IAttackInterface,
 	public IGameplayTagAssetInterface,
 	public IGrappleTargetInterface
@@ -65,6 +66,10 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
+		USphereComponent* PlayerPogoDetection{ nullptr };
 #pragma endregion //Base
 
 #pragma region GameplayTags
@@ -111,7 +116,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|WallDetection")
 		float WDC_MinHeight{ 20.f };
 private:
-	Wall::WallData m_E_WallData;
+	Wall::WallData m_WallData;
 	//Wall::WallData m_WallJumpData;
 
 #pragma endregion //Wall Mechanics
@@ -190,5 +195,19 @@ public:
 	void Do_GroundPound_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override {}
 	void Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength) override;
 
+
 #pragma endregion //GettingSmacked
+#pragma region Pogo
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Pogo|Collision")
+		float PB_SphereRadius{ 90.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Pogo|Collision")
+		float PB_SphereRadius_Stuck{ 150.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Pogo")
+		float PB_Groundpound_LaunchWallNormal{ 0.2f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Pogo")
+		float PB_Groundpound_LaunchStrength{ 1200.f };
+public:
+	void Receive_Pogo_GroundPound_Pure() override;
+#pragma endregion //Pogo
 };

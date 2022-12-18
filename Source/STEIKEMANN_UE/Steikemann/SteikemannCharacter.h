@@ -54,6 +54,15 @@ enum class EAirState : int8
 	AIR_Pogo
 };
 
+UENUM() 
+enum class EPogoType : int8
+{
+	POGO_None,
+	POGO_Passive,
+	POGO_Jump,
+	POGO_Groundpound
+};
+
 UENUM()
 enum class EGrappleState : int8
 {
@@ -339,7 +348,8 @@ public:	// States
 	EState GetState() const { return m_State; }
 	void SetState(EState state) { m_State = state; }
 	//void ReevaluateState();
-	void ResetState();
+	UFUNCTION(BlueprintCallable)
+		void ResetState();
 	void SetDefaultState();
 
 	virtual void AllowActionCancelationWithInput() override;
@@ -436,39 +446,61 @@ public:
 
 
 #pragma endregion //Basic_Movement
+
 #pragma region Pogo
-	/*
-	* -------------------- Player Pogo Jumping on enemy --------------------------
-	*/
+private:
+	EPogoType m_PogoType = EPogoType::POGO_None;
+	AActor* m_PogoTarget{ nullptr };
+
+	bool bPB_Groundpound_PredeterminedPogoHit{};
+public:
 	/* The strength of the pogo bounce */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce")
-		float PogoBounceStrength{ 2000.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Passive")
+		float PB_LaunchStrength_Passive{ 1300.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Groundpound")
+		float PB_LaunchStrength_Groundpound{ 2500.f };
 
 	/* Extra contingency length checked between the player and the enemy they are falling towards, before the PogoBounce is called */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce")
-		float PogoContingency{ 50.f };
+		float PB_TargetLengthContingency{ 50.f };
 
 	// Minimum time the pogo state lasts - Will disable some mechanics while in that state
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce")
-		float Pogo_StateTimer{ 0.5f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Passive")
+		float PB_StateTimer_Passive{ 0.1f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Groundpound")
+		float PB_StateTimer_Groundpound{ 0.4f };
 	FTimerHandle TH_Pogo;
-
-	void CheckIfEnemyBeneath(const FHitResult& Hit);
-	UFUNCTION(BlueprintCallable)
-		bool CheckDistanceToEnemy(const FHitResult& Hit);
-
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce")
 		float PogoInputDirectionMultiplier{ 0.1f };
+	
+private: // Within Collision bools
+	bool bPB_TickCheck_Passive{};
+	bool bPB_TickCheck_Groundpound{};
 
-	UFUNCTION(BlueprintCallable)
-		void PogoBounce(const FVector& EnemyLocation);
+
+public:	// Target detection
+	bool PB_TargetBeneath();
+	bool PB_ValidTargetDistance(const FVector OtherActorLocation);
+
+private:  
+	void PB_EnterPogoState(EPogoType type, float time);
+
+	bool PB_Passive_IMPL(AActor* OtherActor);
+	void PB_Launch_Passive();
+
+	bool PB_Groundpound_Predeterminehit();
+	bool PB_Groundpound_IMPL(AActor* OtherActor);
+	void PB_Launch_Groundpound();
+
+	void PB_Exit();
+
+	bool ValidLengthToCapsule(FVector HitLocation, FVector capsuleLocation, float CapsuleHeight, float CapsuleRadius);
 
 #pragma endregion //Pogo
 	
-	/* Includes all actions related to the crouch button */
 #pragma region Crouch		
-	
+public:
 	bool bPressedCrouch{};
 	bool bIsCrouchWalking{};
 	bool IsCrouchWalking() const { return bIsCrouchWalking; }
@@ -521,7 +553,7 @@ public:
 #pragma endregion //Crouch	
 
 #pragma region Collectibles & Health
-
+public:
 	void ReceiveCollectible(ECollectibleType type);
 
 	UPROPERTY(BlueprintReadWrite, Category = "Collectibles")
@@ -653,6 +685,7 @@ private:
 		void RotateActorYawPitchToVector(FVector AimVector, float DeltaTime = 0);	//Old
 	void RollActorTowardsLocation(FVector Point, float DeltaTime = 0);
 
+	// Other Functions
 
 /* -------------------------------- GRAPPLEHOOK ----------------------------- */
 #pragma region GrappleHook

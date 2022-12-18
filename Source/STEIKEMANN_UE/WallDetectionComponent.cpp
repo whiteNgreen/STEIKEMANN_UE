@@ -218,10 +218,10 @@ bool UWallDetectionComponent::ValidLengthToCapsule(FVector Hit, FVector capsuleL
 
 	float length = FVector(Hit - Point).Size();
 
-	if (length > m_MinLengthToWall)
-		return false;
+	if (length < m_MinLengthToWall)
+		return true;
 
-	return true;
+	return false;
 }
 
 bool UWallDetectionComponent::DetectLedge(Wall::LedgeData& ledge, const AActor* actor, const FVector actorLocation, const FVector actorUp, const Wall::WallData& wall, const float height, const float inwardsLength)
