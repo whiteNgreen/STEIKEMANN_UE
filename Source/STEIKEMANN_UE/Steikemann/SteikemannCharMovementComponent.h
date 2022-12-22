@@ -142,7 +142,10 @@ public:
 	void DeactivateJumpMechanics();
 
 #pragma endregion //Jump
-
+#pragma region Pogo
+public:
+	void PB_Launch_Active(FVector direction, float strength);
+#pragma endregion //Pogo
 #pragma region GRAPPLE HOOK
 	bool bGrappleHook_InitialState{};
 

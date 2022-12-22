@@ -59,9 +59,19 @@ enum class EPogoType : int8
 {
 	POGO_None,
 	POGO_Passive,
-	POGO_Jump,
-	POGO_Groundpound
+	POGO_Active,
+	POGO_Groundpound,
+
+	POGO_Leave
 };
+//UENUM()
+//enum class EPogoTickCheck : int8
+//{
+//	PB_Tick_None,
+//	PB_Tick_Passive,
+//	PB_Tick_Active,
+//	PB_Tick_Groundpound
+//};
 
 UENUM()
 enum class EGrappleState : int8
@@ -158,7 +168,7 @@ public:
 	/* Input vector rotated to match the playercontrollers rotation */
 	FVector InputVector;
 
-	EMovementInput m_MovementInputState = EMovementInput::Open;
+	EMovementInput m_EMovementInputState = EMovementInput::Open;
 
 	TWeakObjectPtr<class USteikemannCharMovementComponent> MovementComponent;
 	/* Returns the custom MovementComponent. A TWeakPtr<class USteikemannCharMovementComponent> */
@@ -345,8 +355,8 @@ public:
 
 #pragma region Basic_Movement
 public:	// States
-	EState GetState() const { return m_State; }
-	void SetState(EState state) { m_State = state; }
+	EState GetState() const { return m_EState; }
+	void SetState(EState state) { m_EState = state; }
 	//void ReevaluateState();
 	UFUNCTION(BlueprintCallable)
 		void ResetState();
@@ -354,8 +364,8 @@ public:	// States
 
 	virtual void AllowActionCancelationWithInput() override;
 private:
-	EState m_State = EState::STATE_OnGround;
-	EAirState m_AirState = EAirState::AIR_None;
+	EState m_EState = EState::STATE_OnGround;
+	EAirState m_EAirState = EAirState::AIR_None;
 	float m_BaseGravity{};
 
 public:/* ------------------- Basic Movement ------------------- */
@@ -449,48 +459,77 @@ public:
 
 #pragma region Pogo
 private:
-	EPogoType m_PogoType = EPogoType::POGO_None;
+	EPogoType m_EPogoType = EPogoType::POGO_None;
 	AActor* m_PogoTarget{ nullptr };
 
-	bool bPB_Groundpound_PredeterminedPogoHit{};
 public:
 	/* The strength of the pogo bounce */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Passive")
-		float PB_LaunchStrength_Passive{ 1300.f };
+		float PB_LaunchStrength_Z_Passive{ 1300.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Passive")
+		float PB_LaunchStrength_MultiXY_Passive{ 500.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Active")
+		float PB_LaunchStrength_Active{ 1800.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Groundpound")
 		float PB_LaunchStrength_Groundpound{ 2500.f };
 
+	// Detection
 	/* Extra contingency length checked between the player and the enemy they are falling towards, before the PogoBounce is called */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce")
 		float PB_TargetLengthContingency{ 50.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce")
+		float PB_Max2DTargetDistance{ 100.f };
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Active", meta = (DisplayPriority = "2"))
+		float PB_ActiveDetection_CapsuleZLocation{ 100.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Active", meta = (PrioDisplayPriorityrity = "3"))
+		float PB_ActiveDetection_CapsuleHalfHeight{ 100.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Active", meta = (PrioDisplayPriorityrity = "4"))
+		float PB_ActiveDetection_CapsuleRadius{ 70.f };
 
 	// Minimum time the pogo state lasts - Will disable some mechanics while in that state
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Passive")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Passive", meta = (DisplayPriority = "1"))
 		float PB_StateTimer_Passive{ 0.1f };
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Groundpound")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Active", meta = (DisplayPriority = "1"))
+		float PB_StateTimer_Active{ 0.3f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Groundpound", meta = (DisplayPriority = "1"))
 		float PB_StateTimer_Groundpound{ 0.4f };
-	FTimerHandle TH_Pogo;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce")
-		float PogoInputDirectionMultiplier{ 0.1f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Passive")
+		float PB_InputMulti_Passive{ 0.6f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Active")
+		float PB_InputMulti_Active{ 0.3f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Groundpound")
+		float PB_InputMulti_Groundpound{ 0.05f };
 	
 private: // Within Collision bools
-	bool bPB_TickCheck_Passive{};
-	bool bPB_TickCheck_Groundpound{};
+	//EPogoTickCheck m_EPogoTickCheck = EPogoTickCheck::PB_Tick_None;
+	//bool bPB_TickCheck_Passive{};
+	//bool bPB_TickCheck_Groundpound{};
+	//bool bPB_PassiveLaunched{};
+	bool bPB_Groundpound_PredeterminedPogoHit{};
 
+	FTimerHandle TH_PB_ExitHandle; // Timer handle holding exit time. For validating buffering of PB_Active inputs
+	FTimerHandle TH_Pogo;
 
 public:	// Target detection
 	bool PB_TargetBeneath();
 	bool PB_ValidTargetDistance(const FVector OtherActorLocation);
 
+	bool PB_Active_TargetDetection();
+
 private:  
-	void PB_EnterPogoState(EPogoType type, float time);
+	void PB_Pogo();
+	void PB_EnterPogoState(float time);
 
 	bool PB_Passive_IMPL(AActor* OtherActor);
 	void PB_Launch_Passive();
 
-	bool PB_Groundpound_Predeterminehit();
+	void PB_Active_IMPL();
+	void PB_Launch_Active();
+
 	bool PB_Groundpound_IMPL(AActor* OtherActor);
+	bool PB_Groundpound_Predeterminehit();
 	void PB_Launch_Groundpound();
 
 	void PB_Exit();
@@ -696,9 +735,9 @@ public:
 	void GH_SetGrappleType(IGameplayTagAssetInterface* ITag, IGrappleTargetInterface* IGrapple);
 
 	UFUNCTION(BlueprintCallable)
-		bool IsGrappling() const { return m_State == EState::STATE_Grappling; }
+		bool IsGrappling() const { return m_EState == EState::STATE_Grappling; }
 	UFUNCTION(BlueprintCallable)
-		bool Is_GH_PreLaunch() const { return IsGrappling() && m_GrappleState == EGrappleState::Pre_Launch; }
+		bool Is_GH_PreLaunch() const { return IsGrappling() && m_EGrappleState == EGrappleState::Pre_Launch; }
 public:	// Launch Functions
 	void GH_PreLaunch();
 	void GH_PreLaunch_Static(void(ASteikemannCharacter::* LaunchFunction)(), IGrappleTargetInterface* IGrapple);
@@ -713,8 +752,8 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		FVector Active_GrappledActor_Location{};
 private:
-	EGrappleState m_GrappleState = EGrappleState::None;
-	EGrappleType m_GrappleType = EGrappleType::None;
+	EGrappleState m_EGrappleState = EGrappleState::None;
+	EGrappleType m_EGrappleType = EGrappleType::None;
 	TWeakObjectPtr<AActor> GrappledActor{ nullptr };
 	TWeakObjectPtr<AActor> Active_GrappledActor{ nullptr };
 
@@ -808,7 +847,7 @@ public:
 
 /* ----------------------------------------- ATTACKS ----------------------------------------------- */
 #pragma region Attacks
-	EAttackState m_AttackState = EAttackState::None;
+	EAttackState m_EAttackState = EAttackState::None;
 	FTimerHandle TH_BufferAttack;
 
 	// Time removed from
@@ -893,7 +932,7 @@ public:
 
 	/* --------------------------------- SMACK ATTACK ----------------------------- */
 	#pragma region SmackAttack
-	ESmackAttackState m_SmackAttackState = ESmackAttackState::None;
+	ESmackAttackState m_ESmackAttackState = ESmackAttackState::None;
 
 	bool bAttackPress{};
 
@@ -1001,7 +1040,7 @@ public:
 	#pragma region GroundPound
 
 	bool bGroundPoundPress{};
-	bool IsGroundPounding() const { return m_State == EState::STATE_Attacking && m_AttackState == EAttackState::GroundPound; }
+	bool IsGroundPounding() const { return m_EState == EState::STATE_Attacking && m_EAttackState == EAttackState::GroundPound; }
 
 	void Click_GroundPound();
 	void UnClick_GroundPound();

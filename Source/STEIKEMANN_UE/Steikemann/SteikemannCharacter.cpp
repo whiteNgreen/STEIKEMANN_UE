@@ -145,7 +145,7 @@ void ASteikemannCharacter::NS_Land_Implementation(const FHitResult& Hit)
 	//bool groundpound{};
 	//if (IsGroundPounding()) {
 	//	GroundPoundLand(Hit);
-	//	m_AttackState = EAttackState::None;
+	//	m_EAttackState = EAttackState::None;
 	//	ResetState();
 	//	groundpound = true;
 	//}
@@ -195,7 +195,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		if (InputVectorRaw.Size() > 1.f || InputVector.Size() > 1.f)
 			InputVector.Normalize();
 	}
-	switch (m_State)
+	switch (m_EState)
 	{
 	case EState::STATE_OnGround:
 		PRINT("STATE_OnGround");
@@ -216,9 +216,9 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		break;
 	}
 
-	PRINTPAR("Attack State :: %i", m_AttackState);
-	PRINTPAR("Air State :: %i", m_AirState);
-	PRINTPAR("Pogo Type :: %i", m_PogoType);
+	PRINTPAR("Attack State :: %i", m_EAttackState);
+	PRINTPAR("Air State :: %i", m_EAirState);
+	PRINTPAR("Pogo Type :: %i", m_EPogoType);
 
 	/*		Resets Rotation Pitch and Roll		*/
 	if (IsFalling() || GetMoveComponent()->IsWalking()) {
@@ -244,26 +244,32 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 
 	/*------------ STATES ---------------*/
 	const bool wall = WallDetector->DetectWall(this, GetActorLocation(), GetActorForwardVector(), m_Walldata, m_WallJumpData);
-	switch (m_State)
+	switch (m_EState)
 	{
 	case EState::STATE_OnGround:
 	{
-		if (m_AttackState == EAttackState::GroundPound)
+		if (m_EAttackState == EAttackState::GroundPound)
 			PB_Exit();
 		break;
 	}
 	case EState::STATE_InAir:
 	{
-
-		if (m_PogoTarget)
+		switch (m_EPogoType)
 		{
-			if (bPB_TickCheck_Passive)
-				PB_Passive_IMPL(m_PogoTarget);
-			if (bPB_TickCheck_Groundpound)
-				PB_Groundpound_IMPL(m_PogoTarget);
+		case EPogoType::POGO_None:
+			break;
+		case EPogoType::POGO_Passive:
+			PB_Passive_IMPL(m_PogoTarget);
+			break;
+		case EPogoType::POGO_Active:
+			PRINTLONG("Tick: POGO ACTIVE");
+			PB_Active_IMPL();
+			break;
+		default:
+			break;
 		}
 
-		if (m_AirState == EAirState::AIR_Pogo) break;
+		if (m_EAirState == EAirState::AIR_Pogo) break;
 		if (wall && m_WallState == EOnWallState::WALL_None)
 		{
 			// Detect ledge & Ledge Grab
@@ -279,7 +285,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 			if (ValidateWall() && m_WallJumpData.valid)
 			{
 				GetMoveComponent()->Initial_OnWall_Hang(m_WallJumpData, OnWall_HangTime);
-				m_State = EState::STATE_OnWall;
+				m_EState = EState::STATE_OnWall;
 				m_WallState = EOnWallState::WALL_Hang;
 			}
 		}
@@ -298,10 +304,35 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		break;
 	}
 	case EState::STATE_Attacking:
-		//if (m_AttackState == EAttackState::GroundPound)
+		
+		switch (m_EAttackState)
+		{
+		case EAttackState::None:
+			break;
+		case EAttackState::Smack:
+			break;
+		case EAttackState::Scoop:
+			break;
+		case EAttackState::GroundPound:
+			if (m_EPogoType == EPogoType::POGO_Groundpound) 
+			{
+				PRINTLONG("Tick: POGO GROUND POUND");
+				PB_Groundpound_IMPL(m_PogoTarget);
+				break;
+			}
+			break;
+		default:
+			break;
+		}
+		//if (m_EAttackState == EAttackState::GroundPound)
 			//bPB_Groundpound_PredeterminedPogoHit = PB_Groundpound_Predeterminehit();
 		break;
 	case EState::STATE_Grappling:
+		if (m_EPogoType == EPogoType::POGO_Passive)
+		{
+			PB_Passive_IMPL(m_PogoTarget);
+			break;
+		}
 		break;
 	default:
 		break;
@@ -342,7 +373,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	//	}
 	//}
 
-	if (m_State == EState::STATE_Grappling && m_GrappleType == EGrappleType::Dynamic_Ground) {
+	if (m_EState == EState::STATE_Grappling && m_EGrappleType == EGrappleType::Dynamic_Ground) {
 		GrappleDynamicGuideCamera(DeltaTime);
 	}
 
@@ -479,7 +510,7 @@ void ASteikemannCharacter::GH_GrappleAiming()
 		}
 
 		GrappleInterface = Cast<IGrappleTargetInterface>(Target);
-		if (GrappleInterface && m_State != EState::STATE_Grappling)
+		if (GrappleInterface && m_EState != EState::STATE_Grappling)
 		{
 			GrappleInterface->TargetedPure();
 		}
@@ -489,7 +520,7 @@ void ASteikemannCharacter::GH_GrappleAiming()
 	else
 	{
 		IGrappleTargetInterface* GrappleInterface = Cast<IGrappleTargetInterface>(GrappledActor.Get());
-		if (GrappleInterface && m_State != EState::STATE_Grappling)
+		if (GrappleInterface && m_EState != EState::STATE_Grappling)
 		{
 			GrappleInterface->TargetedPure();
 		}
@@ -499,7 +530,7 @@ void ASteikemannCharacter::GH_GrappleAiming()
 
 void ASteikemannCharacter::RightTriggerClick()
 {
-	switch (m_State)
+	switch (m_EState)
 	{
 	case EState::STATE_None:		break;
 	case EState::STATE_OnGround:	break;
@@ -537,12 +568,12 @@ void ASteikemannCharacter::RightTriggerClick()
 	//	if (TagInterface && GrappleInterface)
 	//	{
 	//		Active_GrappledActor = GrappledActor;
-
+	//
 	//		/* Checking tags to determine if the grapple target is dynamic or static */
 	//		FGameplayTagContainer GrappledTags;
 	//		TagInterface->GetOwnedGameplayTags(GrappledTags);
-
-
+	//
+	//
 	//		/* Grappling to Enemy/Dynamic Target */
 	//		//if (GrappledTags.HasTag(Tag_GrappleTarget_Dynamic))	// Burde bruke denne taggen på fiendene
 	//		if (GrappledTags.HasTag(Tag::AubergineDoggo()))		// Også spesifisere videre med fiende type
@@ -562,7 +593,7 @@ void ASteikemannCharacter::RightTriggerClick()
 	//		{
 	//			bGrapplingStaticTarget = true;
 	//		}
-
+	//
 	//		Initial_GrappleHook();	// TODO: Forandre til to ulike grappling funksjoner, basert på Static og Dynamisk Target
 	//	}
 	//}
@@ -582,7 +613,7 @@ void ASteikemannCharacter::GH_SetGrappleType(IGameplayTagAssetInterface* ITag, I
 	// Static Target
 	if (tags.HasTag(Tag::GrappleTarget_Static()))
 	{
-		m_GrappleType = EGrappleType::Static;
+		m_EGrappleType = EGrappleType::Static;
 		GH_PreLaunch_Static(&ASteikemannCharacter::GH_Launch_Static, IGrapple);
 		return;
 	}
@@ -595,24 +626,24 @@ void ASteikemannCharacter::GH_SetGrappleType(IGameplayTagAssetInterface* ITag, I
 	if (IGrapple->IsStuck_Pure())
 	{
 		ResetState();
-		if (m_State == EState::STATE_OnGround)	m_GrappleType = EGrappleType::Static_StuckEnemy_Ground;
-		if (m_State == EState::STATE_InAir)		m_GrappleType = EGrappleType::Static_StuckEnemy_Air;
+		if (m_EState == EState::STATE_OnGround)	m_EGrappleType = EGrappleType::Static_StuckEnemy_Ground;
+		if (m_EState == EState::STATE_InAir)		m_EGrappleType = EGrappleType::Static_StuckEnemy_Air;
 		GH_PreLaunch_Static(&ASteikemannCharacter::GH_Launch_Static_StuckEnemy, IGrapple);
 		return;
 	}
 
 		// Player in Air
-	if (m_State == EState::STATE_InAir)
+	if (m_EState == EState::STATE_InAir)
 	{
-		m_GrappleType = EGrappleType::Dynamic_Air;
+		m_EGrappleType = EGrappleType::Dynamic_Air;
 		GH_PreLaunch_Dynamic(IGrapple, false);
 		return;
 	}
 
 		// Player on Ground
-	if (m_State == EState::STATE_OnGround)
+	if (m_EState == EState::STATE_OnGround)
 	{
-		m_GrappleType = EGrappleType::Dynamic_Ground;
+		m_EGrappleType = EGrappleType::Dynamic_Ground;
 		GH_PreLaunch_Dynamic(IGrapple, true);
 		return;
 	}
@@ -627,7 +658,7 @@ void ASteikemannCharacter::GH_PreLaunch_Static(void(ASteikemannCharacter::* Laun
 	GetWorldTimerManager().SetTimer(TH_Grapplehook_Pre_Launch,
 		[this]()
 		{
-			m_GrappleState = EGrappleState::Post_Launch;
+			m_EGrappleState = EGrappleState::Post_Launch;
 			GetMoveComponent()->m_GravityMode = EGravityMode::Default;
 		},
 		GrappleDrag_PreLaunch_Timer_Length, false);
@@ -647,7 +678,7 @@ void ASteikemannCharacter::GH_PreLaunch_Dynamic(IGrappleTargetInterface* IGrappl
 	GetWorldTimerManager().SetTimer(TH_Grapplehook_Pre_Launch,
 		[this, IGrapple, OnGround]()
 		{
-			m_GrappleState = EGrappleState::Post_Launch;
+			m_EGrappleState = EGrappleState::Post_Launch;
 			GetMoveComponent()->m_GravityMode = EGravityMode::Default;
 			IGrapple->HookedPure(GetActorLocation(), OnGround);
 		},
@@ -659,8 +690,8 @@ void ASteikemannCharacter::GH_PreLaunch_Dynamic(IGrappleTargetInterface* IGrappl
 
 void ASteikemannCharacter::GH_PreLaunch()
 {
-	m_State = EState::STATE_Grappling;
-	m_GrappleState = EGrappleState::Pre_Launch;
+	m_EState = EState::STATE_Grappling;
+	m_EGrappleState = EGrappleState::Pre_Launch;
 	GetMoveComponent()->m_GravityMode = EGravityMode::ForcedNone;
 	GetMoveComponent()->DeactivateJumpMechanics();
 	RotateActorYawToVector(Active_GrappledActor->GetActorLocation() - GetActorLocation());
@@ -711,9 +742,9 @@ void ASteikemannCharacter::GH_Stop()
 {
 	Active_GrappledActor = nullptr;
 
-	m_State = EState::STATE_None;
-	m_GrappleState = EGrappleState::None;
-	m_GrappleType = EGrappleType::None;
+	m_EState = EState::STATE_None;
+	m_EGrappleState = EGrappleState::None;
+	m_EGrappleType = EGrappleType::None;
 	SetDefaultState();
 }
 
@@ -1029,32 +1060,32 @@ void ASteikemannCharacter::GrappleDynamicGuideCamera(float deltatime)
 void ASteikemannCharacter::ResetState()
 {
 	if (IsOnGround()) {
-		m_State = EState::STATE_OnGround;
+		m_EState = EState::STATE_OnGround;
 		return;
 	}
 	if (GetMoveComponent()->IsFalling()) {
-		m_State = EState::STATE_InAir;
-		m_AirState = EAirState::AIR_Freefall;
+		m_EState = EState::STATE_InAir;
+		m_EAirState = EAirState::AIR_Freefall;
 		return;
 	}
 }
 
 void ASteikemannCharacter::SetDefaultState()
 {
-	switch (m_State)
+	switch (m_EState)
 	{
 	case EState::STATE_None:
 		break;
 	case EState::STATE_OnGround:
 		break;
 	case EState::STATE_InAir:
-		if (m_AirState == EAirState::AIR_Pogo) return;
+		if (m_EAirState == EAirState::AIR_Pogo) return;
 		break;
 	case EState::STATE_OnWall: return;
 	case EState::STATE_Attacking: 
-		if (m_AttackState == EAttackState::GroundPound)
+		if (m_EAttackState == EAttackState::GroundPound)
 			if (GetCharacterMovement()->IsWalking())
-				m_State = EState::STATE_OnGround;
+				m_EState = EState::STATE_OnGround;
 		return;
 	case EState::STATE_Grappling: return;
 	default:
@@ -1068,14 +1099,14 @@ void ASteikemannCharacter::AllowActionCancelationWithInput()
 {
 	//m_State = EState::STATE_None;
 	//SetDefaultState();
-	m_MovementInputState = EMovementInput::Open;
+	m_EMovementInputState = EMovementInput::Open;
 
 }
 
 bool ASteikemannCharacter::BreakMovementInput(float value)
 {
-	if (m_MovementInputState == EMovementInput::Locked) return true;
-	switch (m_State)
+	if (m_EMovementInputState == EMovementInput::Locked) return true;
+	switch (m_EState)
 	{
 	case EState::STATE_OnGround:
 		break;
@@ -1084,7 +1115,7 @@ bool ASteikemannCharacter::BreakMovementInput(float value)
 	case EState::STATE_OnWall: return true;
 	case EState::STATE_Attacking:
 	{
-		if (m_AttackState == EAttackState::Smack && m_MovementInputState == EMovementInput::Open && value > 0.1f)
+		if (m_EAttackState == EAttackState::Smack && m_EMovementInputState == EMovementInput::Open && value > 0.1f)
 		{
 			ResetState();
 			StopAnimMontage();
@@ -1162,29 +1193,41 @@ void ASteikemannCharacter::LookUpAtRate(float rate)
 
 void ASteikemannCharacter::Landed(const FHitResult& Hit)
 {
-	switch (m_State)
+	PRINTLONG("Landed");
+	UE_LOG(LogTemp, Display, TEXT("Landed"));
+	switch (m_EState)
 	{
 	case EState::STATE_None:
 		break;
 	case EState::STATE_OnGround:
 		break;
 	case EState::STATE_InAir:
+		switch (m_EAirState)
+		{
+		case EAirState::AIR_None:		break;
+		case EAirState::AIR_Freefall:	break;
+		case EAirState::AIR_Jump:		break;
+		case EAirState::AIR_Pogo:		return;
+		default:						break;
+		}
 		break;
 	case EState::STATE_OnWall:
 		break;
 	case EState::STATE_Attacking:
 		if (bPB_Groundpound_PredeterminedPogoHit)
 			return;
-		if (m_AttackState == EAttackState::GroundPound)
+		if (m_EAttackState == EAttackState::GroundPound)
 		{
 			bool groundpound{};
 			if (IsGroundPounding()) {
 				GroundPoundLand(Hit);
-				//m_AttackState = EAttackState::None;
+				//m_EAttackState = EAttackState::None;
 				//ResetState();
 				groundpound = true;
 			}
 		}
+		//if (m_EPogoType == EPogoType::POGO_Groundpound)
+			//return;
 		break;
 	case EState::STATE_Grappling:
 		break;
@@ -1192,18 +1235,7 @@ void ASteikemannCharacter::Landed(const FHitResult& Hit)
 		break;
 	}
 
-	switch (m_AirState)
-	{
-	case EAirState::AIR_None:
-		break;
-	case EAirState::AIR_Freefall:
-		break;
-	case EAirState::AIR_Jump:
-		break;
-	case EAirState::AIR_Pogo: return;
-	default:
-		break;
-	}
+
 
 	//if (bPB_Groundpound_PredeterminedPogoHit)
 		//return;
@@ -1214,14 +1246,13 @@ void ASteikemannCharacter::Landed(const FHitResult& Hit)
 
 
 	bPB_Groundpound_PredeterminedPogoHit = false;
-	bPB_TickCheck_Passive = false;
-	bPB_TickCheck_Groundpound = false;
+	//m_EPogoTickCheck = EPogoTickCheck::PB_Tick_None;
 }
 
 void ASteikemannCharacter::Jump()
 {
 	/* Don't Jump if player is Grappling */
-	switch (m_State)
+	switch (m_EState)
 	{
 	case EState::STATE_None:
 		break;
@@ -1242,85 +1273,8 @@ void ASteikemannCharacter::Jump()
 		bJumpClick = true;
 		bJumping = true;
 
-		/* ------ VARIOUS TYPES OF JUMPS ------- */
-
-		/* ---- SLIDE JUMP ---- */
-		//if (IsCrouchSliding())
-		//{
-		//	JumpCurrentCount++;
-		//	{
-		//		FVector CrouchSlideDirection = GetVelocity();
-		//		CrouchSlideDirection.Normalize();
-		//		/*bAddJumpVelocity = */GetMoveComponent()->CrouchSlideJump(CrouchSlideDirection, InputVector);
-		//	}
-		//	Anim_Activate_Jump();	// Anim_Activate_CrouchSlideJump()
-		//	return;
-		//}
-
-		///* ---- LEDGE JUMP ---- */
-		////if ((GetMoveComponent()->bLedgeGrab) && GetMoveComponent()->IsFalling())
-		//if (IsLedgeGrabbing() && GetMoveComponent()->IsFalling())
-		//{
-		//	JumpCurrentCount = 1;
-
-		//	ResetWallJumpAndLedgeGrab();
-		//	bOnWallActive = false;
-		//	WallJump_NonStickTimer = 0.f;
-
-		//	/*bAddJumpVelocity = */GetMoveComponent()->LedgeJump(LedgeLocation, JumpStrength);
-		//	Anim_Activate_Jump();	//	Anim_Activate_LedgeGrabJump
-		//	return;
-		//}
-
-		///* ---- WALL JUMP ---- */
-		//if ((GetMoveComponent()->bStickingToWall || bFoundStickableWall) && GetMoveComponent()->IsFalling() || 
-		//	(GetMoveComponent()->IsFalling() && Jump_DetectWall()))
-		//{
-		//	GetMoveComponent()->WallJump(Wall_Normal, JumpStrength);
-		//	Anim_Activate_Jump();	//	Anim_Activate_WallJump
-		//	return;
-		//}
-
-		///* If player walked off an edge with no jumpcount */
-		//if (GetMoveComponent()->IsFalling() && JumpCurrentCount == 0)
-		//{
-		//	/* and the post edge timer is valid */
-		//	if (bCanPostEdgeRegularJump)
-		//	{
-		//		JumpCurrentCount++;
-		//	}
-		//	/* after post edge timer is valid */
-		//	else 
-		//	{
-		//		JumpCurrentCount = 2;
-		//	}
-		//	GetMoveComponent()->Jump(JumpStrength);
-		//	Anim_Activate_Jump();
-		//	return;
-		//}
-
-
-		///* ---- DOUBLE JUMP ---- */
-		//if (CanDoubleJump())
-		//{
-		//	JumpCurrentCount++;
-		//	//GetMoveComponent()->Jump(JumpStrength);
-		//	GetMoveComponent()->DoubleJump(InputVector.GetSafeNormal(), JumpStrength * DoubleJump_MultiplicationFactor);
-		//	GetMoveComponent()->StartJumpHeightHold();
-		//	Anim_Activate_Jump();	// Anim DoubleJump
-		//	return;
-		//}
-
-		///* ---- REGULAR JUMP ---- */
-		//if (CanJump())
-		//{
-		//	JumpCurrentCount++;
-		//	GetMoveComponent()->Jump(JumpStrength);
-		//	Anim_Activate_Jump();
-		//	return;
-		//}
 		FTimerHandle h;
-		switch (m_State)	// TODO: Go to Sub-States eg: OnGround->Idle|Running|Slide
+		switch (m_EState)	// TODO: Go to Sub-States eg: OnGround->Idle|Running|Slide
 		{
 		case EState::STATE_OnGround:	// Regular Jump
 		{
@@ -1334,6 +1288,17 @@ void ASteikemannCharacter::Jump()
 		}
 		case EState::STATE_InAir:	// Double Jump
 		{
+			if (m_EPogoType != EPogoType::POGO_Leave)
+				if (PB_Active_TargetDetection())
+				{
+					UE_LOG(LogTemp, Warning, TEXT("----------------"));
+
+					m_EPogoType = EPogoType::POGO_Active;
+					//PB_Active_IMPL();
+					//Anim_Activate_Jump();
+					break;
+				}
+
 			if (GetMoveComponent()->IsFalling() && JumpCurrentCount == 0)
 			{
 				/* and the post edge timer is valid */
@@ -1364,7 +1329,7 @@ void ASteikemannCharacter::Jump()
 			// Ledgejump
 			if (m_WallState == EOnWallState::WALL_Ledgegrab)
 			{
-				m_State = EState::STATE_InAir;
+				m_EState = EState::STATE_InAir;
 				m_WallState = EOnWallState::WALL_Leave;
 				GetMoveComponent()->LedgeJump(InputVector, JumpStrength);
 				GetMoveComponent()->m_GravityMode = EGravityMode::LerpToDefault;
@@ -1373,7 +1338,7 @@ void ASteikemannCharacter::Jump()
 			}
 
 			// Walljump
-			m_State = EState::STATE_InAir;
+			m_EState = EState::STATE_InAir;
 			m_WallState = EOnWallState::WALL_Leave;
 			
 			
@@ -1556,8 +1521,8 @@ bool ASteikemannCharacter::IsFalling() const
 {
 	if (!GetMoveComponent().IsValid()) { return false; }
 	return  GetMoveComponent()->MovementMode == MOVE_Falling 
-		&& m_State == EState::STATE_InAir 
-		&& m_AirState == EAirState::AIR_Freefall;
+		&& m_EState == EState::STATE_InAir 
+		&& m_EAirState == EAirState::AIR_Freefall;
 }
 
 bool ASteikemannCharacter::IsOnGround() const
@@ -1592,30 +1557,104 @@ bool ASteikemannCharacter::PB_ValidTargetDistance(const FVector OtherActorLocati
 	if (PlayerZ < OtherActorLocation.Z)
 		return false;
 
+	FVector Direction2D = FVector(OtherActorLocation - GetActorLocation());
+	Direction2D.Z = 0.f;
+	const bool Valid2D = Direction2D.Size() <= PB_Max2DTargetDistance;
+
 	float LengthToEnemy = GetActorLocation().Z - OtherActorLocation.Z;
-
 	float Difference = (GetCapsuleComponent()->GetScaledCapsuleHalfHeight()) + (PB_TargetLengthContingency);
-
 	/* If Player is close to the enemy */
-	if (LengthToEnemy - Difference < 0.f)
+	if (LengthToEnemy - Difference < 0.f && Valid2D)
 		return true;
 
 	return false;
 }
 
+bool ASteikemannCharacter::PB_Active_TargetDetection()
+{
+	FCollisionShape capsule = FCollisionShape::MakeCapsule(PB_ActiveDetection_CapsuleRadius, PB_ActiveDetection_CapsuleHalfHeight);
+
+	FVector location = GetActorLocation() - FVector(0, 0, PB_ActiveDetection_CapsuleZLocation);
+	FHitResult Hit;
+	FCollisionQueryParams Params("", false, this);
+	bool b = GetWorld()->SweepSingleByChannel(Hit, location, location, FQuat(1, 0, 0, 0), ECC_PogoCollision, capsule, Params);
+	return b;
+}
+
+bool ASteikemannCharacter::PB_Passive_IMPL(AActor* OtherActor)
+{
+	// Validate Distance
+	if (!PB_ValidTargetDistance(OtherActor->GetActorLocation()))	
+		return false;
+	if (GetCharacterMovement()->Velocity.Z > 0.f)
+		return false;
+
+	// Launch Passive Pogo
+	PB_EnterPogoState(PB_StateTimer_Passive);
+	PB_Launch_Passive();
+
+	// Affect Pogo Target
+
+	return true;
+}
+
 void ASteikemannCharacter::PB_Launch_Passive()
 {
-	/* Pogo bounce 
-	* The direction of the bounce should be based on: 
-	*	Velocity
-	*	Input Direction
-	*/
-	JumpCurrentCount = 1;	// Resets double jump
-	GetMoveComponent()->Velocity.Z = 0.f;
+	FVector Direction = GetCharacterMovement()->Velocity.GetSafeNormal2D();
+	Direction = (Direction + InputVector) / 2.f;
 
-	FVector Direction = FVector::UpVector + (InputVector * PogoInputDirectionMultiplier); Direction.Normalize();
-	GetMoveComponent()->AddImpulse(Direction * PB_LaunchStrength_Passive, true);	// Simple method of bouncing player atm
+	GetCharacterMovement()->Velocity *= 0.f;
+	GetCharacterMovement()->AddImpulse((FVector::UpVector * PB_LaunchStrength_Z_Passive) + (Direction * PB_LaunchStrength_MultiXY_Passive), true);
+
 	Anim_Activate_Jump();	// Anim Pogo
+}
+
+void ASteikemannCharacter::PB_Active_IMPL()
+{
+	m_EAirState = EAirState::AIR_Pogo;
+	m_EPogoType = EPogoType::POGO_Leave;
+	//GetWorldTimerManager().ClearTimer(TH_Pogo);
+
+	PB_Launch_Active();
+	PB_EnterPogoState(PB_StateTimer_Active);
+
+	GetWorldTimerManager().SetTimer(TH_PB_ExitHandle, [this](){ m_EPogoType = EPogoType::POGO_None; }, PB_StateTimer_Active, false);
+
+	// Visual Effects
+	Anim_Activate_Jump();
+}
+
+void ASteikemannCharacter::PB_Launch_Active()
+{
+	FVector direction = FVector((FVector::UpVector * (1.f - (InputVector.Size() * PB_InputMulti_Active))) + (InputVector * PB_InputMulti_Active)).GetSafeNormal();
+	GetMoveComponent()->PB_Launch_Active(direction, PB_LaunchStrength_Active);
+}
+
+bool ASteikemannCharacter::PB_Groundpound_IMPL(AActor* OtherActor)
+{
+	if (!PB_ValidTargetDistance(OtherActor->GetActorLocation()))
+		return false;
+
+	if (IAttackInterface* IAttack = Cast<IAttackInterface>(OtherActor))
+		IAttack->Receive_Pogo_GroundPound_Pure();
+
+	JumpCurrentCount = 1;	// Resets double jump
+	PB_EnterPogoState(PB_StateTimer_Groundpound);
+	PB_Launch_Groundpound();
+	ResetState();
+	m_EAttackState = EAttackState::None;
+	m_EPogoType = EPogoType::POGO_None;
+	return true;
+}
+
+void ASteikemannCharacter::PB_Launch_Groundpound()
+{
+	GetCharacterMovement()->Velocity *= 0.f;
+	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Falling);
+
+	FVector Direction = ((FVector::UpVector * (1.f - PB_InputMulti_Groundpound)) + (InputVector * PB_InputMulti_Groundpound)).GetSafeNormal();
+	GetCharacterMovement()->AddImpulse(Direction * PB_LaunchStrength_Groundpound, true);	// Simple method of bouncing player atm
+	Anim_Activate_Jump();	// Anim_Pogo-Groundpound 
 }
 
 bool ASteikemannCharacter::PB_Groundpound_Predeterminehit()
@@ -1656,37 +1695,12 @@ bool ASteikemannCharacter::PB_Groundpound_Predeterminehit()
 	return false;
 }
 
-bool ASteikemannCharacter::PB_Groundpound_IMPL(AActor* OtherActor)
-{
-	if (!PB_ValidTargetDistance(OtherActor->GetActorLocation())) return false;
-
-	if (IAttackInterface* IAttack = Cast<IAttackInterface>(OtherActor))
-		IAttack->Receive_Pogo_GroundPound_Pure();
-
-	PB_EnterPogoState(EPogoType::POGO_Groundpound, PB_StateTimer_Groundpound);
-	PB_Launch_Groundpound();
-	bPB_TickCheck_Groundpound = false;
-	return true;
-}
-
-void ASteikemannCharacter::PB_Launch_Groundpound()
-{
-	JumpCurrentCount = 1;	// Resets double jump
-	GetCharacterMovement()->Velocity *= 0.f;
-	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Falling);
-
-	FVector Direction = FVector::UpVector + (InputVector * PogoInputDirectionMultiplier); Direction.Normalize();
-	GetCharacterMovement()->AddImpulse(Direction * PB_LaunchStrength_Groundpound, true);	// Simple method of bouncing player atm
-	Anim_Activate_Jump();	// Pogo-Groundpound
-}
-
 void ASteikemannCharacter::PB_Exit()
 {
-	m_AttackState = EAttackState::None;
-	m_PogoType = EPogoType::POGO_None;
-	bPB_TickCheck_Passive = false;
-	bPB_TickCheck_Groundpound = false;
-	m_PogoTarget = nullptr;
+	m_EAttackState = EAttackState::None;
+	m_EPogoType = EPogoType::POGO_None;
+	//m_EPogoTickCheck = EPogoTickCheck::PB_Tick_None;
+	//m_PogoTarget = nullptr;
 }
 
 bool ASteikemannCharacter::ValidLengthToCapsule(FVector HitLocation, FVector capsuleLocation, float CapsuleHeight, float CapsuleRadius)
@@ -1707,33 +1721,20 @@ bool ASteikemannCharacter::ValidLengthToCapsule(FVector HitLocation, FVector cap
 	return false;
 }
 
-void ASteikemannCharacter::PB_EnterPogoState(EPogoType type, float time)
+void ASteikemannCharacter::PB_Pogo()
 {
-	m_PogoType = type;
-	m_State = EState::STATE_InAir;
-	m_AirState = EAirState::AIR_Pogo;
-	GetWorldTimerManager().SetTimer(TH_Pogo, [this]()
-		{
-			m_PogoType = EPogoType::POGO_None;
-			m_AirState = EAirState::AIR_Freefall; 
-		}, 
-		time, false);
+	if (m_EAttackState == EAttackState::GroundPound) {
+		PRINTLONG("Collision: ENTER POGO GROUNDPOUND");
+		m_EPogoType = EPogoType::POGO_Groundpound;
+		return;
+	}
+	m_EPogoType = EPogoType::POGO_Passive;
 }
 
-bool ASteikemannCharacter::PB_Passive_IMPL(AActor* OtherActor)
+void ASteikemannCharacter::PB_EnterPogoState(float time)
 {
-	// Validate Distance
-	if (!PB_ValidTargetDistance(OtherActor->GetActorLocation()))	
-		return false;
-
-	// Affect Pogo Target
-	
-
-	// Launch Passive Pogo
-	PB_EnterPogoState(EPogoType::POGO_Passive, PB_StateTimer_Passive);
-	PB_Launch_Passive();
-	bPB_TickCheck_Passive = false;
-	return true;
+	m_EAirState = EAirState::AIR_Pogo;
+	GetWorldTimerManager().SetTimer(TH_Pogo, [this](){ m_EAirState = EAirState::AIR_Freefall;  }, time, false);
 }
 
 void ASteikemannCharacter::Start_Crouch()
@@ -1772,7 +1773,7 @@ void ASteikemannCharacter::Stop_Crouch()
 
 void ASteikemannCharacter::Click_Slide()
 {
-	switch (m_State)
+	switch (m_EState)
 	{
 	case EState::STATE_None:
 		break;
@@ -1787,7 +1788,7 @@ void ASteikemannCharacter::Click_Slide()
 	case EState::STATE_Grappling:
 	{
 		// Pull dynamic target free from being stuck
-		if (m_GrappleState == EGrappleState::Pre_Launch && m_GrappleType == EGrappleType::Static_StuckEnemy_Ground)
+		if (m_EGrappleState == EGrappleState::Pre_Launch && m_EGrappleType == EGrappleType::Static_StuckEnemy_Ground)
 		{
 			if (!Active_GrappledActor.IsValid()) return;
 			IGrappleTargetInterface* IGrapple = Cast<IGrappleTargetInterface>(Active_GrappledActor);
@@ -1801,9 +1802,9 @@ void ASteikemannCharacter::Click_Slide()
 			GetMoveComponent()->m_GravityMode = EGravityMode::Default;
 			GH_Stop();
 
-			m_MovementInputState = EMovementInput::Locked;
+			m_EMovementInputState = EMovementInput::Locked;
 			FTimerHandle h;
-			GetWorldTimerManager().SetTimer(h, [this]() { m_MovementInputState = EMovementInput::Open; }, GH_PostPullingTargetFreeTime, false);
+			GetWorldTimerManager().SetTimer(h, [this]() { m_EMovementInputState = EMovementInput::Open; }, GH_PostPullingTargetFreeTime, false);
 			return;
 		}
 		return;
@@ -1965,7 +1966,7 @@ void ASteikemannCharacter::Respawn()
 void ASteikemannCharacter::ExitOnWall(EState state)
 {
 	// TODO: Reevaluate m_State EState
-	m_State = state;
+	m_EState = state;
 	m_WallState = EOnWallState::WALL_Leave;
 	FTimerHandle h;
 	GetWorldTimerManager().SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, 0.5f, false);
@@ -1973,12 +1974,12 @@ void ASteikemannCharacter::ExitOnWall(EState state)
 
 bool ASteikemannCharacter::IsOnWall() const
 {
-	return m_State == EState::STATE_OnWall && m_WallState == EOnWallState::WALL_Drag;
+	return m_EState == EState::STATE_OnWall && m_WallState == EOnWallState::WALL_Drag;
 }
 
 bool ASteikemannCharacter::IsLedgeGrabbing() const
 {
-	return m_State == EState::STATE_OnWall && m_WallState == EOnWallState::WALL_Ledgegrab;
+	return m_EState == EState::STATE_OnWall && m_WallState == EOnWallState::WALL_Ledgegrab;
 }
 
 bool ASteikemannCharacter::Validate_Ledge(FHitResult& hit)
@@ -2002,7 +2003,7 @@ void ASteikemannCharacter::Initial_LedgeGrab()
 	if (!b)
 		return;
 
-	m_State = EState::STATE_OnWall;
+	m_EState = EState::STATE_OnWall;
 	m_WallState = EOnWallState::WALL_Ledgegrab;
 
 	// adjust to valid location
@@ -2093,24 +2094,10 @@ void ASteikemannCharacter::OnCapsuleComponentBeginOverlap(UPrimitiveComponent* O
 	tag->GetOwnedGameplayTags(tags);
 
 	// Collision with Pogo Target
-	if (tags.HasTag(Tag::PogoTarget()))
+	if (tags.HasTag(Tag::PogoTarget()) && OtherComp->IsA(USphereComponent::StaticClass()))
 	{
 		m_PogoTarget = OtherActor;
-		FVector location = m_PogoTarget->GetActorLocation();
-		
-		if (m_State == EState::STATE_Attacking && m_AttackState == EAttackState::GroundPound)
-		{
-			if (!PB_Groundpound_IMPL(m_PogoTarget))
-				bPB_TickCheck_Groundpound = true;
-			return;
-		}
-		if ((m_State == EState::STATE_InAir && m_AirState == EAirState::AIR_Freefall)
-			|| (m_State == EState::STATE_Grappling)) 
-		{
-			if (!PB_Passive_IMPL(m_PogoTarget))
-				bPB_TickCheck_Passive = true;
-			return;
-		}
+		PB_Pogo();
 	}
 	
 	/* Collision with collectible */
@@ -2151,12 +2138,13 @@ void ASteikemannCharacter::OnCapsuleComponentEndOverlap(UPrimitiveComponent* Ove
 	// Collision with Pogo Target
 	if (tags.HasTag(Tag::PogoTarget()))
 	{
-		if (OtherActor == m_PogoTarget)
+		if (OtherActor == m_PogoTarget && OtherComp->IsA(USphereComponent::StaticClass()))
 		{
-			m_PogoTarget = nullptr;
-			if (m_AirState == EAirState::AIR_Pogo || m_PogoType != EPogoType::POGO_None)
-				if (m_AttackState == EAttackState::GroundPound)
-					m_AttackState = EAttackState::None;
+			if (m_EPogoType == EPogoType::POGO_None)
+				m_PogoTarget = nullptr;
+			//if (m_EAirState == EAirState::AIR_Pogo || m_EPogoType != EPogoType::POGO_None)
+			//	if (m_EAttackState == EAttackState::GroundPound)
+			//		m_EAttackState = EAttackState::None;
 		}
 	}
 
@@ -2368,9 +2356,9 @@ void ASteikemannCharacter::Deactivate_ScoopAttack()
 
 void ASteikemannCharacter::ComboAttack_Pure()
 {
-	m_State = EState::STATE_Attacking;
-	m_SmackAttackState = ESmackAttackState::Attack;
-	m_MovementInputState = EMovementInput::Locked;
+	m_EState = EState::STATE_Attacking;
+	m_ESmackAttackState = ESmackAttackState::Attack;
+	m_EMovementInputState = EMovementInput::Locked;
 	Deactivate_AttackCollider();
 	int combo{};
 	(AttackComboCount++ % 2 == 0) ? combo = 1 : combo = 2;
@@ -2397,7 +2385,7 @@ void ASteikemannCharacter::Click_Attack()
 	bAttackPress = true;
 
 
-	switch (m_State)
+	switch (m_EState)
 	{
 	case EState::STATE_OnGround:
 	{
@@ -2418,16 +2406,16 @@ void ASteikemannCharacter::Click_Attack()
 	}
 	case EState::STATE_Attacking:
 	{
-		if (m_SmackAttackState == ESmackAttackState::Hold) 
-			m_SmackAttackState = ESmackAttackState::Buffer;
-		if (m_SmackAttackState == ESmackAttackState::Ready)
+		if (m_ESmackAttackState == ESmackAttackState::Hold) 
+			m_ESmackAttackState = ESmackAttackState::Buffer;
+		if (m_ESmackAttackState == ESmackAttackState::Ready)
 			ComboAttack_Pure();
 		break;
 	}
 	case EState::STATE_Grappling:
 	{
 		/* Buffer Attack if Grappling to Dynamic Target */
-		if (m_GrappleType == EGrappleType::Dynamic_Ground)
+		if (m_EGrappleType == EGrappleType::Dynamic_Ground)
 		{
 			if (GetWorldTimerManager().IsTimerActive(TH_BufferAttack)) return;
 
@@ -2435,7 +2423,7 @@ void ASteikemannCharacter::Click_Attack()
 			if (t > 0.f) {
 				GetWorldTimerManager().SetTimer(TH_BufferAttack, [this]()
 					{
-						m_State = EState::STATE_OnGround; 
+						m_EState = EState::STATE_OnGround; 
 						AttackSmack_Start_Pure();
 						AttackSmack_Start();
 					},
@@ -2484,35 +2472,35 @@ void ASteikemannCharacter::UnClick_ScoopAttack()
 
 void ASteikemannCharacter::AttackSmack_Start_Pure()
 {
-	m_State = EState::STATE_Attacking;
-	m_AttackState = EAttackState::Smack;
-	m_SmackAttackState = ESmackAttackState::Attack;
-	m_MovementInputState = EMovementInput::Locked;
+	m_EState = EState::STATE_Attacking;
+	m_EAttackState = EAttackState::Smack;
+	m_ESmackAttackState = ESmackAttackState::Attack;
+	m_EMovementInputState = EMovementInput::Locked;
 }
 
 void ASteikemannCharacter::Stop_Attack()
 {
 	AttackComboCount = 0;
-	m_AttackState = EAttackState::None;
-	m_State = EState::STATE_None;
-	m_MovementInputState = EMovementInput::Open;
+	m_EAttackState = EAttackState::None;
+	m_EState = EState::STATE_None;
+	m_EMovementInputState = EMovementInput::Open;
 	SetDefaultState();
 }
 
 void ASteikemannCharacter::StartAttackBufferPeriod()
 {
-	m_SmackAttackState = ESmackAttackState::Hold;
+	m_ESmackAttackState = ESmackAttackState::Hold;
 }
 
 void ASteikemannCharacter::ExecuteAttackBuffer()
 {
-	if (m_SmackAttackState == ESmackAttackState::Buffer)
+	if (m_ESmackAttackState == ESmackAttackState::Buffer)
 	{
 		ComboAttack_Pure();
 		return;
 	}
 
-	m_SmackAttackState = ESmackAttackState::Ready;
+	m_ESmackAttackState = ESmackAttackState::Ready;
 }
 
 void ASteikemannCharacter::Activate_AttackCollider()
@@ -2587,7 +2575,7 @@ void ASteikemannCharacter::OnAttackColliderBeginOverlap(UPrimitiveComponent* Ove
 		/* Smack attack collider */
 		if (OverlappedComp == AttackCollider)
 		{
-			switch (m_AttackState)
+			switch (m_EAttackState)
 			{
 			case EAttackState::None:
 				break;
@@ -2698,7 +2686,7 @@ void ASteikemannCharacter::Click_GroundPound()
 
 		bPB_Groundpound_PredeterminedPogoHit = PB_Groundpound_Predeterminehit();
 
-		if (IsGroundPounding() || IsOnGround() || m_State == EState::STATE_OnGround) return;
+		if (IsGroundPounding() || IsOnGround() || m_EState == EState::STATE_OnGround) return;
 		m_WallState = EOnWallState::WALL_Leave;
 		
 		ExitOnWall(EState::STATE_Attacking);
@@ -2721,8 +2709,8 @@ void ASteikemannCharacter::Launch_GroundPound()
 
 void ASteikemannCharacter::Start_GroundPound()
 {
-	m_State = EState::STATE_Attacking;
-	m_AttackState = EAttackState::GroundPound;
+	m_EState = EState::STATE_Attacking;
+	m_EAttackState = EAttackState::GroundPound;
 
 	GetMoveComponent()->GP_PreLaunch();
 

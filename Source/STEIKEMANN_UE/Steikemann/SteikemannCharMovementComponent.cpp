@@ -305,6 +305,13 @@ void USteikemannCharMovementComponent::DeactivateJumpMechanics()
 	bJumpPrematureSlowdown = false;
 }
 
+void USteikemannCharMovementComponent::PB_Launch_Active(FVector direction, float strength)
+{
+	//m_GravityMode = EGravityMode::Default;
+	Velocity *= 0.f;
+	AddImpulse(direction * strength, true);
+}
+
 
 
 void USteikemannCharMovementComponent::Initial_OnWall_Hang(const Wall::WallData& wall, float time)
