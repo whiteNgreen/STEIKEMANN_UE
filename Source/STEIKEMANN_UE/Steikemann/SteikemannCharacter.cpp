@@ -1986,10 +1986,10 @@ bool ASteikemannCharacter::Validate_Ledge(FHitResult& hit)
 {
 	FHitResult h;
 	FCollisionQueryParams param("", false, this);
-	const bool b1 = GetWorld()->LineTraceSingleByChannel(h, m_Ledgedata.ActorLocation, m_Ledgedata.ActorLocation + (FVector::DownVector * (GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 5.f)), ECC_WallDetection, param);
+	const bool b1 = GetWorld()->LineTraceSingleByChannel(h, m_Ledgedata.ActorLocation, m_Ledgedata.ActorLocation + (FVector::DownVector * (GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 5.f)), ECC_PlayerWallDetection, param);
 	if (b1)
 		return false;
-	const bool b2 = GetWorld()->LineTraceSingleByChannel(hit, m_Ledgedata.TraceLocation, m_Ledgedata.TraceLocation - (m_Walldata.Normal * 100.f), ECC_WallDetection, param);
+	const bool b2 = GetWorld()->LineTraceSingleByChannel(hit, m_Ledgedata.TraceLocation, m_Ledgedata.TraceLocation - (m_Walldata.Normal * 100.f), ECC_PlayerWallDetection, param);
 	if (!b2)
 		return false;
 
@@ -2034,7 +2034,7 @@ bool ASteikemannCharacter::ValidateWall()
 	FVector start = GetActorLocation() + FVector(0, 0, Wall_HeightCriteria);
 	FHitResult hit;
 	FCollisionQueryParams Params("", false, this);
-	const bool b = GetWorld()->LineTraceSingleByChannel(hit, start, start + (m_WallJumpData.Normal * 200.f * -1.f), ECC_WallDetection, Params);
+	const bool b = GetWorld()->LineTraceSingleByChannel(hit, start, start + (m_WallJumpData.Normal * 200.f * -1.f), ECC_PlayerWallDetection, Params);
 	return b;
 }
 

@@ -45,8 +45,8 @@ void ASmallEnemy::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	SetDefaultState();
-
-	const bool wall = WallDetector->DetectStickyWall(this, GetActorLocation(), GetActorForwardVector(), m_WallData);
+	
+	const bool wall = WallDetector->DetectStickyWall(this, GetActorLocation(), GetActorForwardVector(), m_WallData, ECC_EnemyWallDetection);
 	if (wall && m_State == EEnemyState::STATE_InAir && m_WallState != EWall::WALL_Leaving)
 	{
 		m_State = EEnemyState::STATE_OnWall;

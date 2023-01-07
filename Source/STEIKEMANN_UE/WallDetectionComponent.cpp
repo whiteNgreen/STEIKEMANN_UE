@@ -39,7 +39,7 @@ bool UWallDetectionComponent::DetectWall(const AActor* actor, const FVector Loca
 {
 	TArray<FHitResult> Hits;
 	FCollisionQueryParams Params = FCollisionQueryParams("", false, actor);
-	bool b = GetWorld()->SweepMultiByChannel(Hits, Location, Location + ForwardVector, FQuat(1.f, 0, 0, 0), ECC_WallDetection, m_capsule, Params);
+	bool b = GetWorld()->SweepMultiByChannel(Hits, Location, Location + ForwardVector, FQuat(1.f, 0, 0, 0), ECC_PlayerWallDetection, m_capsule, Params);
 
 	if (bShowDebug)
 		DrawDebugCapsule(GetWorld(), Location, m_capsule.GetCapsuleHalfHeight(), m_capsule.GetCapsuleRadius(), FQuat(1.f, 0, 0, 0), FColor(.3f, .3f, 1.f, 1.f), false, 0, 0, 1.f);
@@ -78,11 +78,12 @@ bool UWallDetectionComponent::DetectWall(const AActor* actor, const FVector Loca
 	return true;
 }
 
-bool UWallDetectionComponent::DetectStickyWall(const AActor* actor, const FVector Location, const FVector Forward, Wall::WallData& walldata)
+bool UWallDetectionComponent::DetectStickyWall(const AActor* actor, const FVector Location, const FVector Forward, Wall::WallData& walldata, ECollisionChannel TraceChannel)
 {
 	TArray<FHitResult> Hits;
 	FCollisionQueryParams Params = FCollisionQueryParams("", false, actor);
-	bool b = GetWorld()->SweepMultiByChannel(Hits, Location, Location + Forward, FQuat(1.f, 0, 0, 0), ECC_WallDetection, m_capsule, Params);
+	//bool b = GetWorld()->SweepMultiByChannel(Hits, Location, Location + Forward, FQuat(1.f, 0, 0, 0), ECC_EnemyWallDetection, m_capsule, Params);
+	bool b = GetWorld()->SweepMultiByChannel(Hits, Location, Location + Forward, FQuat(1.f, 0, 0, 0), TraceChannel, m_capsule, Params);
 
 	if (bShowDebug)
 		DrawDebugCapsule(GetWorld(), Location, m_capsule.GetCapsuleHalfHeight(), m_capsule.GetCapsuleRadius(), FQuat(1.f, 0, 0, 0), FColor(.3f, .3f, 1.f, 1.f), false, 0, 0, 1.f);
@@ -105,7 +106,7 @@ bool UWallDetectionComponent::DetectStickyWall(const AActor* actor, const FVecto
 
 	FHitResult Hit;
 	FVector Direction = walldata.Location - Location;
-	b = GetWorld()->LineTraceSingleByChannel(Hit, Location, Location + (Direction * 1.1f), ECC_WallDetection, Params);
+	b = GetWorld()->LineTraceSingleByChannel(Hit, Location, Location + (Direction * 1.1f), ECC_EnemyWallDetection, Params);
 
 	if (b)
 	{
@@ -234,7 +235,7 @@ bool UWallDetectionComponent::DetectLedge(Wall::LedgeData& ledge, const AActor* 
 	FHitResult hit;
 	FCollisionQueryParams Params = FCollisionQueryParams("", false, actor);
 
-	const bool firstCheck = !GetWorld()->LineTraceSingleByChannel(hit, aboveLocation, inwardsLocation, ECC_WallDetection, Params);
+	const bool firstCheck = !GetWorld()->LineTraceSingleByChannel(hit, aboveLocation, inwardsLocation, ECC_PlayerWallDetection, Params);
 	if (bShowDebug)
 		DrawDebugLine(GetWorld(), aboveLocation, inwardsLocation, FColor::Red, false, 5.f, 0, 5.f);
 
@@ -242,7 +243,7 @@ bool UWallDetectionComponent::DetectLedge(Wall::LedgeData& ledge, const AActor* 
 		return false;
 
 	TArray<FHitResult> Hits;
-	const bool secondCheck = !GetWorld()->SweepMultiByChannel(Hits, inwardsLocation, inwardsLocation + FVector::DownVector, FQuat(1.f, 0, 0, 0), ECC_WallDetection, m_capsule, Params);
+	const bool secondCheck = !GetWorld()->SweepMultiByChannel(Hits, inwardsLocation, inwardsLocation + FVector::DownVector, FQuat(1.f, 0, 0, 0), ECC_PlayerWallDetection, m_capsule, Params);
 
 	if (bShowDebug)
 		DrawDebugCapsule(GetWorld(), inwardsLocation, m_capsule.GetCapsuleHalfHeight(), m_capsule.GetCapsuleRadius(), FQuat(1.f, 0, 0, 0), FColor(1.f, .3f, 0.3f, 1.f), false, 5.f, 0, 1.5f);
@@ -257,7 +258,7 @@ bool UWallDetectionComponent::DetectLedge(Wall::LedgeData& ledge, const AActor* 
 	if (firstCheck && secondCheck)
 	{
 		FHitResult f;
-		const bool final = GetWorld()->LineTraceSingleByChannel(f, inwardsLocation, inwardsLocation + (FVector::DownVector * height), ECC_WallDetection, Params);
+		const bool final = GetWorld()->LineTraceSingleByChannel(f, inwardsLocation, inwardsLocation + (FVector::DownVector * height), ECC_PlayerWallDetection, Params);
 		if (bShowDebug)
 			DrawDebugLine(GetWorld(), inwardsLocation, inwardsLocation + (FVector::DownVector * height), FColor::Blue, false, 5.f, 0, 5.f);
 

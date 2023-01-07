@@ -34,7 +34,7 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 
 	/* -- Gravity -- */
 	SetGravityScale(DeltaTime);
-
+	PRINTPAR("GravityScale %f", GravityScale);
 
 	/* Crouch */
 	if (GetCharOwner()->IsCrouchSliding()) {
@@ -92,19 +92,19 @@ void USteikemannCharMovementComponent::SetGravityScale(float deltatime)
 	switch (m_GravityMode)
 	{
 	case EGravityMode::Default:
-		GravityScale = GravityScaleOverride;
+		GravityScale = m_GravityScaleOverride;
 		break;
 	case EGravityMode::LerpToDefault:
-		GravityScale = FMath::FInterpTo(GravityScale, GravityScaleOverride, deltatime, GravityScaleOverride_InterpSpeed);
-		if (GravityScale < GravityScaleOverride - 0.01f || GravityScale > GravityScaleOverride + 0.05f)
+		GravityScale = FMath::FInterpTo(GravityScale, m_GravityScaleOverride, deltatime, m_GravityScaleOverride_InterpSpeed);
+		if (GravityScale < m_GravityScaleOverride - 0.01f || GravityScale > m_GravityScaleOverride + 0.05f)
 			m_GravityMode = EGravityMode::Default;
 		break;
 	case EGravityMode::None:
 		GravityScale = 0.f;
 		break;
 	case EGravityMode::LerpToNone:
-		GravityScale = FMath::FInterpTo(GravityScale, 0.f, deltatime, GravityScaleOverride_InterpSpeed);
-		if (GravityScale < GravityScaleOverride - 0.01f || GravityScale > GravityScaleOverride + 0.05f)
+		GravityScale = FMath::FInterpTo(GravityScale, 0.f, deltatime, m_GravityScaleOverride_InterpSpeed);
+		if (GravityScale < m_GravityScaleOverride - 0.01f || GravityScale > m_GravityScaleOverride + 0.05f)
 			m_GravityMode = EGravityMode::None;
 		break;
 	case EGravityMode::ForcedNone:
@@ -322,7 +322,7 @@ void USteikemannCharMovementComponent::Initial_OnWall_Hang(const Wall::WallData&
 	m_WallState = EOnWallState::WALL_Hang;
 
 	Velocity *= 0.f;
-	GravityScaleOverride_InterpSpeed = 1.f / time;
+	m_GravityScaleOverride_InterpSpeed = 1.f / time;
 	m_GravityMode = EGravityMode::LerpToNone;
 
 	//FTimerHandle h;

@@ -8,7 +8,8 @@
 #include "STEIKEMANN_UE.h"
 #include "WallDetectionComponent.generated.h"
 
-#define ECC_WallDetection ECC_GameTraceChannel3 
+#define ECC_PlayerWallDetection ECC_GameTraceChannel3 
+#define ECC_EnemyWallDetection ECC_GameTraceChannel4
 
 namespace Wall {
 	struct WallData
@@ -77,7 +78,7 @@ public:	// Wall Detection
 	// Viable wall angles between upper and lower limit. 
 
 	bool DetectWall(const AActor* actor, const FVector Location, const FVector ForwardVector, Wall::WallData& walldata, Wall::WallData& WallJumpData);
-	bool DetectStickyWall(const AActor* actor, const FVector Location, const FVector Forward, Wall::WallData& walldata);
+	bool DetectStickyWall(const AActor* actor, const FVector Location, const FVector Forward, Wall::WallData& walldata, ECollisionChannel TraceChannel);
 
 private:
 	float m_OwnerHalfHeight{};

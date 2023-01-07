@@ -224,10 +224,10 @@ public:
 
 		/* The amount of particles that will spawn determined by the characters landing velocity, times this multiplier */
 		UPROPERTY(EditAnywhere, Category = "Particle Effects|Land")
-			float NSM_Land_ParticleAmount		UMETA(DisplayName = "Particle Amount Multiplier") { 0.5f };
+			float NSM_Land_ParticleAmount		/*UMETA(DisplayName = "Particle Amount Multiplier") */{ 0.5f };
 		/* The speed of the particles will be determined by the characters velocity when landing, times this multiplier */
 		UPROPERTY(EditAnywhere, Category = "Particle Effects|Land")
-			float NSM_Land_ParticleSpeed		UMETA(DisplayName = "Particle Speed Multiplier") { 0.5f };
+			float NSM_Land_ParticleSpeed		/*UMETA(DisplayName = "Particle Speed Multiplier")*/ { 0.5f };
 
 		#pragma endregion //Landing
 
@@ -237,7 +237,7 @@ public:
 			UNiagaraSystem* NS_WallSlide{ nullptr };
 		/* The amount of particles per second the system should emit */
 		UPROPERTY(EditAnywhere, Category = "Particle Effects|WallJump")
-			float NS_WallSlide_ParticleAmount	UMETA(DisplayName = "WallSlide ParticleAmount") { 1000.f };
+			float NS_WallSlide_ParticleAmount	/*UMETA(DisplayName = "WallSlide ParticleAmount")*/ { 1000.f };
 	#pragma endregion //OnWall
 
 	#pragma region Crouch
@@ -279,21 +279,21 @@ public:
 	float CameraGuide_Pitch{ 0.f };
 
 	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "500"))
-			float CameraGuide_Pitch_MIN		UMETA(DisplayName = "Pitch At Min") { 100.f };
+			float CameraGuide_Pitch_MIN		/*UMETA(DisplayName = "Pitch At Min")*/ { 100.f };
 
 	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "5000"))
-			float CameraGuide_Pitch_MAX		UMETA(DisplayName = "Pitch At Max") { 500.f };
+			float CameraGuide_Pitch_MAX		/*UMETA(DisplayName = "Pitch At Max")*/ { 500.f };
 
 	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "2"))
-			float CameraGuide_ZdiffMultiplier		UMETA(DisplayName = "Zdiff Multiplier") { 1.f };
+			float CameraGuide_ZdiffMultiplier		/*UMETA(DisplayName = "Zdiff Multiplier") */{ 1.f };
 			
 	/* Maximum distance for pitch adjustment */
 	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "10000"))
-			float CameraGuide_Pitch_DistanceMAX		UMETA(DisplayName = "Max Distance") { 2000.f };
+			float CameraGuide_Pitch_DistanceMAX		/*UMETA(DisplayName = "Max Distance") */{ 2000.f };
 
 	/* Minimum distance for pitch adjustment */
 	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "10000"))
-			float CameraGuide_Pitch_DistanceMIN		UMETA(DisplayName = "Min Distance") { 100.f };
+			float CameraGuide_Pitch_DistanceMIN		/*UMETA(DisplayName = "Min Distance") */{ 100.f };
 
 	EPointType CurrentCameraGuide;
 	EPointType PreviousCameraGuide;
@@ -548,7 +548,7 @@ public:
 	/* Regular Crouch */
 	/* Crouch slide will only start if the player is walking with a speed above this */
 	UPROPERTY(EditAnywhere, Category = "Movement|Crouch")
-		float Crouch_WalkToSlideSpeed  UMETA(DisplayName = "Walk To Crouch Slide Speed") { 400.f };
+		float Crouch_WalkToSlideSpeed  /*UMETA(DisplayName = "Walk To Crouch Slide Speed") */{ 400.f };
 	void Start_Crouch();
 	void Stop_Crouch();
 
@@ -560,11 +560,11 @@ public:
 
 	/* How long will the crouch slide last */
 	UPROPERTY(EditAnywhere, Category = "Movement|Crouch")
-		float CrouchSlide_Time  UMETA(DisplayName = "Crouch Slide Time") { 0.5f };
+		float CrouchSlide_Time  /*UMETA(DisplayName = "Crouch Slide Time")*/ { 0.5f };
 
 	/* How long before a new crouchslide can begin */
 	UPROPERTY(EditAnywhere, Category = "Movement|Crouch")
-		float Post_CrouchSlide_Time  UMETA(DisplayName = "Crouch Slide Wait Time") { 0.5f };
+		float Post_CrouchSlide_Time  /*UMETA(DisplayName = "Crouch Slide Wait Time")*/ { 0.5f };
 
 	/* Initial CrouchSlide Speed */
 	UPROPERTY(EditAnywhere, Category = "Movement|Crouch")
@@ -802,7 +802,7 @@ public:
 	/* The added percentage of the screens height that is added to the aiming location. A higher number turns it closer to the
 		middle, with a lower number further up. 0 directly to the middle */
 	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Targeting")
-		float GrappleAimYChange_Base UMETA(DisplayName = "GrappleAimYDifference") { 4.f };
+		float GrappleAimYChange_Base /*UMETA(DisplayName = "GrappleAimYDifference") */{ 4.f };
 	float GrappleAimYChange{};
 
 	void GH_GrappleAiming();
@@ -821,27 +821,27 @@ public:
 		float GrappleHook_DividingFactor{ 2.f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
-		float GrappleHook_PostLaunchTimer UMETA(DisplayName = "Post Launch Timer") { 1.f };
+		float GrappleHook_PostLaunchTimer /*UMETA(DisplayName = "Post Launch Timer")*/ { 1.f };
 
 
 	/* How long the player will be held in the air before being launched towards the grappled actor */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
-		float GrappleDrag_PreLaunch_Timer_Length UMETA(DisplayName = "PreLaunch Timer")  { 0.25f };
+		float GrappleDrag_PreLaunch_Timer_Length /*UMETA(DisplayName = "PreLaunch Timer")*/  { 0.25f };
 
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Grappling Hook|StuckEnemy")
-		float GrappleHook_Time_ToStuckEnemy UMETA(DisplayName = "Time To Stuck Enemy") { 0.3f };
+		float GrappleHook_Time_ToStuckEnemy /*UMETA(DisplayName = "Time To Stuck Enemy")*/ { 0.3f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Grappling Hook|StuckEnemy")
-		float GrappleHook_AboveStuckEnemy UMETA(DisplayName = "Z Above Stuck Enemy") { 50.f };
+		float GrappleHook_AboveStuckEnemy /*UMETA(DisplayName = "Z Above Stuck Enemy")*/ { 50.f };
 
 	/* -- GRAPPLE CAMERA VARIABLES -- */
 	/* Interpolation speed of the camera rotation during grapplehook Drag */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag|Camera Rotation")
-		float GrappleDrag_Camera_InterpSpeed			UMETA(DisplayName = "Interpolation Speed")		{ 3.f };
+		float GrappleDrag_Camera_InterpSpeed			/*UMETA(DisplayName = "Interpolation Speed")	*/	{ 3.f };
 
 	/* Pitch adjustment for the camera rotation during the Pre_Launch of Grapple Drag  */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag|Camera Rotation")
-		float GrappleDrag_Camera_PitchPoint				UMETA(DisplayName = "Pitch Point")				{ 20.f };
+		float GrappleDrag_Camera_PitchPoint				/*UMETA(DisplayName = "Pitch Point")	*/			{ 20.f };
 
 #pragma endregion //GrappleHook
 
@@ -909,23 +909,23 @@ public:
 	 * If the player still holds the attack button, the character will perform the scoop attack. 
 	 *  Else if the button is not held at this time, the character will perform the regular SmackAttack */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|SmackAttack")
-		float SmackAttack_Anticipation_Rate		UMETA(DisplayName = "1. Smack Anticipation Rate") { 4.5f };
+		float SmackAttack_Anticipation_Rate		/*UMETA(DisplayName = "1. Smack Anticipation Rate")*/ { 4.5f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|SmackAttack")
-		float SmackAttack_Action_Rate			UMETA(DisplayName = "2. Smack Action Rate") { 5.f };
+		float SmackAttack_Action_Rate			/*UMETA(DisplayName = "2. Smack Action Rate")*/ { 5.f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|SmackAttack")
-		float SmackAttack_Reaction_Rate			UMETA(DisplayName = "3. Smack Reaction Rate") { 2.f };
+		float SmackAttack_Reaction_Rate			/*UMETA(DisplayName = "3. Smack Reaction Rate")*/ { 2.f };
 	
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|ScoopAttack")
-		float ScoopAttack_Anticipation_Rate		UMETA(DisplayName = "1. Scoop Anticipation Rate") { 10.f };
+		float ScoopAttack_Anticipation_Rate		/*UMETA(DisplayName = "1. Scoop Anticipation Rate")*/ { 10.f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|ScoopAttack")
-		float ScoopAttack_Action_Rate			UMETA(DisplayName = "2. Scoop Action Rate") { 7.f };
+		float ScoopAttack_Action_Rate			/*UMETA(DisplayName = "2. Scoop Action Rate")*/ { 7.f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|ScoopAttack")
-		float ScoopAttack_Reaction_Rate			UMETA(DisplayName = "3. Scoop Reaction Rate") { 2.f };
+		float ScoopAttack_Reaction_Rate			/*UMETA(DisplayName = "3. Scoop Reaction Rate")*/ { 2.f };
 
 
 
@@ -947,9 +947,9 @@ public:
 		uint8 SmackDirectionType{ 1 };
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|SmackDirection", meta = (UIMin = "1.0", UIMax = "4.0", EditCondition = "SmackDirectionType == 2 || SmackDirectionType == 3", EditConditionHides))
-		float SmackDirection_CameraMultiplier	UMETA(DisplayName = "Camera Multiplier") { 1.f };
+		float SmackDirection_CameraMultiplier	/*UMETA(DisplayName = "Camera Multiplier")*/ { 1.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|SmackDirection", meta = (UIMin = "1.0", UIMax = "4.0", EditCondition = "SmackDirectionType == 1 || SmackDirectionType == 3", EditConditionHides))
-		float SmackDirection_InputMultiplier	UMETA(DisplayName = "Input Multiplier") { 1.f };
+		float SmackDirection_InputMultiplier	/*UMETA(DisplayName = "Input Multiplier")*/ { 1.f };
 
 	
 	/* The angle from the ground the enemy will be smacked. 0 degrees: Is parallel to the ground. 90 degrees: Is directly upwards */
@@ -958,9 +958,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
 		float SmackAttackStrength{ 1500.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks", meta = (UIMin = "0", UIMax = "1"))
-		float SmackAttack_InputAngleMultiplier			UMETA(DisplayName = "Input Angle Multiplier") { 0.2 };
+		float SmackAttack_InputAngleMultiplier			/*UMETA(DisplayName = "Input Angle Multiplier")*/ { 0.2 };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks", meta = (UIMin = "0", UIMax = "1"))
-		float SmackAttack_InputStrengthMultiplier		UMETA(DisplayName = "Input Strength Multiplier") { 0.2 };
+		float SmackAttack_InputStrengthMultiplier		/*UMETA(DisplayName = "Input Strength Multiplier")*/ { 0.2 };
 
 	/* ---- Moving Character During SmackAttack ---- */
 	/* How far the character will move forward during Smack Attack. Happens during The Action when the collider is active */
