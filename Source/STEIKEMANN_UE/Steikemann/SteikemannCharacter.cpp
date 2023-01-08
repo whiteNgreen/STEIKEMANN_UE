@@ -1520,9 +1520,9 @@ bool ASteikemannCharacter::IsJumping() const
 bool ASteikemannCharacter::IsFalling() const
 {
 	if (!GetMoveComponent().IsValid()) { return false; }
-	return  GetMoveComponent()->MovementMode == MOVE_Falling 
-		&& m_EState == EState::STATE_InAir 
-		&& m_EAirState == EAirState::AIR_Freefall;
+	return  GetMoveComponent()->MovementMode == MOVE_Falling;
+		//&& m_EState == EState::STATE_InAir 
+		//&& m_EAirState == EAirState::AIR_Freefall;
 }
 
 bool ASteikemannCharacter::IsOnGround() const

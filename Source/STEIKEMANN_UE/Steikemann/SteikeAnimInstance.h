@@ -22,8 +22,8 @@ public:
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 
 	UPROPERTY(BlueprintReadOnly)
-		TWeakObjectPtr<class ASteikemannCharacter> SteikeOwner{ nullptr };
-		//class ASteikemannCharacter* SteikeOwner{ nullptr };
+		class ASteikemannCharacter* SteikeOwner{ nullptr };
+		//TWeakObjectPtr<class ASteikemannCharacter> SteikeOwner{ nullptr };
 
 	/* Walking Speed */
 	UPROPERTY(BlueprintReadOnly)
