@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "../AbstractClasses/AbstractCharacter.h"
 #include "../Interfaces/AttackInterface.h"
 #include "../Interfaces/GrappleTargetInterface.h"
 #include "../DebugMacros.h"
@@ -47,7 +48,7 @@ enum class EWall : int8
 };
 
 UCLASS()
-class STEIKEMANN_UE_API ASmallEnemy : public ACharacter,
+class STEIKEMANN_UE_API ASmallEnemy : public AAbstractCharacter,
 	public IAttackInterface,
 	public IGameplayTagAssetInterface,
 	public IGrappleTargetInterface
@@ -65,6 +66,10 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
+		USphereComponent* PlayerPogoDetection{ nullptr };
 #pragma endregion //Base
 
 #pragma region GameplayTags
@@ -91,11 +96,15 @@ private: // Gravity
 public:
 	UWallDetectionComponent* WallDetector{ nullptr };
 	EWall m_WallState = EWall::WALL_None;
+	FTimerHandle TH_LeavingWall;
+
 public:
 	void StickToWall();
 	virtual bool IsStuck_Pure() override { return m_State == EEnemyState::STATE_OnWall; }
-
+	void LeaveWall();
 public:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|WallDetection")
+		float WDC_LeavingWallTimer{ 0.5f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall")
 		bool bWDC_Debug{};
 
@@ -108,7 +117,7 @@ public:
 		float WDC_MinHeight{ 20.f };
 private:
 	Wall::WallData m_WallData;
-	Wall::WallData m_WallJumpData;
+	//Wall::WallData m_WallJumpData;
 
 #pragma endregion //Wall Mechanics
 
@@ -123,23 +132,19 @@ public:
 	FTimerHandle Handle_GrappledCooldown;
 	void ResetCanBeGrappleHooked() { bCanBeGrappleHooked = true; }
 
-	/* Choice between the first and second grapplelaunch method */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook")
-		bool bUseFirstGrappleLaunchMethod{ true };
-
-	/* When grapplehooked by the player, launch towards them with this strength : 1st method */	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook", meta = (EditCondition = "bUseFirstGrappleLaunchMethod", EditConditionHides))
-		float GrappledLaunchStrength{ 1000.f };
-
-	/* When grapplehooked by the player, launch them upwards of this angle : 1st method*/	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook", meta = (EditCondition = "bUseFirstGrappleLaunchMethod", EditConditionHides))
-		float GrappledLaunchAngle{ 45.f };
 
 	/* Time it should take to reach the Grappled Instigator : 2nd method */	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook", meta = (EditCondition = "!bUseFirstGrappleLaunchMethod", EditConditionHides))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook")
 		float GrappledLaunchTime{ 1.f };
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook", meta = (EditCondition = "!bUseFirstGrappleLaunchMethod", EditConditionHides))
-		float GrappledZInstigator{ 50.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook")
+		float GrappledLaunchTime_CollisionActivation{ 0.1f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook")
+		float GrappledInstigatorOffset{ 50.f };
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook|PulledFree", meta = (UIMin = "0", UIMax = "3"))
+		float Grappled_PulledFreeStrengthMultiplier{ 1.5f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook|PulledFree")
+		float Grappled_PulledFreeNoCollisionTimer{ 0.5f };
 
 	/* ----- Grapple Interface ------ */
 	virtual void TargetedPure() override;
@@ -154,6 +159,8 @@ public:
 	virtual void HookedPure(const FVector InstigatorLocation, bool OnGround,bool PreAction = false) override;
 
 	virtual void UnHookedPure() override;
+
+	virtual void PullFree_Pure(const FVector InstigatorLocation);
 
 	//virtual FGameplayTag GetGrappledGameplayTag_Pure() const override { return Enemy; }
 #pragma endregion //GrappleHooked
@@ -188,5 +195,19 @@ public:
 	void Do_GroundPound_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override {}
 	void Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength) override;
 
+
 #pragma endregion //GettingSmacked
+#pragma region Pogo
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Pogo|Collision")
+		float PB_SphereRadius{ 90.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Pogo|Collision")
+		float PB_SphereRadius_Stuck{ 150.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Pogo")
+		float PB_Groundpound_LaunchWallNormal{ 0.2f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Pogo")
+		float PB_Groundpound_LaunchStrength{ 1200.f };
+public:
+	void Receive_Pogo_GroundPound_Pure() override;
+#pragma endregion //Pogo
 };

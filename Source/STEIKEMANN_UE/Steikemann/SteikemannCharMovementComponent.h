@@ -59,13 +59,13 @@ public:
 	/* Gravity over time while character is in the air */
 		/* The Base gravity scale override */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|GravityOverride")
-		float GravityScaleOverride UMETA(DisplayName = "Gravity Scale Override") { 2.f };
+		float m_GravityScaleOverride /*UMETA(DisplayName = "Gravity Scale Override")*/ { 2.f };
 		/* Gravity scale during freefall */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|GravityOverride")
-		float GravityScaleOverride_Freefall UMETA(DisplayName = "Freefall Gravity") { 2.f };
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|GravityOverride")
+		//float m_GravityScaleOverride_Freefall /*UMETA(DisplayName = "Freefall Gravity")*/ { 2.f };
 		/* Interpolation speed between gravityscale override and freefall gravity */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|GravityOverride")
-		float GravityScaleOverride_InterpSpeed{ 2.f };
+		float m_GravityScaleOverride_InterpSpeed{ 2.f };
 private:
 	void SetGravityScale(float deltatime);
 
@@ -93,9 +93,9 @@ public:
 	FVector CrouchSlideJump_Vector{};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Jump|CrouchSlideJump")
-		float CrouchSlideJumpAngle	UMETA(DisplayName = "Jump Angle") { 30.f };
+		float CrouchSlideJumpAngle	/*UMETA(DisplayName = "Jump Angle")*/ { 30.f };
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Jump|CrouchSlideJump")
-		float CSJ_MaxInputAngleAdjustment UMETA(DisplayName = "Max Input Angle Adjustment") { 30.f };
+		float CSJ_MaxInputAngleAdjustment /*UMETA(DisplayName = "Max Input Angle Adjustment")*/ { 30.f };
 
 
 	/*	* Initiates the CrouchSlideJump. The SlideDirection vector is the current direction the character is crouchsliding in 
@@ -142,7 +142,10 @@ public:
 	void DeactivateJumpMechanics();
 
 #pragma endregion //Jump
-
+#pragma region Pogo
+public:
+	void PB_Launch_Active(FVector direction, float strength);
+#pragma endregion //Pogo
 #pragma region GRAPPLE HOOK
 	bool bGrappleHook_InitialState{};
 

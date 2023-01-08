@@ -58,5 +58,5 @@ public:
 		void GroundPound();
 	virtual void Do_GroundPound_Pure(IAttackInterface* OtherInterface, AActor* OtherActor){}
 	virtual void Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength) {}
-	
+	virtual void Receive_Pogo_GroundPound_Pure(){}
 };

@@ -34,8 +34,7 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 
 	/* -- Gravity -- */
 	SetGravityScale(DeltaTime);
-	PRINTPAR("___GravityScale : %f", GravityScale);
-
+	PRINTPAR("GravityScale %f", GravityScale);
 
 	/* Crouch */
 	if (GetCharOwner()->IsCrouchSliding()) {
@@ -62,8 +61,6 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 		}
 		
 	}
-	PRINTPAR("Gravity Z = %f", GetGravityZ());
-	PRINTPAR("Velocity Z = %f", Velocity.Z);
 
 	/* Wall Jump / Sticking to wall */
 	switch (m_WallState)
@@ -95,19 +92,19 @@ void USteikemannCharMovementComponent::SetGravityScale(float deltatime)
 	switch (m_GravityMode)
 	{
 	case EGravityMode::Default:
-		GravityScale = GravityScaleOverride;
+		GravityScale = m_GravityScaleOverride;
 		break;
 	case EGravityMode::LerpToDefault:
-		GravityScale = FMath::FInterpTo(GravityScale, GravityScaleOverride, deltatime, GravityScaleOverride_InterpSpeed);
-		if (GravityScale < GravityScaleOverride - 0.01f || GravityScale > GravityScaleOverride + 0.05f)
+		GravityScale = FMath::FInterpTo(GravityScale, m_GravityScaleOverride, deltatime, m_GravityScaleOverride_InterpSpeed);
+		if (GravityScale < m_GravityScaleOverride - 0.01f || GravityScale > m_GravityScaleOverride + 0.05f)
 			m_GravityMode = EGravityMode::Default;
 		break;
 	case EGravityMode::None:
 		GravityScale = 0.f;
 		break;
 	case EGravityMode::LerpToNone:
-		GravityScale = FMath::FInterpTo(GravityScale, 0.f, deltatime, GravityScaleOverride_InterpSpeed);
-		if (GravityScale < GravityScaleOverride - 0.01f || GravityScale > GravityScaleOverride + 0.05f)
+		GravityScale = FMath::FInterpTo(GravityScale, 0.f, deltatime, m_GravityScaleOverride_InterpSpeed);
+		if (GravityScale < m_GravityScaleOverride - 0.01f || GravityScale > m_GravityScaleOverride + 0.05f)
 			m_GravityMode = EGravityMode::None;
 		break;
 	case EGravityMode::ForcedNone:
@@ -278,11 +275,6 @@ void USteikemannCharMovementComponent::SlowdownJumpSpeed(float DeltaTime)
 
 void USteikemannCharMovementComponent::StopJump()
 {
-	//if (bIsDoubleJumping)
-	//{
-	//	StartJumpHeightHold();
-	//}
-
 	bIsJumping = false;
 	bIsDoubleJumping = false;
 	GetCharOwner()->bJumping = false;
@@ -313,20 +305,14 @@ void USteikemannCharMovementComponent::DeactivateJumpMechanics()
 	bJumpPrematureSlowdown = false;
 }
 
+void USteikemannCharMovementComponent::PB_Launch_Active(FVector direction, float strength)
+{
+	//m_GravityMode = EGravityMode::Default;
+	Velocity *= 0.f;
+	AddImpulse(direction * strength, true);
+}
 
-//void USteikemannCharMovementComponent::InitialOnWall(const Wall::WallData& wall, float time)
-//{
-//	m_WallJumpData = wall;
-//
-//	switch (m_WallState)
-//	{
-//	case EOnWallState::WALL_None:
-//		InitialOnWall_IMPL(time);
-//		break;
-//	default:
-//		break;
-//	}
-//}
+
 
 void USteikemannCharMovementComponent::Initial_OnWall_Hang(const Wall::WallData& wall, float time)
 {
@@ -336,7 +322,7 @@ void USteikemannCharMovementComponent::Initial_OnWall_Hang(const Wall::WallData&
 	m_WallState = EOnWallState::WALL_Hang;
 
 	Velocity *= 0.f;
-	GravityScaleOverride_InterpSpeed = 1.f / time;
+	m_GravityScaleOverride_InterpSpeed = 1.f / time;
 	m_GravityMode = EGravityMode::LerpToNone;
 
 	//FTimerHandle h;
@@ -411,6 +397,7 @@ void USteikemannCharMovementComponent::ExitWall()
 void USteikemannCharMovementComponent::CancelOnWall()
 {
 	m_WallState = EOnWallState::WALL_None;
+	m_GravityMode = EGravityMode::Default;
 	GetCharOwner()->GetWorldTimerManager().ClearTimer(TH_WallHang);
 }
 
@@ -422,23 +409,6 @@ void USteikemannCharMovementComponent::ExitWall_Air()
 	Velocity *= 0.f;
 }
 
-//void USteikemannCharMovementComponent::InitialOnWall_IMPL(float time)
-//{
-//	PRINTLONG("ON WALL HANG");
-//	m_WallState = EOnWallState::WALL_Hang;
-//
-//	Velocity *= 0.f;
-//	GravityScaleOverride_InterpSpeed = 1.f / time;
-//	m_GravityMode = EGravityMode::LerpToNone;
-//
-//	FTimerHandle h;
-//	GetCharOwner()->GetWorldTimerManager().SetTimer(h, [this]()
-//		{
-//			m_GravityMode = EGravityMode::LerpToDefault;
-//			m_WallState = EOnWallState::WALL_Drag; 
-//			GetCharOwner()->m_WallState = EOnWallState::WALL_Drag;
-//		}, time, false);	// TODO: Change WALL_None to WALL_Drag
-//}
 
 void USteikemannCharMovementComponent::OnWallHang_IMPL()
 {

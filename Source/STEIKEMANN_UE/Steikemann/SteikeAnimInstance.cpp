@@ -16,8 +16,8 @@ void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	Super::NativeUpdateAnimation(DeltaSeconds);
 
 
-	if (SteikeOwner.IsValid()) {
-	//if (SteikeOwner) {
+	//if (SteikeOwner.IsValid()) {
+	if (SteikeOwner) {
 
 		/* Set speed variables */
 		Speed = SteikeOwner->GetVelocity().Size();
