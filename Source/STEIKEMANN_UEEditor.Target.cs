@@ -8,8 +8,8 @@ public class STEIKEMANN_UEEditorTarget : TargetRules
 	public STEIKEMANN_UEEditorTarget( TargetInfo Target) : base(Target)
 	{
 		Type = TargetType.Editor;
-		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_1;
-		DefaultBuildSettings = BuildSettingsVersion.V2;
+        IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
+        DefaultBuildSettings = BuildSettingsVersion.V2;
 		ExtraModuleNames.AddRange( new string[] { "STEIKEMANN_UE" } );
 	}
 }
