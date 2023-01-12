@@ -5,11 +5,11 @@
 
 
 // Print To Screen MACRO
-#define PRINT(X) ( GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Cyan, FString::Printf(TEXT(X))) )
-#define PRINTLONG(X) ( GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Cyan, FString::Printf(TEXT(X))) )
+#define PRINT(X)				( GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Black, FString::Printf(TEXT(X))) )
+#define PRINTLONG(X)			( GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Black, FString::Printf(TEXT(X))) )
 
-#define PRINTPAR(X, ...) ( GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Yellow, FString::Printf(TEXT(X), ##__VA_ARGS__)) )
-#define PRINTPARLONG(X, ...) ( GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Yellow, FString::Printf(TEXT(X), ##__VA_ARGS__)) )
+#define PRINTPAR(X, ...)		( GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Yellow, FString::Printf(TEXT(X), ##__VA_ARGS__)) )
+#define PRINTPARLONG(X, ...)	( GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Yellow, FString::Printf(TEXT(X), ##__VA_ARGS__)) )
 
 #define PLOG(X) ( UE_LOG(LogTemp, Display, FString::Printf(TEXT(X))) )
 
@@ -24,13 +24,9 @@
 *	TIMER t1 = TIMENOW()
 *	TIME_MILLI("text", t1) */
 #include <chrono>
-
 typedef std::chrono::high_resolution_clock::time_point TIMER;
 #define DURATION(a) std::chrono::duration_cast<std::chrono::nanoseconds>(a).count()
 #define TIMENOW() std::chrono::high_resolution_clock::now()
-#define TIME_NANO(x, t)		E_TRACE(std::string(x) + "{0} nanoseconds",				DURATION(TIMENOW() - t))				
-#define TIME_MICRO(x, t)	E_TRACE(std::string(x) + "{0} microseconds",	(float)(DURATION(TIMENOW() - t) / (1e3)))		
-#define TIME_MILLI(x, t)	E_TRACE(std::string(x) + "{0} milliseconds",	(float)(DURATION(TIMENOW() - t) / (1e6)))		
-#define TIME_SECOND(x, t)	E_TRACE(std::string(x) + "{0} seconds",			(float)(DURATION(TIMENOW() - t) / (1e9)))	
-
+#define TIME_MILLI(t)		PRINTPARLONG("%f milliseconds",		(float)(DURATION(TIMENOW() - t) / (1e6)))		
+#define TIME_SECOND(t)		PRINTPARLONG("%f seconds",			(float)(DURATION(TIMENOW() - t) / (1e9)))	
 #endif // DEBUG
