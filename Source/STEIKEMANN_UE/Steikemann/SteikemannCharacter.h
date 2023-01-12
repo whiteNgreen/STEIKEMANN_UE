@@ -139,12 +139,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
 		class UCameraComponent* Camera{ nullptr };
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
-		class UPoseableMeshComponent* GrappleHookMesh{ nullptr };
 
 	/* testing */
-	//FGameplayTag Tag_Player;
-
 	FGameplayTag Tag_Enemy;
 	FGameplayTag Tag_EnemyAubergineDoggo;
 	FGameplayTag Tag_GrappleTarget;
@@ -164,9 +160,11 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	/* The Raw InputVector */
-	FVector InputVectorRaw;
+	UPROPERTY(BlueprintReadOnly)
+		FVector InputVectorRaw;
 	/* Input vector rotated to match the playercontrollers rotation */
-	FVector InputVector;
+	UPROPERTY(BlueprintReadOnly)
+		FVector InputVector;
 
 	EMovementInput m_EMovementInputState = EMovementInput::Open;
 

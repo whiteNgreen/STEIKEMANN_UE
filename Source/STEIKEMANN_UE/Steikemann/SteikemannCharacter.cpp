@@ -52,9 +52,6 @@ ASteikemannCharacter::ASteikemannCharacter(const FObjectInitializer& ObjectIniti
 	Camera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	Camera->bUsePawnControlRotation = false;
 
-	GrappleHookMesh = CreateDefaultSubobject<UPoseableMeshComponent>(TEXT("GrappleHook Mesh"));
-	GrappleHookMesh->SetupAttachment(RootComponent);
-
 	GrappleTargetingDetectionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("Grapple Targeting Detection Sphere"));
 	GrappleTargetingDetectionSphere->SetupAttachment(GetCapsuleComponent());
 	GrappleTargetingDetectionSphere->SetGenerateOverlapEvents(false);
@@ -555,48 +552,6 @@ void ASteikemannCharacter::RightTriggerClick()
 	JumpCurrentCount = 1;	// Reset DoubleJump
 
 	GH_SetGrappleType(ITag, IGrapple);
-
-	//---------------------------------------------------------
-	
-	
-	//if (IsGrappling() || IsPostGrapple()) { return; }
-
-	//if (GrappledActor.IsValid() && !Active_GrappledActor.IsValid())
-	//{
-	//	IGameplayTagAssetInterface* TagInterface = Cast<IGameplayTagAssetInterface>(GrappledActor.Get());
-	//	IGrappleTargetInterface* GrappleInterface = Cast<IGrappleTargetInterface>(GrappledActor.Get());
-	//	if (TagInterface && GrappleInterface)
-	//	{
-	//		Active_GrappledActor = GrappledActor;
-	//
-	//		/* Checking tags to determine if the grapple target is dynamic or static */
-	//		FGameplayTagContainer GrappledTags;
-	//		TagInterface->GetOwnedGameplayTags(GrappledTags);
-	//
-	//
-	//		/* Grappling to Enemy/Dynamic Target */
-	//		//if (GrappledTags.HasTag(Tag_GrappleTarget_Dynamic))	// Burde bruke denne taggen på fiendene
-	//		if (GrappledTags.HasTag(Tag::AubergineDoggo()))		// Også spesifisere videre med fiende type
-	//		{
-	//			if (GrappleInterface->IsStuck_Pure()) {
-	//				bGrapplingStaticTarget = true;
-	//			}
-	//			else {
-	//				bGrapplingDynamicTarget = true;
-	//				InitialGrappleDynamicZ = GrappledActor->GetActorLocation().Z;
-	//				if (IsOnGround())
-	//					bGrapplingDynamicTarget_CameraGuide = true;
-	//			}
-	//		}
-	//		/* Grappling to Static Target */
-	//		else if (GrappledTags.HasTag(Tag::GrappleTarget_Static()))
-	//		{
-	//			bGrapplingStaticTarget = true;
-	//		}
-	//
-	//		Initial_GrappleHook();	// TODO: Forandre til to ulike grappling funksjoner, basert på Static og Dynamisk Target
-	//	}
-	//}
 }
 
 void ASteikemannCharacter::RightTriggerUn_Click()
@@ -610,6 +565,7 @@ void ASteikemannCharacter::GH_SetGrappleType(IGameplayTagAssetInterface* ITag, I
 	FGameplayTagContainer tags;
 	ITag->GetOwnedGameplayTags(tags);
 
+	GetMoveComponent()->StopJump();
 	// Static Target
 	if (tags.HasTag(Tag::GrappleTarget_Static()))
 	{

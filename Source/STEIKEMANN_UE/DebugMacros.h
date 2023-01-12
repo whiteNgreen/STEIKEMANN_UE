@@ -33,20 +33,4 @@ typedef std::chrono::high_resolution_clock::time_point TIMER;
 #define TIME_MILLI(x, t)	E_TRACE(std::string(x) + "{0} milliseconds",	(float)(DURATION(TIMENOW() - t) / (1e6)))		
 #define TIME_SECOND(x, t)	E_TRACE(std::string(x) + "{0} seconds",			(float)(DURATION(TIMENOW() - t) / (1e9)))	
 
-
-//#define DRAWLINE_XXX(x,A,B,C,FUNC,...) FUNC
-//#define DRAWLINE(...)    DRAWLINE_XXX(,##__VA_ARGS__, \
-//									DRAWLINE_3(##__VA_ARGS__), \
-//									DRAWLINE_2(##__VA_ARGS__), \
-//									DRAWLINE_1(##__VA_ARGS__), \
-//									DRAWLINE_0(##__VA_ARGS__)  \
-//									)	
-//
-//#define THIRD_ARGUMENT(A,B,C,...) C
-//#define COUNT_ARGUMENTS(...) THIRD_ARGUMENT(dummy, ##__VA_ARGS__, C, B, A)
-
-//#define GET_3RD_ARG(x,A,B,C,D, ...) D
-//#define DRAWLINE_MACRO_CHOOSER(...) ( GET_3RD_ARG(##__VA_ARGS__, DRAWLINE_3, DRAWLINE_2, DRAWLINE_1, ##__VA_ARGS__ ) )
-//#define DRAWLINE(...) DRAWLINE_MACRO_CHOOSER(##__VA_ARGS__)(##__VA_ARGS__)
-
 #endif // DEBUG
