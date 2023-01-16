@@ -164,7 +164,7 @@ public:
 		FVector InputVectorRaw;
 	/* Input vector rotated to match the playercontrollers rotation */
 	UPROPERTY(BlueprintReadOnly)
-		FVector InputVector;
+		FVector m_InputVector;
 
 	EMovementInput m_EMovementInputState = EMovementInput::Open;
 

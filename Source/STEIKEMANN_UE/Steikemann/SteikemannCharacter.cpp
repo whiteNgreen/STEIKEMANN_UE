@@ -185,12 +185,12 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 
 	/* Rotate Inputvector to match the playercontroller */
 	{
-		InputVector = InputVectorRaw;
+		m_InputVector = InputVectorRaw;
 		FRotator Rot = GetControlRotation();
-		InputVector = InputVector.RotateAngleAxis(Rot.Yaw, FVector::UpVector);
+		m_InputVector = m_InputVector.RotateAngleAxis(Rot.Yaw, FVector::UpVector);
 
-		if (InputVectorRaw.Size() > 1.f || InputVector.Size() > 1.f)
-			InputVector.Normalize();
+		if (InputVectorRaw.Size() > 1.f || m_InputVector.Size() > 1.f)
+			m_InputVector.Normalize();
 	}
 	switch (m_EState)
 	{
@@ -1274,7 +1274,7 @@ void ASteikemannCharacter::Jump()
 			if (CanDoubleJump())
 			{
 				JumpCurrentCount++;
-				GetMoveComponent()->DoubleJump(InputVector.GetSafeNormal(), JumpStrength * DoubleJump_MultiplicationFactor);
+				GetMoveComponent()->DoubleJump(m_InputVector.GetSafeNormal(), JumpStrength * DoubleJump_MultiplicationFactor);
 				GetMoveComponent()->StartJumpHeightHold();
 				Anim_Activate_Jump();//Anim DoubleJump
 			}
@@ -1287,7 +1287,7 @@ void ASteikemannCharacter::Jump()
 			{
 				m_EState = EState::STATE_InAir;
 				m_WallState = EOnWallState::WALL_Leave;
-				GetMoveComponent()->LedgeJump(InputVector, JumpStrength);
+				GetMoveComponent()->LedgeJump(m_InputVector, JumpStrength);
 				GetMoveComponent()->m_GravityMode = EGravityMode::LerpToDefault;
 				GetWorldTimerManager().SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, 0.5f, false);
 				break;
@@ -1298,13 +1298,13 @@ void ASteikemannCharacter::Jump()
 			m_WallState = EOnWallState::WALL_Leave;
 			
 			
-			if (InputVector.SizeSquared() > 0.5f)
-				RotateActorYawToVector(InputVector);
+			if (m_InputVector.SizeSquared() > 0.5f)
+				RotateActorYawToVector(m_InputVector);
 			else
 				RotateActorYawToVector(m_WallJumpData.Normal);
 
 			GetWorldTimerManager().SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, OnWall_Reset_OnWallJump_Timer, false);
-			GetMoveComponent()->WallJump(InputVector, JumpStrength);
+			GetMoveComponent()->WallJump(m_InputVector, JumpStrength);
 			Anim_Activate_Jump();//Anim_Activate_WallJump
 			break;
 		}
@@ -1381,7 +1381,7 @@ void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
 					{
 						FVector CrouchSlideDirection = GetVelocity();
 						CrouchSlideDirection.Normalize();
-						/*bAddJumpVelocity = */GetMoveComponent()->CrouchSlideJump(CrouchSlideDirection, InputVector);
+						/*bAddJumpVelocity = */GetMoveComponent()->CrouchSlideJump(CrouchSlideDirection, m_InputVector);
 					}
 					Anim_Activate_Jump();	// Anim_Activate_CrouchSlideJump()
 					return;
@@ -1557,7 +1557,7 @@ bool ASteikemannCharacter::PB_Passive_IMPL(AActor* OtherActor)
 void ASteikemannCharacter::PB_Launch_Passive()
 {
 	FVector Direction = GetCharacterMovement()->Velocity.GetSafeNormal2D();
-	Direction = (Direction + InputVector) / 2.f;
+	Direction = (Direction + m_InputVector) / 2.f;
 
 	GetCharacterMovement()->Velocity *= 0.f;
 	GetCharacterMovement()->AddImpulse((FVector::UpVector * PB_LaunchStrength_Z_Passive) + (Direction * PB_LaunchStrength_MultiXY_Passive), true);
@@ -1582,7 +1582,7 @@ void ASteikemannCharacter::PB_Active_IMPL()
 
 void ASteikemannCharacter::PB_Launch_Active()
 {
-	FVector direction = FVector((FVector::UpVector * (1.f - (InputVector.Size() * PB_InputMulti_Active))) + (InputVector * PB_InputMulti_Active)).GetSafeNormal();
+	FVector direction = FVector((FVector::UpVector * (1.f - (m_InputVector.Size() * PB_InputMulti_Active))) + (m_InputVector * PB_InputMulti_Active)).GetSafeNormal();
 	GetMoveComponent()->PB_Launch_Active(direction, PB_LaunchStrength_Active);
 }
 
@@ -1608,7 +1608,7 @@ void ASteikemannCharacter::PB_Launch_Groundpound()
 	GetCharacterMovement()->Velocity *= 0.f;
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Falling);
 
-	FVector Direction = ((FVector::UpVector * (1.f - PB_InputMulti_Groundpound)) + (InputVector * PB_InputMulti_Groundpound)).GetSafeNormal();
+	FVector Direction = ((FVector::UpVector * (1.f - PB_InputMulti_Groundpound)) + (m_InputVector * PB_InputMulti_Groundpound)).GetSafeNormal();
 	GetCharacterMovement()->AddImpulse(Direction * PB_LaunchStrength_Groundpound, true);	// Simple method of bouncing player atm
 	Anim_Activate_Jump();	// Anim_Pogo-Groundpound 
 }
@@ -1802,8 +1802,8 @@ void ASteikemannCharacter::Start_CrouchSliding()
 		NiComp_CrouchSlide->SetNiagaraVariableVec3("User.M_Velocity", GetVelocity() * -1.f);
 		NiComp_CrouchSlide->Activate();
 
-		FVector SlideDirection{ InputVector };
-		if (InputVector.IsZero())
+		FVector SlideDirection{ m_InputVector };
+		if (m_InputVector.IsZero())
 		{
 			SlideDirection = GetActorForwardVector();
 		}
@@ -2496,8 +2496,8 @@ void ASteikemannCharacter::Deactivate_AttackCollider()
 
 void ASteikemannCharacter::RotateToAttack()
 {
-	AttackDirection = InputVector;
-	if (InputVector.IsNearlyZero())
+	AttackDirection = m_InputVector;
+	if (m_InputVector.IsNearlyZero())
 	{
 		AttackDirection = GetActorForwardVector();
 		AttackDirection.Z = 0; AttackDirection.Normalize();
@@ -2585,10 +2585,10 @@ void ASteikemannCharacter::Do_SmackAttack_Pure(IAttackInterface* OtherInterface,
 
 		FVector cam;
 
-		if (InputVector.IsNearlyZero())
+		if (m_InputVector.IsNearlyZero())
 			Direction = (Direction + (GetActorForwardVector() * SmackDirection_InputMultiplier)).GetSafeNormal2D();
 		else {
-			Direction = (Direction + (InputVector * SmackDirection_InputMultiplier) + (GetControlRotation().Vector().GetSafeNormal2D() * SmackDirection_CameraMultiplier)).GetSafeNormal2D();
+			Direction = (Direction + (m_InputVector * SmackDirection_InputMultiplier) + (GetControlRotation().Vector().GetSafeNormal2D() * SmackDirection_CameraMultiplier)).GetSafeNormal2D();
 		}
 
 		float angle = FMath::DegreesToRadians(SmackUpwardAngle);
