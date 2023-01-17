@@ -100,6 +100,15 @@ void ASmallEnemy::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 }
 
+void ASmallEnemy::DisableCollisions()
+{
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+}
+void ASmallEnemy::EnableCollisions()
+{
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+}
+
 void ASmallEnemy::SetDefaultState()
 {
 	switch (m_State)

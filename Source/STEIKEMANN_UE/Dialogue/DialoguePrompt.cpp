@@ -27,11 +27,11 @@ ADialoguePrompt::ADialoguePrompt()
 	Prompt = CreateDefaultSubobject<USceneComponent>("Prompt");
 	Prompt->SetupAttachment(Volume);
 
-	CameraTransform_One = CreateDefaultSubobject<UCameraComponent>("Camera_One");
-	CameraTransform_One->SetupAttachment(Volume);
+	Camera_One = CreateDefaultSubobject<UCameraComponent>("Camera_One");
+	Camera_One->SetupAttachment(Volume);
 
-	CameraTransform_Two = CreateDefaultSubobject<UCameraComponent>("Camera_Two");
-	CameraTransform_Two->SetupAttachment(Volume);
+	Camera_Two = CreateDefaultSubobject<UCameraComponent>("Camera_Two");
+	Camera_Two->SetupAttachment(Volume);
 }
 
 // Called when the game starts or when spawned

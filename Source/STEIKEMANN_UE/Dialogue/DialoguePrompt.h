@@ -29,9 +29,9 @@ public:
 		class UBoxComponent* Volume;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		UCameraComponent* CameraTransform_One;
+		UCameraComponent* Camera_One;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		UCameraComponent* CameraTransform_Two;
+		UCameraComponent* Camera_Two;
 
 public:
 	// Sets default values for this actor's properties

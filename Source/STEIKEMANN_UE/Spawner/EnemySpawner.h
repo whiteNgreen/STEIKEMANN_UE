@@ -3,12 +3,23 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "../GameplayTags.h"
+#include "../Interfaces/AttackInterface.h"
 #include "GameFramework/Actor.h"
 #include "EnemySpawner.generated.h"
 
+UENUM()
+enum EEnemySpawnType
+{
+	AubergineDog,
+	Character,
+	Other
+};
 
 UCLASS()
-class STEIKEMANN_UE_API AEnemySpawner : public AActor
+class STEIKEMANN_UE_API AEnemySpawner : public AActor,
+	public IGameplayTagAssetInterface,
+	public IAttackInterface
 {
 	GENERATED_BODY()
 	
@@ -25,24 +36,64 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 public: // Components
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(BlueprintReadWrite)
 		USceneComponent* Root;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(BlueprintReadWrite)
 		USceneComponent* SpawnPoint;
 
 public: // Variables
+	FGameplayTagContainer GameplayTags;
+
+	/* Time between getting attacked */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		float CanBeAttackedTimer{ 1.f };
+
+	/* When respawning: Only respawn the actors that are outside of this radius from the spawners root */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		float SpawnerActiveRadius{ 2000.f };
+
 	float AngleYaw{};
 	float AnglePitch{};
 	float LaunchVelocity{};
+	FVector m_SpawnLocation{};
+
+	EEnemySpawnType m_EENemySpawnType;
 
 	FTimerHandle TH_SpawnTimer;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		uint8 m_SpawnAmount{ 3 };
+		float Spawn_LaunchStrength{ 1000.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		TSubclassOf<AActor> SpawningActor;
+		FVector2D PitchRange{ 40.f, 80.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		float m_SpawnTimer{ 1.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		uint8 m_SpawnAmount{ 3 };
+	uint8 m_SpawnIndex{};
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		TSubclassOf<class ASmallEnemy> SpawningActorType;
+
+	TArray<ASmallEnemy*> SpawnedActors;
 
 public: // Functions
+	void CheckSpawningActorClass();
 	void SpawnActor();
 	float RandomFloat(float min, float max);
+
+	void DetermineActorsToRespawn(TArray<ASmallEnemy*>& actorsToRespawn);
+	void RespawnActors(TArray<ASmallEnemy*>& actorsToRespawn);
+	void RespawnActor();
+
+		// GameplayTags Interface
+	virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override { TagContainer = GameplayTags; }
+
+		// Attack Interface
+	virtual bool CanBeAttacked() override { return bAICanBeDamaged; }
+	virtual void Gen_ReceiveAttack(const FVector& Direction, const float& Strength, EAttackType& AType) override;
+
+private: // Functions
+	void SpawnAubergineDog();
+	ACharacter* SpawnCharacter();
+
+	//void DetermineActorsToRespawn();
 };

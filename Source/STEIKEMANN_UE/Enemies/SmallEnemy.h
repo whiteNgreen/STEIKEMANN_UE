@@ -72,6 +72,8 @@ public:
 		USphereComponent* PlayerPogoDetection{ nullptr };
 #pragma endregion //Base
 
+	void DisableCollisions();
+	void EnableCollisions();
 #pragma region GameplayTags
 	UPROPERTY(BlueprintReadOnly, Category = "GameplayTags")
 		FGameplayTagContainer GameplayTags;

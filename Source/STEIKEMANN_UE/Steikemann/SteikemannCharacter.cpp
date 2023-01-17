@@ -20,6 +20,7 @@
 #include "../StaticActors/Collectible.h"
 #include "../StaticActors/PlayerRespawn.h"
 #include "../Dialogue/DialoguePrompt.h"
+#include "../Spawner/EnemySpawner.h"
 
 // Sets default values
 ASteikemannCharacter::ASteikemannCharacter(const FObjectInitializer& ObjectInitializer)
@@ -139,14 +140,6 @@ UNiagaraComponent* ASteikemannCharacter::CreateNiagaraComponent(FName Name, USce
 
 void ASteikemannCharacter::NS_Land_Implementation(const FHitResult& Hit)
 {
-	//bool groundpound{};
-	//if (IsGroundPounding()) {
-	//	GroundPoundLand(Hit);
-	//	m_EAttackState = EAttackState::None;
-	//	ResetState();
-	//	groundpound = true;
-	//}
-
 	/* Play Landing particle effect */
 	float Velocity = GetVelocity().Size();
 	UNiagaraComponent* NiagaraPlayer{ nullptr };
@@ -157,8 +150,6 @@ void ASteikemannCharacter::NS_Land_Implementation(const FHitResult& Hit)
 	}
 	else
 	{
-		//PRINTLONG("Niagara Component not yet completed with its task. Creating temp Niagara Component.");
-
 		UNiagaraComponent* TempNiagaraLand = CreateNiagaraComponent("Niagara_Land", RootComponent, FAttachmentTransformRules::SnapToTargetIncludingScale, true);
 		NiagaraPlayer = TempNiagaraLand;
 	}
@@ -1841,7 +1832,6 @@ void ASteikemannCharacter::Click_Slide()
 	if (m_PromptState == EPromptState::InPrompt)
 		ExitPrompt();
 
-	return;	// Remomve Slide mechanic
 	switch (m_EState)
 	{
 	case EState::STATE_None:
@@ -1881,6 +1871,7 @@ void ASteikemannCharacter::Click_Slide()
 	default:
 		break;
 	}
+	return;	// Remomve Slide mechanic
 
 	if (bPressedSlide) { return; }
 	if (IsCrouchSliding()) { return; }
@@ -2631,15 +2622,20 @@ void ASteikemannCharacter::OnAttackColliderBeginOverlap(UPrimitiveComponent* Ove
 		FGameplayTagContainer TCon;	
 		ITag->GetOwnedGameplayTags(TCon);
 		
+		EAttackType AType;
+		if (OverlappedComp == AttackCollider) { AType = EAttackType::SmackAttack; }
+		if (OverlappedComp == GroundPoundCollider) { AType = EAttackType::GroundPound; }
 		/* Attacking a corruption core */
 		if (TCon.HasTag(Tag::CorruptionCore()))
 		{
-			EAttackType AType;
-			if (OverlappedComp == AttackCollider) { AType = EAttackType::SmackAttack; }
-			if (OverlappedComp == GroundPoundCollider) { AType = EAttackType::GroundPound; }
 			Gen_Attack(IAttack, OtherActor, AType);
 		}
 
+		/* Attacking Enemy Spawner */
+		if (TCon.HasTag(Tag::EnemySpawner()))
+		{
+			Gen_Attack(IAttack, OtherActor, AType);
+		}
 
 		/* Smack attack collider */
 		if (OverlappedComp == AttackCollider)
