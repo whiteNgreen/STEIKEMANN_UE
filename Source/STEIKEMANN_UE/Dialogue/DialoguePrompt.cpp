@@ -23,6 +23,15 @@ ADialoguePrompt::ADialoguePrompt()
 
 	Volume = CreateDefaultSubobject<UBoxComponent>("Volume");
 	Volume->SetupAttachment(Root);
+
+	Prompt = CreateDefaultSubobject<USceneComponent>("Prompt");
+	Prompt->SetupAttachment(Volume);
+
+	CameraTransform_One = CreateDefaultSubobject<UCameraComponent>("Camera_One");
+	CameraTransform_One->SetupAttachment(Volume);
+
+	CameraTransform_Two = CreateDefaultSubobject<UCameraComponent>("Camera_Two");
+	CameraTransform_Two->SetupAttachment(Volume);
 }
 
 // Called when the game starts or when spawned
@@ -47,6 +56,8 @@ void ADialoguePrompt::OnVolumeBeginOverlap(UPrimitiveComponent* OverlappedComp, 
 		bPlayerWithinVolume = true;
 		auto player = (ASteikemannCharacter*)m_Player;
 		m_PlayerCamera = player->Camera;
+		player->EnterPromptArea(this, Prompt->GetComponentLocation());
+		CameraLerpSpeed = player->CameraLerpSpeed_Prompt;
 		ShowPrompt();
 	};
 
@@ -75,5 +86,57 @@ void ADialoguePrompt::OnVolumeEndOverlap(UPrimitiveComponent* OverlappedComp, AA
 	if (OtherActor != m_Player) return;
 	if (!OtherComp->IsA(UCapsuleComponent::StaticClass())) return;
 
+	auto player = (ASteikemannCharacter*)m_Player;
+	player->LeavePromptArea();
 	EndPrompt();
+}
+
+void ADialoguePrompt::PromptChange_Pure()
+{
+	PromptChange();
+}
+
+bool ADialoguePrompt::GetNextPromptState(ASteikemannCharacter* player, int8 promptIndex)
+{
+	bool returnBool{};
+	if (promptIndex != -1) {
+		m_PromptIndex = promptIndex;
+	}
+	PromptChange_Pure();
+	switch (m_PromptIndex)
+	{
+	case 0:
+		PRINTLONG("FIRST PROMPT");
+		/* Save camera transform, to lerp back to the correct spot */
+		player->m_CameraTransform = m_PlayerCamera->GetComponentTransform();	
+		m_ECameraLerp = ECameraLerp::First;
+		returnBool = true;
+		break;
+	case 1:
+		PRINTLONG("SECOND PROMPT");
+		m_ECameraLerp = ECameraLerp::Second;
+		returnBool = true;
+		break;
+	case 2:
+		PRINTLONG("LAST PROMPT");
+		returnBool = true;
+		break;
+	case 3:
+		m_ECameraLerp = ECameraLerp::None;
+		player->ExitPrompt();
+		return true;
+	case 4:
+		return false;
+	default:
+		break;
+	}
+	m_PromptIndex++;
+	return returnBool;
+}
+
+void ADialoguePrompt::ExitPrompt_Pure()
+{
+	ExitPrompt();
+	m_ECameraLerp = ECameraLerp::None;
+	m_PromptIndex = 0;
 }

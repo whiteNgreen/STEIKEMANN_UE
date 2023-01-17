@@ -5,8 +5,8 @@
 
 
 // Print To Screen MACRO
-#define PRINT(X)				( GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Black, FString::Printf(TEXT(X))) )
-#define PRINTLONG(X)			( GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Black, FString::Printf(TEXT(X))) )
+#define PRINT(X)				( GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Blue, FString::Printf(TEXT(X))) )
+#define PRINTLONG(X)			( GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Blue, FString::Printf(TEXT(X))) )
 
 #define PRINTPAR(X, ...)		( GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Yellow, FString::Printf(TEXT(X), ##__VA_ARGS__)) )
 #define PRINTPARLONG(X, ...)	( GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Yellow, FString::Printf(TEXT(X), ##__VA_ARGS__)) )

@@ -120,6 +120,19 @@ enum class ESmackAttackState : int8
 };
 
 
+UENUM()
+enum class EPromptState : int8
+{
+	None,
+	WithingArea,
+	InPrompt
+};
+//UENUM()
+//enum class EPromptType : int8
+//{
+//	GilbertsDialogue
+//};
+
 
 UCLASS()
 class STEIKEMANN_UE_API ASteikemannCharacter : public AAbstractCharacter, 
@@ -141,11 +154,11 @@ public:
 
 
 	/* testing */
-	FGameplayTag Tag_Enemy;
-	FGameplayTag Tag_EnemyAubergineDoggo;
-	FGameplayTag Tag_GrappleTarget;
-	FGameplayTag Tag_GrappleTarget_Static;
-	FGameplayTag Tag_GrappleTarget_Dynamic;
+	//FGameplayTag Tag_Enemy;
+	//FGameplayTag Tag_EnemyAubergineDoggo;
+	//FGameplayTag Tag_GrappleTarget;
+	//FGameplayTag Tag_GrappleTarget_Static;
+	//FGameplayTag Tag_GrappleTarget_Dynamic;
 
 
 protected:
@@ -165,6 +178,26 @@ public:
 	/* Input vector rotated to match the playercontrollers rotation */
 	UPROPERTY(BlueprintReadOnly)
 		FVector m_InputVector;
+
+#pragma region Prompt Area
+	/* Player within prompt area */
+	UPROPERTY(BlueprintReadOnly)
+		EPromptState m_PromptState = EPromptState::None;
+	FVector m_PromptLocation;
+	class ADialoguePrompt* m_PromptActor{ nullptr };
+
+	UPROPERTY(BlueprintReadOnly)
+		bool bCameraLerpBack_PostPrompt{};
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Camera|Prompt")
+		float CameraLerpSpeed_Prompt{ 2.f };
+	float m_CameraLerpAlpha_PostPrompt{};
+	
+	void EnterPromptArea(ADialoguePrompt* promptActor, FVector promptLocation);
+	void LeavePromptArea();
+
+	bool ActivatePrompt();
+	bool ExitPrompt();
+#pragma endregion // Prompt Area
 
 	EMovementInput m_EMovementInputState = EMovementInput::Open;
 
@@ -269,6 +302,10 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 		void PlayCameraShake(TSubclassOf<UCameraShakeBase> shake, float falloff);
+
+	FTransform m_CameraTransform;
+	bool LerpCameraBackToBoom(float DeltaTime);
+
 
 #pragma region CameraGuide
 	
@@ -375,6 +412,8 @@ public:
 
 	void MoveForward(float value);
 	void MoveRight(float value);
+	virtual void AddControllerYawInput(float Val) override;
+	virtual void AddControllerPitchInput(float Val) override;
 	void TurnAtRate(float rate);
 	void LookUpAtRate(float rate);
 
@@ -419,9 +458,11 @@ public:
 	void JumpRelease();
 	void CheckJumpInput(float DeltaTime) override;
 
+	/* Animation activation */
 	UFUNCTION(BlueprintImplementableEvent)
-		/* Animation activation */
 		void Anim_Activate_Jump();
+	UFUNCTION(BlueprintImplementableEvent)
+		void Anim_Activate_DoubleJump();
 
 	bool CanDoubleJump() const;
 	bool IsJumping() const;

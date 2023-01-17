@@ -19,7 +19,7 @@
 #include "Components/SplineComponent.h"
 #include "../StaticActors/Collectible.h"
 #include "../StaticActors/PlayerRespawn.h"
-
+#include "../Dialogue/DialoguePrompt.h"
 
 // Sets default values
 ASteikemannCharacter::ASteikemannCharacter(const FObjectInitializer& ObjectInitializer)
@@ -182,6 +182,21 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Red, FString::Printf(TEXT("Health : %i"), Health), true, FVector2D(3));
 
 	if (IsDead()) { return; }
+
+	switch (m_PromptState)
+	{
+	case EPromptState::None:
+		PRINT("Prompt: None");
+		break;
+	case EPromptState::WithingArea:
+		PRINT("Prompt: WithinArea");
+		break;
+	case EPromptState::InPrompt:
+		PRINT("Prompt: InPrompt");
+		break;
+	default:
+		break;
+	}
 
 	/* Rotate Inputvector to match the playercontroller */
 	{
@@ -374,6 +389,8 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		GrappleDynamicGuideCamera(DeltaTime);
 	}
 
+	if (bCameraLerpBack_PostPrompt)
+		bCameraLerpBack_PostPrompt = LerpCameraBackToBoom(DeltaTime);
 	GuideCamera(DeltaTime);
 
 	/* ----------------------- COMBAT TICKS ------------------------------ */
@@ -401,8 +418,8 @@ void ASteikemannCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	PlayerInputComponent->BindAxis("Move Forward / Backward", this, &ASteikemannCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("Move Right / Left", this, &ASteikemannCharacter::MoveRight);
 		/* Looking control */
-	PlayerInputComponent->BindAxis("Turn Right / Left Mouse", this,		&APawn::AddControllerYawInput);
-	PlayerInputComponent->BindAxis("Look Up / Down Mouse", this,		&APawn::AddControllerPitchInput);
+	PlayerInputComponent->BindAxis("Turn Right / Left Mouse", this,		&ASteikemannCharacter::AddControllerYawInput);
+	PlayerInputComponent->BindAxis("Look Up / Down Mouse", this,		&ASteikemannCharacter::AddControllerPitchInput);
 	PlayerInputComponent->BindAxis("Turn Right / Left Gamepad", this,	&ASteikemannCharacter::TurnAtRate);
 	PlayerInputComponent->BindAxis("Look Up/Down Gamepad", this,		&ASteikemannCharacter::LookUpAtRate);
 			/* Dualshock */
@@ -433,6 +450,82 @@ void ASteikemannCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	/* Attack - GroundPound */
 	PlayerInputComponent->BindAction("GroundPound", IE_Pressed, this, &ASteikemannCharacter::Click_GroundPound);
 	PlayerInputComponent->BindAction("GroundPound", IE_Released, this, &ASteikemannCharacter::UnClick_GroundPound);
+}
+
+void ASteikemannCharacter::EnterPromptArea(ADialoguePrompt* promptActor, FVector promptLocation)
+{
+	m_PromptActor = promptActor;
+	m_PromptState = EPromptState::WithingArea;
+	m_PromptLocation = promptLocation;
+}
+
+void ASteikemannCharacter::LeavePromptArea()
+{
+	m_PromptState = EPromptState::None;
+}
+
+bool ASteikemannCharacter::ActivatePrompt()
+{
+	PRINTLONG("Activate Prompt");
+	bool b{};
+	switch (m_PromptState)
+	{
+	case EPromptState::None:			return false;
+
+	case EPromptState::WithingArea:
+		PRINTLONG("Steikemann: FIRST PROMPT");
+		m_EMovementInputState = EMovementInput::Locked;
+		m_PromptState = EPromptState::InPrompt;
+		// Get first prompt state
+		return m_PromptActor->GetNextPromptState(this, 0);
+
+	case EPromptState::InPrompt:
+		PRINTLONG("Steikemann: CONTINUE PROMPT");
+		// Get next prompt state
+		b = m_PromptActor->GetNextPromptState(this);
+		if (!b) m_EMovementInputState = EMovementInput::Open;
+		return b;
+	default:
+		break;
+	}
+	return b;
+}
+
+bool ASteikemannCharacter::ExitPrompt()
+{
+	PRINTLONG("Exit Prompt");
+	m_EMovementInputState = EMovementInput::Open;
+	m_PromptState = EPromptState::WithingArea;
+	// Notify DialoguePrompt of exiting
+	m_PromptActor->ExitPrompt_Pure();
+
+	// Start lerping camera back to default position
+	m_CameraLerpAlpha_PostPrompt = 0.f;
+	bCameraLerpBack_PostPrompt = true;
+	return false;
+}
+
+bool ASteikemannCharacter::LerpCameraBackToBoom(float DeltaTime)
+{
+	PRINT("Camera lerp back to Camera Boom");
+	m_CameraLerpAlpha_PostPrompt = FMath::Min(m_CameraLerpAlpha_PostPrompt += DeltaTime * CameraLerpSpeed_Prompt, 1.f);
+	FTransform TargetTransform = CameraBoom->GetSocketTransform(USpringArmComponent::SocketName);
+	m_CameraTransform = Camera->GetComponentTransform();
+
+	FVector lerpLocation = FMath::Lerp(m_CameraTransform.GetLocation(), TargetTransform.GetLocation(), m_CameraLerpAlpha_PostPrompt);
+	FQuat lerpRotation = FMath::Lerp(m_CameraTransform.GetRotation(), TargetTransform.GetRotation(), m_CameraLerpAlpha_PostPrompt);
+
+	FTransform finalTransform(lerpRotation, lerpLocation, FVector(1.f));
+	Camera->SetWorldTransform(finalTransform);
+
+	// End camera lerp
+	if (m_CameraLerpAlpha_PostPrompt >= 1.f)
+	{
+		PRINTLONG("POST PROMPT: Stop camera transform lerp");
+		Camera->SetWorldTransform(m_CameraTransform);
+		return false;
+	}
+	return true;
 }
 
 
@@ -1136,14 +1229,28 @@ void ASteikemannCharacter::MoveRight(float value)
 
 }
 
+void ASteikemannCharacter::AddControllerYawInput(float Val)
+{
+	if (m_PromptState == EPromptState::InPrompt) return;
+	Super::AddControllerYawInput(Val);
+}
+
+void ASteikemannCharacter::AddControllerPitchInput(float Val)
+{
+	if (m_PromptState == EPromptState::InPrompt) return;
+	Super::AddControllerPitchInput(Val);
+}
+
 
 void ASteikemannCharacter::TurnAtRate(float rate)
 {
+	if (m_PromptState == EPromptState::InPrompt) return;
 	AddControllerYawInput(rate * TurnRate * GetWorld()->GetDeltaSeconds());
 }
 
 void ASteikemannCharacter::LookUpAtRate(float rate)
 {
+	if (m_PromptState == EPromptState::InPrompt) return;
 	AddControllerPitchInput(rate * TurnRate * GetWorld()->GetDeltaSeconds());
 }
 
@@ -1207,6 +1314,8 @@ void ASteikemannCharacter::Landed(const FHitResult& Hit)
 
 void ASteikemannCharacter::Jump()
 {
+	if (ActivatePrompt()) return;
+
 	/* Don't Jump if player is Grappling */
 	switch (m_EState)
 	{
@@ -1276,7 +1385,7 @@ void ASteikemannCharacter::Jump()
 				JumpCurrentCount++;
 				GetMoveComponent()->DoubleJump(m_InputVector.GetSafeNormal(), JumpStrength * DoubleJump_MultiplicationFactor);
 				GetMoveComponent()->StartJumpHeightHold();
-				Anim_Activate_Jump();//Anim DoubleJump
+				Anim_Activate_DoubleJump();//Anim DoubleJump
 			}
 			break;
 		}
@@ -1729,6 +1838,10 @@ void ASteikemannCharacter::Stop_Crouch()
 
 void ASteikemannCharacter::Click_Slide()
 {
+	if (m_PromptState == EPromptState::InPrompt)
+		ExitPrompt();
+
+	return;	// Remomve Slide mechanic
 	switch (m_EState)
 	{
 	case EState::STATE_None:

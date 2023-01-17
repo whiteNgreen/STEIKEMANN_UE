@@ -5,7 +5,16 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Camera/CameraComponent.h"
+#include "../Steikemann/SteikemannCharacter.h"
 #include "DialoguePrompt.generated.h"
+
+UENUM(BlueprintType)
+enum class ECameraLerp : uint8
+{
+	None,
+	First,
+	Second
+};
 
 UCLASS()
 class STEIKEMANN_UE_API ADialoguePrompt : public AActor
@@ -15,7 +24,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		USceneComponent* Root;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		USceneComponent* Prompt;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		class UBoxComponent* Volume;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		UCameraComponent* CameraTransform_One;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		UCameraComponent* CameraTransform_Two;
+
 public:
 	// Sets default values for this actor's properties
 	ADialoguePrompt();
@@ -35,7 +52,14 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		UCameraComponent* m_PlayerCamera{ nullptr };
 
-public:
+	UPROPERTY(BlueprintReadOnly)
+		ECameraLerp m_ECameraLerp;
+	UPROPERTY(BlueprintReadOnly)
+		float CameraLerpSpeed{ 1.f };
+	UPROPERTY(BlueprintReadOnly)
+		uint8 m_PromptIndex{0};
+
+public:	// Functions for activating prompt
 	UFUNCTION()
 		void OnVolumeBeginOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 	UFUNCTION()
@@ -45,4 +69,15 @@ public:
 		void ShowPrompt();
 	UFUNCTION(BlueprintImplementableEvent)
 		void EndPrompt();
+
+	/* Common changes when going from one prompt index to another */
+	UFUNCTION(BlueprintImplementableEvent)
+		void PromptChange();
+	void PromptChange_Pure();
+public:	// Functions called by player
+	bool GetNextPromptState(ASteikemannCharacter* player, int8 promptIndex = -1);
+
+	UFUNCTION(BlueprintImplementableEvent)
+		void ExitPrompt();
+	void ExitPrompt_Pure();
 };
