@@ -7,11 +7,25 @@
 #include "EnemyAIController.generated.h"
 
 
-UENUM()
-enum class ESmallEnemyAIState
+UENUM(BlueprintType)
+enum class ESmallEnemyAIState : uint8
 {
+	RecentlySpawned,
 	Idle,
-	Attack 
+	ChasingTarget,
+	Attack,
+
+	Incapacitated,
+
+	None
+};
+UENUM(BlueprintType)
+enum class EAIIncapacitatedType : uint8
+{
+	None,
+	Stunned,
+	Grappled,
+	StuckToWall
 };
 
 /**
@@ -32,25 +46,43 @@ public:	// Components
 
 public: // Assets
 	UPROPERTY(EditAnywhere)
-		class UBehaviorTree* BTIdle{ nullptr };
-	UPROPERTY(EditAnywhere)
-		class UBehaviorTree* BTAttack{ nullptr };
+		class UBehaviorTree* BT{ nullptr };
 
 	UPROPERTY(EditAnywhere)
 		class UBlackboardData* BB{ nullptr };
 
 public:	// Functions
 	AEnemyAIController();
-
+	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 	virtual void OnPossess(APawn* InPawn) override;
 
-	void SetState_Idle();
-	void SetState_Attack();
+	void OnSeePawn(APawn* SeenPawn);
+	void HearNoise(APawn* InstigatorPawn, const FVector& Location, float Volume);
+
+	void ResetTree();
 	
+	void SetState(const ESmallEnemyAIState& state);
+	void IncapacitateAI(const EAIIncapacitatedType& IncapacitateType, float Time, const ESmallEnemyAIState& NextState = ESmallEnemyAIState::None);
+	void PostIncapacitated_DetermineState(const ESmallEnemyAIState& StateOverride = ESmallEnemyAIState::None);
+
+	void CapacitateAI(float Time, const ESmallEnemyAIState& NextState = ESmallEnemyAIState::None);
+
+public: // Functions called by BTTasks and BTServices
+	void SetNewTargetPoints();
+
+	void UpdateTargetPosition();
 
 public: // Variables
-	ESmallEnemyAIState AIState;
+	ESmallEnemyAIState m_AIState = ESmallEnemyAIState::RecentlySpawned;
+	EAIIncapacitatedType m_AIIncapacitatedType = EAIIncapacitatedType::None;
+
+	//FTimerManager TM_AI;	// ha en egen timer manager istedenfor å bruke World Timer Manager?
+	FTimerHandle TH_IncapacitateTimer;
+
 	UPROPERTY(BlueprintReadWrite)
 		bool bFollowPlayer{};
+	/* Time AI is spent as recently spawned, where it does nothing */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+		float TimeSpentRecentlySpawned{ 1.f };
 };

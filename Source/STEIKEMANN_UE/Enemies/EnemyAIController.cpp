@@ -21,6 +21,20 @@ AEnemyAIController::AEnemyAIController()
 	PSComponent = CreateDefaultSubobject<UPawnSensingComponent>("Pawn Sensing Component");
 }
 
+void AEnemyAIController::BeginPlay()
+{
+	Super::BeginPlay();
+
+	PSComponent->OnSeePawn.AddDynamic(this, &AEnemyAIController::OnSeePawn);
+	PSComponent->OnHearNoise.AddDynamic(this, &AEnemyAIController::HearNoise);
+
+	Async(EAsyncExecution::TaskGraphMainThread, [this]() {
+		SetState(ESmallEnemyAIState::RecentlySpawned);
+		FTimerHandle h;
+		GetWorldTimerManager().SetTimer(h, [this]() { SetState(ESmallEnemyAIState::Idle); }, TimeSpentRecentlySpawned, false);
+		});
+}
+
 void AEnemyAIController::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -32,22 +46,89 @@ void AEnemyAIController::OnPossess(APawn* InPawn)
 
 	PRINTPARLONG("AI Possessed %s", *InPawn->GetName());
 	InitializeBlackboard(*BBComponent, *BB);
-	SetState_Idle();
+	BTComponent->StartTree(*BT);
+
+	SetState(ESmallEnemyAIState::Idle);
 	
 	BBComponent->SetValueAsObject("Player", UGameplayStatics::GetActorOfClass(GetWorld(), ASteikemannCharacter::StaticClass()));
-	BBComponent->SetValueAsVector("APosition", FVector(0, 0, 0));
-	BBComponent->SetValueAsBool("bFollowPlayer", bFollowPlayer);
 }
 
-void AEnemyAIController::SetState_Idle()
+void AEnemyAIController::OnSeePawn(APawn* SeenPawn)
 {
-	BTComponent->StopTree();
-	BTComponent->StartTree(*BTIdle);
 }
 
-void AEnemyAIController::SetState_Attack()
+void AEnemyAIController::HearNoise(APawn* InstigatorPawn, const FVector& Location, float Volume)
 {
-	BTComponent->StopTree();
-	BTComponent->StartTree(*BTAttack);
 }
+
+void AEnemyAIController::ResetTree()
+{
+	BTComponent->RestartTree();
+}
+
+void AEnemyAIController::SetState(const ESmallEnemyAIState& state)
+{
+	m_AIState = state;
+	BBComponent->SetValueAsEnum("Enum_State", (int8)state);
+	ResetTree();
+}
+
+void AEnemyAIController::IncapacitateAI(const EAIIncapacitatedType& IncapacitateType, float Time, const ESmallEnemyAIState& NextState)
+{
+	GetWorldTimerManager().ClearTimer(TH_IncapacitateTimer);
+	SetState(ESmallEnemyAIState::Incapacitated);
+	m_AIIncapacitatedType = IncapacitateType;
+
+	// AI Incapacitated for an undetermined amount of time
+	if (Time < 0.f)
+	{
+		return;
+	}
+	GetWorldTimerManager().SetTimer(TH_IncapacitateTimer, [this, NextState]() { PostIncapacitated_DetermineState(NextState); }, Time, false);
+}
+
+void AEnemyAIController::PostIncapacitated_DetermineState(const ESmallEnemyAIState& StateOverride)
+{
+	if (StateOverride != ESmallEnemyAIState::None) 
+	{
+		SetState(StateOverride);
+		return;
+	}
+
+	// Make a determine next state algorithm based on pawn senses and potential player position
+		//	Temp method 
+	SetState(ESmallEnemyAIState::Idle);
+}
+
+void AEnemyAIController::CapacitateAI(float Time, const ESmallEnemyAIState& NextState)
+{
+	// AI Incapacitated for an undetermined amount of time
+	if (Time < 0.f)
+	{
+		PostIncapacitated_DetermineState(NextState);
+		return;
+	}
+	GetWorldTimerManager().SetTimer(TH_IncapacitateTimer, [this, NextState]() { PostIncapacitated_DetermineState(NextState); }, Time, false);
+}
+
+void AEnemyAIController::SetNewTargetPoints()
+{
+	ASmallEnemy* SEPawn = Cast<ASmallEnemy>(GetPawn());
+	BBComponent->SetValueAsVector("VTarget_A", SEPawn->GetActorLocation());
+
+	// Get location near spawner 
+	FVector NearSpawnLocation = SEPawn->GetRandomLocationNearSpawn();
+	BBComponent->SetValueAsVector("VTarget_B", NearSpawnLocation);
+	UpdateTargetPosition();
+
+	DrawDebugPoint(GetWorld(), NearSpawnLocation, 30.f, FColor::Black, false, 3.f, -1);
+}
+
+void AEnemyAIController::UpdateTargetPosition()
+{
+	FVector targetlocation = BBComponent->GetValueAsVector("VTarget_B");
+
+	BBComponent->SetValueAsVector("VTargetLocation", targetlocation);
+}
+
 

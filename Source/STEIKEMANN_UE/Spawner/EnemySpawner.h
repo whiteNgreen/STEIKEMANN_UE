@@ -16,6 +16,7 @@ enum EEnemySpawnType
 	Other
 };
 
+
 UCLASS()
 class STEIKEMANN_UE_API AEnemySpawner : public AActor,
 	public IGameplayTagAssetInterface,
@@ -38,7 +39,7 @@ public:
 public: // Components
 	UPROPERTY(BlueprintReadWrite)
 		USceneComponent* Root;
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 		USceneComponent* SpawnPoint;
 
 public: // Variables
@@ -48,6 +49,9 @@ public: // Variables
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float CanBeAttackedTimer{ 1.f };
 
+	/* When spawned actor look for a location within spawn, they will not look inside this radius */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		float SpawnerMinRadius{ 500.f };
 	/* When respawning: Only respawn the actors that are outside of this radius from the spawners root */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float SpawnerActiveRadius{ 2000.f };
@@ -59,14 +63,19 @@ public: // Variables
 
 	EEnemySpawnType m_EENemySpawnType;
 
+	FTimerHandle TH_BeginSpawnAction;
 	FTimerHandle TH_SpawnTimer;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float Spawn_LaunchStrength{ 1000.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		FVector2D PitchRange{ 40.f, 80.f };
+	/* Time before spawning actors begin */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		float m_SpawnTimer{ 1.f };
+		float Timer_BeginSpawnAction{ 1.f };
+	/* Time between spawning actors */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		float Timer_SpawnIterator{ 1.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		uint8 m_SpawnAmount{ 3 };
 	uint8 m_SpawnIndex{};
@@ -76,9 +85,10 @@ public: // Variables
 	TArray<ASmallEnemy*> SpawnedActors;
 
 public: // Functions
+	void BeginActorSpawn(void(AEnemySpawner::* spawnFunction)());
+	void BeginActorRespawn();
 	void CheckSpawningActorClass();
 	void SpawnActor();
-	float RandomFloat(float min, float max);
 
 	void DetermineActorsToRespawn(TArray<ASmallEnemy*>& actorsToRespawn);
 	void RespawnActors(TArray<ASmallEnemy*>& actorsToRespawn);
@@ -91,9 +101,9 @@ public: // Functions
 	virtual bool CanBeAttacked() override { return bAICanBeDamaged; }
 	virtual void Gen_ReceiveAttack(const FVector& Direction, const float& Strength, EAttackType& AType) override;
 
-private: // Functions
+public: // Functions - Called by SpawnedActor
+
+private: // PRIVATE Functions
 	void SpawnAubergineDog();
 	ACharacter* SpawnCharacter();
-
-	//void DetermineActorsToRespawn();
 };

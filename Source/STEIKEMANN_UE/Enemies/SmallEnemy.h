@@ -11,8 +11,11 @@
 #include "GameplayTagAssetInterface.h"
 #include "../WallDetectionComponent.h"
 //#include "../GameplayTags.h"
+#include "EnemyAIController.h"
 
 #include "SmallEnemy.generated.h"
+
+DECLARE_DELEGATE(FIncapacitatedLanding)
 
 /************************ ENUMS *****************************/
 UENUM()
@@ -47,6 +50,14 @@ enum class EWall : int8
 	WALL_Leaving
 };
 
+
+struct SpawnPointData
+{
+	FVector Location;
+	float Radius_Min;
+	float Radius_Max;
+};
+
 UCLASS()
 class STEIKEMANN_UE_API ASmallEnemy : public AAbstractCharacter,
 	public IAttackInterface,
@@ -72,6 +83,11 @@ public:
 		USphereComponent* PlayerPogoDetection{ nullptr };
 #pragma endregion //Base
 
+#pragma region SpawnRespawn
+	SpawnPointData m_SpawnPointData;
+	FVector GetRandomLocationNearSpawn();
+#pragma endregion // SpawnRespawn
+
 	void DisableCollisions();
 	void EnableCollisions();
 #pragma region GameplayTags
@@ -86,6 +102,19 @@ public:	// STATES
 	EEnemyState m_State = EEnemyState::STATE_None;
 	EGravityState m_Gravity = EGravityState::Default;
 	void SetDefaultState();
+
+	virtual void Landed(const FHitResult& Hit) override;
+
+
+public: // Variables for calling AI
+	FIncapacitatedLanding IncapacitatedLandingDelegate;
+public: // Functinos calling AI controller
+	void Incapacitate(const EAIIncapacitatedType& IncapacitateType, float Time = -1.f, const ESmallEnemyAIState& NextState = ESmallEnemyAIState::None);
+	void IncapacitateUndeterminedTime(const EAIIncapacitatedType& IncapacitateType, void (ASmallEnemy::* function)());
+	void Capacitate(const EAIIncapacitatedType& IncapacitateType, float Time = -1.f, const ESmallEnemyAIState& NextState = ESmallEnemyAIState::None);
+
+private: // Functions Capacitate - Used for IncapacitatedLandingDelegate
+	void Capacitate_Grappled();
 
 private: // Gravity
 	float GravityScale;
