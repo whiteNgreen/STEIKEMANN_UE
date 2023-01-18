@@ -12,11 +12,12 @@ enum class ESmallEnemyAIState : uint8
 {
 	RecentlySpawned,
 	Idle,
+	// STATE: Sensed Player
 	ChasingTarget,
 	Attack,
 
 	Incapacitated,
-
+	
 	None
 };
 UENUM(BlueprintType)
@@ -57,8 +58,10 @@ public:	// Functions
 	virtual void Tick(float DeltaTime) override;
 	virtual void OnPossess(APawn* InPawn) override;
 
-	void OnSeePawn(APawn* SeenPawn);
-	void HearNoise(APawn* InstigatorPawn, const FVector& Location, float Volume);
+	UFUNCTION()
+		void AIOnSeePawn(APawn* pawn);
+	UFUNCTION()
+		void AIHearNoise(APawn* InstigatorPawn, const FVector& Location, float Volume);
 
 	void ResetTree();
 	

@@ -25,8 +25,8 @@ void AEnemyAIController::BeginPlay()
 {
 	Super::BeginPlay();
 
-	PSComponent->OnSeePawn.AddDynamic(this, &AEnemyAIController::OnSeePawn);
-	PSComponent->OnHearNoise.AddDynamic(this, &AEnemyAIController::HearNoise);
+	PSComponent->OnSeePawn.AddDynamic(this, &AEnemyAIController::AIOnSeePawn);
+	PSComponent->OnHearNoise.AddDynamic(this, &AEnemyAIController::AIHearNoise);
 
 	Async(EAsyncExecution::TaskGraphMainThread, [this]() {
 		SetState(ESmallEnemyAIState::RecentlySpawned);
@@ -53,12 +53,20 @@ void AEnemyAIController::OnPossess(APawn* InPawn)
 	BBComponent->SetValueAsObject("Player", UGameplayStatics::GetActorOfClass(GetWorld(), ASteikemannCharacter::StaticClass()));
 }
 
-void AEnemyAIController::OnSeePawn(APawn* SeenPawn)
+void AEnemyAIController::AIOnSeePawn(APawn* pawn)
 {
+	PRINTPARLONG("%s sees pawn %s", *GetName(), *pawn->GetName());
+
+	// SetState(SensedPlayer)
+	// Spot player, wait 't' seconds before chasing them - BTServiceChecking if player is still spotted 
+		// If player was heard, instantly become hostile
 }
 
-void AEnemyAIController::HearNoise(APawn* InstigatorPawn, const FVector& Location, float Volume)
+void AEnemyAIController::AIHearNoise(APawn* InstigatorPawn, const FVector& Location, float Volume)
 {
+	// SetState(SensedPlayer)
+	//
+	// Hear player, if they are then spotted, instantly become hostile
 }
 
 void AEnemyAIController::ResetTree()
