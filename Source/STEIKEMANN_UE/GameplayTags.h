@@ -6,7 +6,10 @@
 namespace Tag {
 
 	// Player
-	static FGameplayTag Player() { return FGameplayTag::RequestGameplayTag("Pottit"); }
+	static FGameplayTag Player() { 
+		static FGameplayTag p{ FGameplayTag::RequestGameplayTag("Pottit") };
+		return p; 
+	}
 
 	// Enemies
 	static FGameplayTag Enemy() { return FGameplayTag::RequestGameplayTag("Enemy"); }

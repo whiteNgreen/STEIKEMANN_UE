@@ -4,15 +4,17 @@
 
 #include "CoreMinimal.h"
 #include "AIController.h"
+#include "../GameplayTags.h"
 #include "EnemyAIController.generated.h"
 
+DECLARE_MULTICAST_DELEGATE(FSensedPawnsDelegate)
 
 UENUM(BlueprintType)
 enum class ESmallEnemyAIState : uint8
 {
 	RecentlySpawned,
 	Idle,
-	// STATE: Sensed Player
+	Alerted,
 	ChasingTarget,
 	Attack,
 
@@ -28,6 +30,7 @@ enum class EAIIncapacitatedType : uint8
 	Grappled,
 	StuckToWall
 };
+
 
 /**
  * 
@@ -58,30 +61,51 @@ public:	// Functions
 	virtual void Tick(float DeltaTime) override;
 	virtual void OnPossess(APawn* InPawn) override;
 
+	// Pawn sensing
 	UFUNCTION()
 		void AIOnSeePawn(APawn* pawn);
 	UFUNCTION()
 		void AIHearNoise(APawn* InstigatorPawn, const FVector& Location, float Volume);
+	void SensePawn(APawn* pawn, FGameplayTag& tag);
+	void SensePawn_Player();
+	void SpotPlayer();
 
+	// Attacking 
+	void Attack();
+
+	// Setting State
 	void ResetTree();
-	
 	void SetState(const ESmallEnemyAIState& state);
+	
+	
+	// Incapacitating Owner
 	void IncapacitateAI(const EAIIncapacitatedType& IncapacitateType, float Time, const ESmallEnemyAIState& NextState = ESmallEnemyAIState::None);
-	void PostIncapacitated_DetermineState(const ESmallEnemyAIState& StateOverride = ESmallEnemyAIState::None);
+	void ReDetermineState(const ESmallEnemyAIState& StateOverride = ESmallEnemyAIState::None);
 
 	void CapacitateAI(float Time, const ESmallEnemyAIState& NextState = ESmallEnemyAIState::None);
 
+	
 public: // Functions called by BTTasks and BTServices
 	void SetNewTargetPoints();
 
 	void UpdateTargetPosition();
 
 public: // Variables
+	UPROPERTY(BlueprintReadOnly)
+		class ASmallEnemy* m_PawnOwner{ nullptr };
+
 	ESmallEnemyAIState m_AIState = ESmallEnemyAIState::RecentlySpawned;
 	EAIIncapacitatedType m_AIIncapacitatedType = EAIIncapacitatedType::None;
 
-	//FTimerManager TM_AI;	// ha en egen timer manager istedenfor å bruke World Timer Manager?
+	FTimerManager TM_AI;	// ha en egen timer manager istedenfor å bruke World Timer Manager?
 	FTimerHandle TH_IncapacitateTimer;
+	FTimerHandle TH_SensedPlayer;
+	FTimerHandle TH_SpotPlayer;
+
+
+	bool bIsSensingPawn{};
+	FSensedPawnsDelegate SensedPawnsDelegate;
+	FDelegateHandle DH_SensedPlayer;
 
 	UPROPERTY(BlueprintReadWrite)
 		bool bFollowPlayer{};

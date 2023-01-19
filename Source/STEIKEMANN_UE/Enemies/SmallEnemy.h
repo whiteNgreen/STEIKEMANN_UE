@@ -15,7 +15,9 @@
 
 #include "SmallEnemy.generated.h"
 
-DECLARE_DELEGATE(FIncapacitatedLanding)
+DECLARE_DELEGATE(FIncapacitatedLandDelegation)
+DECLARE_DELEGATE(FIncapacitatedCollision)
+//DECLARE_DELEGATE
 
 /************************ ENUMS *****************************/
 UENUM()
@@ -97,6 +99,23 @@ public:
 	virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override { TagContainer = GameplayTags; return; }
 #pragma endregion //GameplayTags
 
+#pragma region AI
+public: // Variables
+	UPROPERTY(BlueprintReadOnly)
+		APawn* m_SensedPawn{ nullptr };
+	UPROPERTY(BlueprintReadOnly)
+		bool bSensingPawn{};
+/// <summary>
+/// DELEGATE:
+/// 	Funksjoner kalt at AI legger til i delegate.
+/// 	Delegate kalles på BTService
+/// </summary>
+public: // Functions
+	/* Returns true if the player is spotted, false if it spots something else */
+	FGameplayTag SensingPawn(APawn* pawn);
+
+#pragma endregion // AI
+
 #pragma region States
 public:	// STATES
 	EEnemyState m_State = EEnemyState::STATE_None;
@@ -107,13 +126,17 @@ public:	// STATES
 
 
 public: // Variables for calling AI
-	FIncapacitatedLanding IncapacitatedLandingDelegate;
+	FIncapacitatedCollision IncapacitatedCollisionDelegate;
+	FIncapacitatedLandDelegation IncapacitatedLandDelegation;
+
 public: // Functinos calling AI controller
 	void Incapacitate(const EAIIncapacitatedType& IncapacitateType, float Time = -1.f, const ESmallEnemyAIState& NextState = ESmallEnemyAIState::None);
-	void IncapacitateUndeterminedTime(const EAIIncapacitatedType& IncapacitateType, void (ASmallEnemy::* function)());
+	void IncapacitateUndeterminedTime(const EAIIncapacitatedType& IncapacitateType, void (ASmallEnemy::* landingfunction)() = nullptr);
 	void Capacitate(const EAIIncapacitatedType& IncapacitateType, float Time = -1.f, const ESmallEnemyAIState& NextState = ESmallEnemyAIState::None);
 
 private: // Functions Capacitate - Used for IncapacitatedLandingDelegate
+	void IncapacitatedLand();
+	void CollisionDelegate();
 	void Capacitate_Grappled();
 
 private: // Gravity

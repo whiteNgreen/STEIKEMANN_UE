@@ -34,7 +34,7 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 
 	/* -- Gravity -- */
 	SetGravityScale(DeltaTime);
-	PRINTPAR("GravityScale %f", GravityScale);
+	//PRINTPAR("GravityScale %f", GravityScale);
 
 	/* Crouch */
 	if (GetCharOwner()->IsCrouchSliding()) {

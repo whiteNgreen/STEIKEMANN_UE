@@ -124,6 +124,25 @@ void ASmallEnemy::EnableCollisions()
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 }
 
+FGameplayTag ASmallEnemy::SensingPawn(APawn* pawn)
+{
+	m_SensedPawn = pawn;
+	bSensingPawn = true;
+	
+	auto ITag = Cast<IGameplayTagAssetInterface>(pawn);
+	FGameplayTagContainer ContainerTags;
+	ITag->GetOwnedGameplayTags(ContainerTags);
+	if (ContainerTags.HasTag(Tag::Player()))
+	{
+		return Tag::Player();
+	}
+	else if (ContainerTags.HasTag(Tag::AubergineDoggo()))
+	{
+		return Tag::AubergineDoggo();
+	}
+	return FGameplayTag();
+}
+
 void ASmallEnemy::SetDefaultState()
 {
 	switch (m_State)
@@ -153,8 +172,11 @@ void ASmallEnemy::Landed(const FHitResult& Hit)
 {
 	Super::Landed(Hit);
 
-	IncapacitatedLandingDelegate.ExecuteIfBound();
-	IncapacitatedLandingDelegate.Unbind();
+	if (IncapacitatedLandDelegation.ExecuteIfBound())
+		IncapacitatedLandDelegation.Unbind();
+
+	if (IncapacitatedCollisionDelegate.ExecuteIfBound())
+		IncapacitatedCollisionDelegate.Unbind();
 }
 
 void ASmallEnemy::Incapacitate(const EAIIncapacitatedType& IncapacitateType, float Time, const ESmallEnemyAIState& NextState)
@@ -166,13 +188,26 @@ void ASmallEnemy::Incapacitate(const EAIIncapacitatedType& IncapacitateType, flo
 void ASmallEnemy::IncapacitateUndeterminedTime(const EAIIncapacitatedType& IncapacitateType, void(ASmallEnemy::* function)())
 {
 	Incapacitate(IncapacitateType);
-	IncapacitatedLandingDelegate.BindUObject(this, function);
+
+	if (!function) return;
+	IncapacitatedCollisionDelegate.BindUObject(this, function);
+	IncapacitatedLandDelegation.BindUObject(this, &ASmallEnemy::IncapacitatedLand);
 }
 
 void ASmallEnemy::Capacitate(const EAIIncapacitatedType& IncapacitateType, float Time, const ESmallEnemyAIState& NextState)
 {
 	AEnemyAIController* AI = Cast<AEnemyAIController>(GetController());
 	AI->CapacitateAI(Time, NextState);
+}
+
+void ASmallEnemy::IncapacitatedLand()
+{
+	Capacitate(EAIIncapacitatedType::None, 1.f/* Post land stun */);
+}
+
+void ASmallEnemy::CollisionDelegate()
+{
+
 }
 
 void ASmallEnemy::Capacitate_Grappled()
@@ -203,6 +238,8 @@ void ASmallEnemy::RotateActorYawToVector(FVector AimVector, float DeltaTime)
 void ASmallEnemy::StickToWall()
 {
 	m_Gravity = EGravityState::ForcedNone;
+	//AI
+	IncapacitateUndeterminedTime(EAIIncapacitatedType::StuckToWall);
 }
 
 void ASmallEnemy::LeaveWall()
@@ -211,8 +248,8 @@ void ASmallEnemy::LeaveWall()
 	m_WallState = EWall::WALL_Leaving;
 	GetWorldTimerManager().SetTimer(TH_LeavingWall, [this]() { m_WallState = EWall::WALL_None; }, WDC_LeavingWallTimer, false);
 
-	//AI
-	IncapacitateUndeterminedTime(EAIIncapacitatedType::Grappled, &ASmallEnemy::Capacitate_Grappled);
+	//AI - Register collision delegate
+	IncapacitateUndeterminedTime(EAIIncapacitatedType::Grappled, &ASmallEnemy::CollisionDelegate);
 }
 
 void ASmallEnemy::TargetedPure()
@@ -336,7 +373,7 @@ void ASmallEnemy::Receive_SmackAttack_Pure(const FVector& Direction, const float
 		GetCharacterMovement()->Velocity *= 0.f;
 		GetCharacterMovement()->AddImpulse(Direction * s, true);
 
-		Incapacitate(EAIIncapacitatedType::Stunned, 1.f, ESmallEnemyAIState::Idle);
+		Incapacitate(EAIIncapacitatedType::Stunned, 1.5f/* Stun timer */);
 
 		/* Sets a timer before character can be damaged by the same attack */
 		GetWorldTimerManager().SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, SmackAttack_InternalTimer, false);

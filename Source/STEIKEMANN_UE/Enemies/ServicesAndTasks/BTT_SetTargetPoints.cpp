@@ -6,7 +6,7 @@
 #include "../EnemyAIController.h"
 #include "../SmallEnemy.h"
 
-EBTNodeResult::Type UBTT_SetTargetPoint::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
+EBTNodeResult::Type UBTTask_SetTargetPoint::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
     PRINTLONG("SET TARGET POINTS");
     auto c = Cast<AEnemyAIController>(OwnerComp.GetOwner());

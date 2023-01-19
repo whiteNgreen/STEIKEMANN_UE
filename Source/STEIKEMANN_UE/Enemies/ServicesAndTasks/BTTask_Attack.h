@@ -3,17 +3,16 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "BehaviorTree/Tasks/BTTask_MoveTo.h"
-#include "BTT_SetTargetPoints.generated.h"
+#include "BehaviorTree/BTTaskNode.h"
+#include "BTTask_Attack.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class STEIKEMANN_UE_API UBTTask_SetTargetPoint : public UBTTaskNode
+class STEIKEMANN_UE_API UBTTask_Attack : public UBTTaskNode
 {
 	GENERATED_BODY()
 public:
 	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
-
 };

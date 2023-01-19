@@ -174,20 +174,20 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 
 	if (IsDead()) { return; }
 
-	switch (m_PromptState)
-	{
-	case EPromptState::None:
-		PRINT("Prompt: None");
-		break;
-	case EPromptState::WithingArea:
-		PRINT("Prompt: WithinArea");
-		break;
-	case EPromptState::InPrompt:
-		PRINT("Prompt: InPrompt");
-		break;
-	default:
-		break;
-	}
+	//switch (m_PromptState)
+	//{
+	//case EPromptState::None:
+	//	PRINT("Prompt: None");
+	//	break;
+	//case EPromptState::WithingArea:
+	//	PRINT("Prompt: WithinArea");
+	//	break;
+	//case EPromptState::InPrompt:
+	//	PRINT("Prompt: InPrompt");
+	//	break;
+	//default:
+	//	break;
+	//}
 
 	/* Rotate Inputvector to match the playercontroller */
 	{
@@ -198,30 +198,29 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		if (InputVectorRaw.Size() > 1.f || m_InputVector.Size() > 1.f)
 			m_InputVector.Normalize();
 	}
-	switch (m_EState)
-	{
-	case EState::STATE_OnGround:
-		PRINT("STATE_OnGround");
-		break;
-	case EState::STATE_InAir:
-		PRINT("STATE_InAir");
-		break;
-	case EState::STATE_OnWall:
-		PRINT("STATE_OnWall");
-		break;
-	case EState::STATE_Attacking:
-		PRINT("STATE_Attacking");
-		break;
-	case EState::STATE_Grappling:
-		PRINT("STATE_Grappling");
-		break;
-	default:
-		break;
-	}
-
-	PRINTPAR("Attack State :: %i", m_EAttackState);
-	PRINTPAR("Air State :: %i", m_EAirState);
-	PRINTPAR("Pogo Type :: %i", m_EPogoType);
+	//switch (m_EState)
+	//{
+	//case EState::STATE_OnGround:
+	//	PRINT("STATE_OnGround");
+	//	break;
+	//case EState::STATE_InAir:
+	//	PRINT("STATE_InAir");
+	//	break;
+	//case EState::STATE_OnWall:
+	//	PRINT("STATE_OnWall");
+	//	break;
+	//case EState::STATE_Attacking:
+	//	PRINT("STATE_Attacking");
+	//	break;
+	//case EState::STATE_Grappling:
+	//	PRINT("STATE_Grappling");
+	//	break;
+	//default:
+	//	break;
+	//}
+	//PRINTPAR("Attack State :: %i", m_EAttackState);
+	//PRINTPAR("Air State :: %i", m_EAirState);
+	//PRINTPAR("Pogo Type :: %i", m_EPogoType);
 
 	/*		Resets Rotation Pitch and Roll		*/
 	if (IsFalling() || GetMoveComponent()->IsWalking()) {
