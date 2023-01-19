@@ -39,7 +39,7 @@ void AEnemyAIController::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	TM_AI.Tick(DeltaTime);
-	bIsSensingPawn ? PRINT("bIsSensingPawn = True") : PRINT("bIsSensingPawn = False");
+	//bIsSensingPawn ? PRINT("bIsSensingPawn = True") : PRINT("bIsSensingPawn = False");
 }
 
 void AEnemyAIController::OnPossess(APawn* InPawn)
@@ -66,7 +66,6 @@ void AEnemyAIController::AIOnSeePawn(APawn* pawn)
 	SensePawn(pawn, PawnTag);
 	if (PawnTag == Tag::Player())
 	{
-		PRINTPARLONG("%s sees pawn %s", *GetName(), *pawn->GetName());
 		// Spot player, wait 't' seconds before chasing them - BTServiceChecking if player is still spotted 
 		bIsSensingPawn = true;
 
@@ -163,7 +162,6 @@ void AEnemyAIController::IncapacitateAI(const EAIIncapacitatedType& Incapacitate
 
 void AEnemyAIController::ReDetermineState(const ESmallEnemyAIState& StateOverride)
 {
-	PRINTLONG("Redetermining State");
 	if (StateOverride != ESmallEnemyAIState::None) 
 	{
 		SetState(StateOverride);

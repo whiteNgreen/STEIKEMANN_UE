@@ -51,7 +51,8 @@ enum class EAirState : int8
 	AIR_None,
 	AIR_Freefall,
 	AIR_Jump,
-	AIR_Pogo
+	AIR_Pogo,
+	AIR_PostScoopJump
 };
 
 UENUM() 
@@ -450,6 +451,8 @@ public:
 		float Jump_HeightHoldTimer{ 1.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump")
 		float JumpHeightHold_VelocityInterpSpeed{ 5.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump")
+		float PostScoop_JumpTime{ 0.3f };
 
 	void Landed(const FHitResult& Hit) override;
 
@@ -1045,6 +1048,14 @@ public:
 		void Start_ScoopAttack_Pure();
 	void Click_ScoopAttack();
 	void UnClick_ScoopAttack();
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
+		float ScoopJump_Hangtime{ 1.f };
+	FHeightReached HeightReachedDelegate;
+	FTimerHandle TH_ScoopJumpGravityEnable;
+	AActor* ScoopedActor{ nullptr };
+	float Jump_HeightToReach{};
+	void PostScoopJump();
 
 	bool bIsScoopAttacking{};
 	bool bHasbeenScoopLaunched{};

@@ -21,6 +21,7 @@
 #include "../StaticActors/PlayerRespawn.h"
 #include "../Dialogue/DialoguePrompt.h"
 #include "../Spawner/EnemySpawner.h"
+#include "../Enemies/SmallEnemy.h"
 
 // Sets default values
 ASteikemannCharacter::ASteikemannCharacter(const FObjectInitializer& ObjectInitializer)
@@ -198,28 +199,28 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		if (InputVectorRaw.Size() > 1.f || m_InputVector.Size() > 1.f)
 			m_InputVector.Normalize();
 	}
-	//switch (m_EState)
-	//{
-	//case EState::STATE_OnGround:
-	//	PRINT("STATE_OnGround");
-	//	break;
-	//case EState::STATE_InAir:
-	//	PRINT("STATE_InAir");
-	//	break;
-	//case EState::STATE_OnWall:
-	//	PRINT("STATE_OnWall");
-	//	break;
-	//case EState::STATE_Attacking:
-	//	PRINT("STATE_Attacking");
-	//	break;
-	//case EState::STATE_Grappling:
-	//	PRINT("STATE_Grappling");
-	//	break;
-	//default:
-	//	break;
-	//}
-	//PRINTPAR("Attack State :: %i", m_EAttackState);
-	//PRINTPAR("Air State :: %i", m_EAirState);
+	switch (m_EState)
+	{
+	case EState::STATE_OnGround:
+		PRINT("STATE_OnGround");
+		break;
+	case EState::STATE_InAir:
+		PRINT("STATE_InAir");
+		break;
+	case EState::STATE_OnWall:
+		PRINT("STATE_OnWall");
+		break;
+	case EState::STATE_Attacking:
+		PRINT("STATE_Attacking");
+		break;
+	case EState::STATE_Grappling:
+		PRINT("STATE_Grappling");
+		break;
+	default:
+		break;
+	}
+	PRINTPAR("Attack State :: %i", m_EAttackState);
+	PRINTPAR("Air State :: %i", m_EAirState);
 	//PRINTPAR("Pogo Type :: %i", m_EPogoType);
 
 	/*		Resets Rotation Pitch and Roll		*/
@@ -256,6 +257,11 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	}
 	case EState::STATE_InAir:
 	{
+		if (GetActorLocation().Z >= Jump_HeightToReach)
+		{
+			HeightReachedDelegate.Broadcast();
+			HeightReachedDelegate.Clear();
+		}
 		switch (m_EPogoType)
 		{
 		case EPogoType::POGO_None:
@@ -1119,6 +1125,7 @@ void ASteikemannCharacter::SetDefaultState()
 		break;
 	case EState::STATE_InAir:
 		if (m_EAirState == EAirState::AIR_Pogo) return;
+		if (m_EAirState == EAirState::AIR_PostScoopJump) return;
 		break;
 	case EState::STATE_OnWall: return;
 	case EState::STATE_Attacking: 
@@ -1317,7 +1324,7 @@ void ASteikemannCharacter::Jump()
 		break;
 	case EState::STATE_OnWall:
 		break;
-	case EState::STATE_Attacking: return;
+	case EState::STATE_Attacking: break;
 	case EState::STATE_Grappling: return;
 	default:
 		break;
@@ -1408,6 +1415,9 @@ void ASteikemannCharacter::Jump()
 			break;
 		}
 		case EState::STATE_Attacking:
+			if (m_EAttackState != EAttackState::Scoop) break;
+			PostScoopJump();
+
 			break;
 		case EState::STATE_Grappling:
 			break;
@@ -2405,12 +2415,10 @@ void ASteikemannCharacter::Activate_ScoopAttack()
 	//bIsScoopAttacking = true;
 }
 
-void ASteikemannCharacter::Deactivate_ScoopAttack()
+void ASteikemannCharacter::Deactivate_ScoopAttack()	// Decrepid
 {
 	bScoopAttackMoveCharacter = false;
 	bHasbeenScoopLaunched = false;
-
-	
 }
 
 void ASteikemannCharacter::ComboAttack_Pure()
@@ -2433,7 +2441,7 @@ void ASteikemannCharacter::Activate_SmackAttack()
 	//bIsSmackAttacking = true;
 }
 
-void ASteikemannCharacter::Deactivate_SmackAttack()
+void ASteikemannCharacter::Deactivate_SmackAttack()	// Decrepid
 {
 	bSmackAttackMoveCharacter = false;
 }
@@ -2443,19 +2451,18 @@ void ASteikemannCharacter::Click_Attack()
 	if (bAttackPress) { return; }
 	bAttackPress = true;
 
-
 	switch (m_EState)
 	{
 	case EState::STATE_OnGround:
 	{
 		AttackSmack_Start_Pure();
 		RotateToAttack();
-		AttackSmack_Start();
 		break;
 	}
 	case EState::STATE_InAir:
 	{
-
+		if (m_EAirState == EAirState::AIR_PostScoopJump)
+			AttackSmack_Start_Pure();
 		break;
 	}
 	case EState::STATE_OnWall:
@@ -2484,13 +2491,11 @@ void ASteikemannCharacter::Click_Attack()
 					{
 						m_EState = EState::STATE_OnGround; 
 						AttackSmack_Start_Pure();
-						AttackSmack_Start();
 					},
 					t, false);
 				return;
 			}
 			AttackSmack_Start_Pure();
-			AttackSmack_Start();
 			return;
 		}
 		break;
@@ -2508,7 +2513,10 @@ void ASteikemannCharacter::UnClick_Attack()
 
 void ASteikemannCharacter::Start_ScoopAttack_Pure()
 {
-	RotateToAttack();
+	m_EState = EState::STATE_Attacking;
+	m_EAttackState = EAttackState::Scoop;
+	m_ESmackAttackState = ESmackAttackState::Attack;
+	m_EMovementInputState = EMovementInput::Locked;
 
 	Start_ScoopAttack();
 }
@@ -2517,16 +2525,94 @@ void ASteikemannCharacter::Click_ScoopAttack()
 {
 	/* Return conditions */
 	if (bClickScoopAttack) { return; }
-	if (GetMoveComponent()->IsFalling()) { return; }
-
 	bClickScoopAttack = true;
-	
-	Start_ScoopAttack_Pure();
+	switch (m_EState)
+	{
+	case EState::STATE_OnGround:
+	{
+		//AttackSmack_Start_Pure();
+		Start_ScoopAttack_Pure();
+		RotateToAttack();
+		//AttackSmack_Start();
+		break;
+	}
+	case EState::STATE_InAir:
+	{
+
+		break;
+	}
+	case EState::STATE_OnWall:
+	{
+
+		break;
+	}
+	case EState::STATE_Attacking:
+	{
+		//if (m_ESmackAttackState == ESmackAttackState::Hold)
+		//	m_ESmackAttackState = ESmackAttackState::Buffer;
+		//if (m_ESmackAttackState == ESmackAttackState::Ready)
+		//	ComboAttack_Pure();
+		break;
+	}
+	case EState::STATE_Grappling:
+	{
+		/* Buffer Attack if Grappling to Dynamic Target */
+		//if (m_EGrappleType == EGrappleType::Dynamic_Ground)
+		//{
+		//	if (GetWorldTimerManager().IsTimerActive(TH_BufferAttack)) return;
+
+		//	float t = GetWorldTimerManager().GetTimerRemaining(TH_Grapplehook_End_Launch) - SmackAttack_GH_TimerRemoval;
+		//	if (t > 0.f) {
+		//		GetWorldTimerManager().SetTimer(TH_BufferAttack, [this]()
+		//			{
+		//				m_EState = EState::STATE_OnGround;
+		//		//AttackSmack_Start_Pure();
+		//		//AttackSmack_Start();
+		//			},
+		//			t, false);
+		//		return;
+		//	}
+		//	//AttackSmack_Start_Pure();
+		//	//AttackSmack_Start();
+		//	return;
+		//}
+		break;
+	}
+	default:
+		break;
+	}
+	return;	
 }
 
 void ASteikemannCharacter::UnClick_ScoopAttack()
 {
 	bClickScoopAttack = false;
+}
+
+void ASteikemannCharacter::PostScoopJump()
+{
+	m_EState = EState::STATE_InAir;
+	m_EAirState = EAirState::AIR_PostScoopJump;
+	
+	Jump_HeightToReach = ScoopedActor->GetActorLocation().Z;
+	float JumpHeight = Jump_HeightToReach - GetActorLocation().Z;
+
+	GetMoveComponent()->JumpHeight(JumpHeight, PostScoop_JumpTime);
+	HeightReachedDelegate.AddUObject(GetMoveComponent().Get(), &USteikemannCharMovementComponent::DisableGravity);
+
+	ASmallEnemy* enemy = Cast<ASmallEnemy>(ScoopedActor);
+	enemy->DisableGravity();
+	HeightReachedDelegate.AddLambda([this, enemy]() {
+		GetWorldTimerManager().SetTimer(TH_ScoopJumpGravityEnable,
+		[this, enemy]()
+		{
+			GetMoveComponent()->EnableGravity();
+			enemy->EnableGravity();
+			m_EAirState = EAirState::AIR_Freefall;
+		}, ScoopJump_Hangtime, false);
+		});
+
+	Anim_Activate_Jump();//Anim_Activate_WallJump
 }
 
 void ASteikemannCharacter::AttackSmack_Start_Pure()
@@ -2535,6 +2621,7 @@ void ASteikemannCharacter::AttackSmack_Start_Pure()
 	m_EAttackState = EAttackState::Smack;
 	m_ESmackAttackState = ESmackAttackState::Attack;
 	m_EMovementInputState = EMovementInput::Locked;
+	AttackSmack_Start();
 }
 
 void ASteikemannCharacter::Stop_Attack()
@@ -2719,6 +2806,7 @@ void ASteikemannCharacter::Do_ScoopAttack_Pure(IAttackInterface* OtherInterface,
 
 	if (b)
 	{
+		ScoopedActor = OtherActor;
 		/* Rotates player towards scooped actor */
 		RotateActorYawToVector((OtherActor->GetActorLocation() - GetActorLocation()).GetSafeNormal());
 

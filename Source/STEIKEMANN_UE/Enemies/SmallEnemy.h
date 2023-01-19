@@ -10,6 +10,7 @@
 #include "../DebugMacros.h"
 #include "GameplayTagAssetInterface.h"
 #include "../WallDetectionComponent.h"
+#include "Components/TimelineComponent.h"
 //#include "../GameplayTags.h"
 #include "EnemyAIController.h"
 
@@ -124,6 +125,8 @@ public:	// STATES
 
 	virtual void Landed(const FHitResult& Hit) override;
 
+	void EnableGravity();
+	void DisableGravity();
 
 public: // Variables for calling AI
 	FIncapacitatedCollision IncapacitatedCollisionDelegate;
@@ -242,6 +245,16 @@ public:
 	bool GetCanBeSmackAttacked() const override { return bCanBeSmackAttacked; }
 	void ResetCanBeSmackAttacked() override { bCanBeSmackAttacked = true; }
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		UTimelineComponent* TimelineComponent{ nullptr };
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Scoop|Curve")
+		UCurveFloat* ScoopedZForceFloatCurve{ nullptr };
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Scoop|Curve")
+		float ScoopedCurveMultiplier{ 1.f };
+	UFUNCTION()
+		void TimelineComponentUpdate(float time);
+	UFUNCTION()
+		void TimelineComponentEnd();
 
 	void Do_ScoopAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override;	// Getting Scooped
 	void Receive_ScoopAttack_Pure(const FVector& Direction, const float& Strength) override;

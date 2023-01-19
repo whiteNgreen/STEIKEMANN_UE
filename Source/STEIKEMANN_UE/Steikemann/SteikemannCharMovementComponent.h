@@ -66,7 +66,11 @@ public:
 		/* Interpolation speed between gravityscale override and freefall gravity */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|GravityOverride")
 		float m_GravityScaleOverride_InterpSpeed{ 2.f };
-private:
+
+public:	// Functions
+	void EnableGravity();
+	void DisableGravity();
+private:	// Private Functions
 	void SetGravityScale(float deltatime);
 
 #pragma endregion //Gravity
@@ -122,6 +126,8 @@ public:
 	void Jump(const float& JumpStrength);
 	void Jump(const FVector& direction, const float& JumpStrength);
 	void DoubleJump(const FVector& Direction, const float& JumpStrength);
+
+	void JumpHeight(const float Height, const float time);
 
 	/* How far through the jump is the player? Determined by the current velocity */
 	float JumpPercentage{};

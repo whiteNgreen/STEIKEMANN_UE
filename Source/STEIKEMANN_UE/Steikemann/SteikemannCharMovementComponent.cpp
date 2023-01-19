@@ -86,6 +86,16 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 }
 
 
+void USteikemannCharMovementComponent::EnableGravity()
+{
+	m_GravityMode = EGravityMode::Default;
+}
+
+void USteikemannCharMovementComponent::DisableGravity()
+{
+	m_GravityMode = EGravityMode::ForcedNone;
+}
+
 void USteikemannCharMovementComponent::SetGravityScale(float deltatime)
 {
 
@@ -244,6 +254,17 @@ void USteikemannCharMovementComponent::DoubleJump(const FVector& Direction, cons
 
 	AddImpulse(JumpDirection, true);
 	InitialJumpVelocity = JumpDirection.Z;
+}
+
+void USteikemannCharMovementComponent::JumpHeight(const float Height, const float time)
+{
+	Velocity *= 0.f;
+	float t = time;
+
+	float gravZ = GetGravityZ();
+	float forceZ = (Height / t) + (0.5f * -gravZ * t);
+
+	AddImpulse(FVector(0, 0, forceZ), true);
 }
 
 void USteikemannCharMovementComponent::DetermineJump(float DeltaTime)
