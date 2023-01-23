@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Camera/CameraComponent.h"
 #include "../Steikemann/SteikemannCharacter.h"
 #include "DialoguePrompt.generated.h"
 

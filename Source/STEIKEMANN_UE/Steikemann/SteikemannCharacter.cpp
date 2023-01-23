@@ -765,7 +765,7 @@ void ASteikemannCharacter::GH_Launch_Static()
 void ASteikemannCharacter::GH_Launch_Static_StuckEnemy()
 {
 	GetMoveComponent()->DeactivateJumpMechanics();
-	FVector GrappledLocation = GrappledActor->GetActorLocation();
+	FVector GrappledLocation = Active_GrappledActor->GetActorLocation();
 	FVector Direction = GrappledLocation - GetActorLocation();
 	FVector Direction2D = FVector(Direction.X, Direction.Y, 0);
 

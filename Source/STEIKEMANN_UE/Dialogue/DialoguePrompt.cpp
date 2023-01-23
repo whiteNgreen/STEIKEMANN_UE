@@ -8,6 +8,7 @@
 #include "Components/CapsuleComponent.h"
 #include "../GameplayTags.h"
 #include "Kismet/GameplayStatics.h"
+#include "Camera/CameraComponent.h"
 
 #include "../Steikemann/SteikemannCharacter.h"
 
@@ -27,10 +28,10 @@ ADialoguePrompt::ADialoguePrompt()
 	Prompt = CreateDefaultSubobject<USceneComponent>("Prompt");
 	Prompt->SetupAttachment(Volume);
 
-	Camera_One = CreateDefaultSubobject<UCameraComponent>("Camera_One");
+	Camera_One = CreateDefaultSubobject<UCameraComponent>("CameraOne");
 	Camera_One->SetupAttachment(Volume);
 
-	Camera_Two = CreateDefaultSubobject<UCameraComponent>("Camera_Two");
+	Camera_Two = CreateDefaultSubobject<UCameraComponent>("CameraTwo");
 	Camera_Two->SetupAttachment(Volume);
 }
 
