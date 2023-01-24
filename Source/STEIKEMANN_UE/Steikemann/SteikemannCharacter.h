@@ -117,6 +117,8 @@ enum class ESmackAttackState : int8
 	Buffer,
 	Ready,
 
+	PostBuffer_Hold,
+
 	Leave
 };
 
@@ -496,7 +498,9 @@ public:
 	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump|NewJump")
 		//float Jump_TopFloatTime{ 1.f };
 
-
+	/* Cancels Any currently running Animation montage */
+	UFUNCTION(BlueprintImplementableEvent)
+		void CancelAnimation();
 #pragma endregion //Basic_Movement
 
 #pragma region Pogo
@@ -704,6 +708,8 @@ public:// Capsule
 		float LedgeGrab_Height{ 100.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|WallDetection|Ledge")
 		float LedgeGrab_Inwards{ 50.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|WallDetection|Ledge")
+		FVector LedgeGrab_ActorZOffset {};
 
 public: // OnWall
 	FTimerHandle TH_OnWall_Cancel;
@@ -730,6 +736,10 @@ public:	// Ledge grab
 	
 public: // General
 	EOnWallState m_WallState = EOnWallState::WALL_None;
+
+	// Input direction to the wall 
+	float WallInputDirection{};	
+	void SetWallInputDirection();
 
 	void ExitOnWall(EState state);
 public: // Is funcitons
@@ -904,7 +914,7 @@ public:
 
 	void StartAttackBufferPeriod() override;
 	void ExecuteAttackBuffer() override;
-	//void EndAttackBufferPeriod() override;
+	void EndAttackBufferPeriod() override;
 
 	bool CanBeAttacked() override;
 

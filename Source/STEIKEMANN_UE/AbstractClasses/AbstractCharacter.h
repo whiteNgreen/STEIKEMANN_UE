@@ -36,4 +36,6 @@ public:
 	virtual void StartAttackBufferPeriod	(){}
 	virtual void ExecuteAttackBuffer		(){}
 	virtual void EndAttackBufferPeriod		(){}
+
+	//virtual void EndComboHold				(){}
 };

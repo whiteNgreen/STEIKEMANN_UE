@@ -189,6 +189,23 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	//default:
 	//	break;
 	//}
+	
+	//******* Camera Debugging
+	//static FVector previousCamPosition{};
+	//float delta = FVector(previousCamPosition - Camera->GetComponentLocation()).Size();
+	//if (delta > 100.f)
+	//{
+	//	GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, FString::Printf(TEXT("CAMERA GLITCH")));
+	//}
+	//previousCamPosition = Camera->GetComponentLocation();
+
+	static FRotator controlRot{};
+	float deltaYaw = FVector::DotProduct(controlRot.Vector(), GetControlRotation().Vector());
+	if (deltaYaw < 0.9)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, FString::Printf(TEXT("CAMERA GLITCH")));
+	}
+	controlRot = GetControlRotation();
 
 	/* Rotate Inputvector to match the playercontroller */
 	{
@@ -220,6 +237,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		break;
 	}
 	PRINTPAR("Attack State :: %i", m_EAttackState);
+	PRINTPAR("Smack Attack State :: %i", m_ESmackAttackState);
 	PRINTPAR("Air State :: %i", m_EAirState);
 	//PRINTPAR("Pogo Type :: %i", m_EPogoType);
 
@@ -365,22 +383,8 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		}
 	}
 
-	/*	
-	*	POGO BOUNCE
-	* 
-	* Raytrace beneath player to see if they hit an enemy
-	*/
-	//if ((GetMoveComponent()->IsFalling() || IsJumping()) && GetMoveComponent()->Velocity.Z < 0.f)
-	//{
-	//	FHitResult Hit{};
-	//	FCollisionQueryParams Params{ "", false, this };
-	//	const bool b = GetWorld()->LineTraceSingleByChannel(Hit, GetActorLocation(), GetActorLocation() + FVector::DownVector * 500.f, ECC_PogoCollision, Params);
-	//	if (b)
-	//	{
-	//		PB_TargetBeneath(Hit);
-	//	}
-	//}
-
+	
+	/* --------------- CAMERA -------------------- */
 	if (m_EState == EState::STATE_Grappling && m_EGrappleType == EGrappleType::Dynamic_Ground) {
 		GrappleDynamicGuideCamera(DeltaTime);
 	}
@@ -390,13 +394,9 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	GuideCamera(DeltaTime);
 
 	/* ----------------------- COMBAT TICKS ------------------------------ */
-	PreBasicAttackMoveCharacter(DeltaTime);
-	SmackAttackMoveCharacter(DeltaTime);
-	ScoopAttackMoveCharacter(DeltaTime);
-	// Hack method of forcing camera to not freak out during attack movements
-	//if (bPreBasicAttackMoveCharacter || bSmackAttackMoveCharacter || bScoopAttackMoveCharacter) {	
-		//CameraBoom->bDoCollisionTest = false;
-	//} else { CameraBoom->bDoCollisionTest = true; }
+	//PreBasicAttackMoveCharacter(DeltaTime);
+	//SmackAttackMoveCharacter(DeltaTime);
+	//ScoopAttackMoveCharacter(DeltaTime);
 
 }
 
@@ -1143,10 +1143,10 @@ void ASteikemannCharacter::SetDefaultState()
 
 void ASteikemannCharacter::AllowActionCancelationWithInput()
 {
-	//m_State = EState::STATE_None;
-	//SetDefaultState();
 	m_EMovementInputState = EMovementInput::Open;
 
+	//MoveForward(InputVectorRaw.X);
+	//MoveRight(InputVectorRaw.Y);
 }
 
 bool ASteikemannCharacter::BreakMovementInput(float value)
@@ -2032,6 +2032,16 @@ void ASteikemannCharacter::Respawn()
 	SetActorTransform(StartTransform, false, nullptr, ETeleportType::TeleportPhysics);
 }
 
+void ASteikemannCharacter::SetWallInputDirection()
+{
+	//float dot = FVector::DotProduct(m_InputVector, m_WallJumpData.Normal * -1.f);
+	FVector right = FVector::CrossProduct(FVector::UpVector, m_WallJumpData.Normal * -1.f);
+	float direction = FVector::DotProduct(m_InputVector, right);
+	//if (direction < 0) dot *= -1.f;
+
+	WallInputDirection = direction;
+}
+
 void ASteikemannCharacter::ExitOnWall(EState state)
 {
 	// TODO: Reevaluate m_State EState
@@ -2076,7 +2086,7 @@ void ASteikemannCharacter::Initial_LedgeGrab()
 	m_WallState = EOnWallState::WALL_Ledgegrab;
 
 	// adjust to valid location
-	FVector location = m_Ledgedata.ActorLocation;
+	FVector location = m_Ledgedata.ActorLocation + LedgeGrab_ActorZOffset;
 
 	float length = FVector(m_Ledgedata.TraceLocation - hit.ImpactPoint).Size();
 	float radius = GetCapsuleComponent()->GetScaledCapsuleRadius() + 3.f;
@@ -2092,6 +2102,9 @@ void ASteikemannCharacter::Initial_LedgeGrab()
 	RotateActorYawToVector(m_Walldata.Normal * -1.f);
 
 	GetMoveComponent()->m_GravityMode = EGravityMode::ForcedNone;
+
+	// Canceling Animation
+	CancelAnimation();
 }
 
 void ASteikemannCharacter::LedgeGrab()
@@ -2118,6 +2131,7 @@ void ASteikemannCharacter::OnWall_IMPL(float deltatime)
 		break;
 	case EOnWallState::WALL_Drag:
 		GetMoveComponent()->m_WallJumpData = m_WallJumpData;	// TODO: Change when this happens
+		SetWallInputDirection();
 		OnWall_Drag_IMPL(deltatime, (GetMoveComponent()->Velocity.Z/GetMoveComponent()->WJ_DragSpeed) * -1.f);	// VelocityZ scale from 0->1
 		break;
 	case EOnWallState::WALL_Ledgegrab:
@@ -2474,7 +2488,7 @@ void ASteikemannCharacter::Click_Attack()
 	{
 		if (m_ESmackAttackState == ESmackAttackState::Hold) 
 			m_ESmackAttackState = ESmackAttackState::Buffer;
-		if (m_ESmackAttackState == ESmackAttackState::Ready)
+		if (m_ESmackAttackState == ESmackAttackState::Ready || m_ESmackAttackState == ESmackAttackState::PostBuffer_Hold)
 			ComboAttack_Pure();
 		break;
 	}
@@ -2646,6 +2660,11 @@ void ASteikemannCharacter::ExecuteAttackBuffer()
 		return;
 	}
 
+	m_ESmackAttackState = ESmackAttackState::PostBuffer_Hold;
+}
+
+void ASteikemannCharacter::EndAttackBufferPeriod()
+{
 	m_ESmackAttackState = ESmackAttackState::Ready;
 }
 

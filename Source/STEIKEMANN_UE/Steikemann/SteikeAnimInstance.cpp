@@ -50,6 +50,8 @@ void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		
 		// Input angle on wall
 		//InputToActorForwardAngle // TODO: IMPLEMENT
+		WallInputAngle = SteikeOwner->WallInputDirection;
+
 
 		/* Ledge Grab */
 		bLedgeGrab = SteikeOwner->IsLedgeGrabbing();
