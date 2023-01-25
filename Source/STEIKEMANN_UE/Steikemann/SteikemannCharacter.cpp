@@ -307,12 +307,13 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 				break;	
 			}
 
-			// Hang on wall -- Default
+			// Hang on wall Initial Contact 
 			if (ValidateWall() && m_WallJumpData.valid)
 			{
 				GetMoveComponent()->Initial_OnWall_Hang(m_WallJumpData, OnWall_HangTime);
 				m_EState = EState::STATE_OnWall;
 				m_WallState = EOnWallState::WALL_Hang;
+				Anim_OnWallContact();
 			}
 		}
 		break;
@@ -641,6 +642,9 @@ void ASteikemannCharacter::RightTriggerClick()
 	JumpCurrentCount = 1;	// Reset DoubleJump
 
 	GH_SetGrappleType(ITag, IGrapple);
+
+	// Animations
+	Anim_Grapple_Start();
 }
 
 void ASteikemannCharacter::RightTriggerUn_Click()
@@ -726,6 +730,9 @@ void ASteikemannCharacter::GH_PreLaunch_Dynamic(IGrappleTargetInterface* IGrappl
 			m_EGrappleState = EGrappleState::Post_Launch;
 			GetMoveComponent()->m_GravityMode = EGravityMode::Default;
 			IGrapple->HookedPure(GetActorLocation(), OnGround);
+
+			// Animations
+			Anim_Grapple_End();
 		},
 		GrappleDrag_PreLaunch_Timer_Length, false);
 
@@ -759,6 +766,9 @@ void ASteikemannCharacter::GH_Launch_Static()
 	Direction.Normalize();
 
 	GetMoveComponent()->AddImpulse(Direction * LaunchStrength, true);
+
+	// Animations
+	Anim_Grapple_End();
 }
 
 
@@ -781,6 +791,9 @@ void ASteikemannCharacter::GH_Launch_Static_StuckEnemy()
 	m_WallState = EOnWallState::WALL_Leave;
 	FTimerHandle h;
 	GetWorldTimerManager().SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, GrappleHook_Time_ToStuckEnemy + OnWallActivation_PostStuckEnemyGrappled, false);
+
+	// Animations
+	Anim_Grapple_End();
 }
 
 void ASteikemannCharacter::GH_Stop()
@@ -1671,7 +1684,8 @@ void ASteikemannCharacter::PB_Launch_Passive()
 	GetCharacterMovement()->Velocity *= 0.f;
 	GetCharacterMovement()->AddImpulse((FVector::UpVector * PB_LaunchStrength_Z_Passive) + (Direction * PB_LaunchStrength_MultiXY_Passive), true);
 
-	Anim_Activate_Jump();	// Anim Pogo
+	// Animation
+	Anim_Pogo_Passive();	
 }
 
 void ASteikemannCharacter::PB_Active_IMPL()
@@ -2004,7 +2018,8 @@ void ASteikemannCharacter::Death()
 	PRINTLONG("POTTITT IS DEAD");
 
 	bIsDead = true;
-	DisableInput(GetPlayerController());
+	if (GetPlayerController())
+		DisableInput(GetPlayerController());
 
 	/* Set respawn timer */
 	FTimerHandle h;
@@ -2059,6 +2074,11 @@ bool ASteikemannCharacter::IsOnWall() const
 bool ASteikemannCharacter::IsLedgeGrabbing() const
 {
 	return m_EState == EState::STATE_OnWall && m_WallState == EOnWallState::WALL_Ledgegrab;
+}
+
+bool ASteikemannCharacter::Anim_IsOnWall() const
+{
+	return m_EState == EState::STATE_OnWall && (m_WallState == EOnWallState::WALL_Hang || m_WallState == EOnWallState::WALL_Drag);
 }
 
 bool ASteikemannCharacter::Validate_Ledge(FHitResult& hit)

@@ -123,6 +123,8 @@ enum class ESmackAttackState : int8
 };
 
 
+
+
 UENUM()
 enum class EPromptState : int8
 {
@@ -582,6 +584,10 @@ private:
 
 	bool ValidLengthToCapsule(FVector HitLocation, FVector capsuleLocation, float CapsuleHeight, float CapsuleRadius);
 
+public: // Animation
+	UFUNCTION(BlueprintImplementableEvent)
+		void Anim_Pogo_Passive();
+
 #pragma endregion //Pogo
 	
 #pragma region Crouch		
@@ -746,6 +752,11 @@ public: // Is funcitons
 	bool IsOnWall() const;
 	bool IsLedgeGrabbing() const;
 
+public: // Animation and Particle effects
+	bool Anim_IsOnWall() const;
+	UFUNCTION(BlueprintImplementableEvent)
+		void Anim_OnWallContact();
+
 private:
 	Wall::WallData m_Walldata;
 	Wall::WallData m_WallJumpData;
@@ -799,6 +810,14 @@ public:	// Launch Functions
 	void GH_Launch_Static_StuckEnemy();
 
 	void GH_Stop();
+
+public:	// Animation functions
+	UFUNCTION(BlueprintImplementableEvent)
+		void Anim_Grapple_Start();
+	UFUNCTION(BlueprintImplementableEvent)
+		void Anim_Grapple_Middle();
+	UFUNCTION(BlueprintImplementableEvent)
+		void Anim_Grapple_End();
 
 public:
 	UPROPERTY(BlueprintReadOnly)

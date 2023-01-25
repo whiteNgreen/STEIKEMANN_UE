@@ -82,7 +82,7 @@ void AEnemyAIController::AIOnSeePawn(APawn* pawn)
 
 void AEnemyAIController::AIHearNoise(APawn* InstigatorPawn, const FVector& Location, float Volume)
 {
-	PRINTPARLONG("%s HEARING pawn %s", *GetName(), *InstigatorPawn->GetName());
+	//PRINTPARLONG("%s HEARING pawn %s", *GetName(), *InstigatorPawn->GetName());
 
 	// SetState(Alerted)
 	//
@@ -195,7 +195,7 @@ void AEnemyAIController::SetNewTargetPoints()
 	BBComponent->SetValueAsVector("VTarget_B", NearSpawnLocation);
 	UpdateTargetPosition();
 
-	DrawDebugPoint(GetWorld(), NearSpawnLocation, 30.f, FColor::Black, false, 3.f, -1);
+	//DrawDebugPoint(GetWorld(), NearSpawnLocation, 30.f, FColor::Black, false, 3.f, -1);
 }
 
 void AEnemyAIController::UpdateTargetPosition()

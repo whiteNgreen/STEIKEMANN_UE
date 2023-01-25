@@ -46,7 +46,7 @@ void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		bGrappling = SteikeOwner->IsGrappling();
 
 		/* Wall Sticking */
-		bOnWall = SteikeOwner->IsOnWall();
+		bOnWall = SteikeOwner->Anim_IsOnWall();
 		
 		// Input angle on wall
 		//InputToActorForwardAngle // TODO: IMPLEMENT

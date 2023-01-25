@@ -8,7 +8,7 @@
 
 EBTNodeResult::Type UBTTask_SetTargetPoint::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
-    PRINTLONG("SET TARGET POINTS");
+    //PRINTLONG("SET TARGET POINTS");
     auto c = Cast<AEnemyAIController>(OwnerComp.GetOwner());
     c->SetNewTargetPoints();
 

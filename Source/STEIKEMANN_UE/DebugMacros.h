@@ -27,9 +27,9 @@
 typedef std::chrono::high_resolution_clock::time_point TIMER;
 #define DURATION(a) std::chrono::duration_cast<std::chrono::nanoseconds>(a).count()
 #define TIMENOW() std::chrono::high_resolution_clock::now()
-#define TIME_MILLI(t)		PRINTPARLONG("%f milliseconds",		(float)(DURATION(TIMENOW() - t) / (1e6)))		
-#define TIME_MILLI_float(t)		(float)(DURATION(TIMENOW() - t) / (1e6))		
-#define TIME_SECOND(t)		PRINTPARLONG("%f seconds",			(float)(DURATION(TIMENOW() - t) / (1e9)))	
+#define TIME_MILLI(t)				PRINTPARLONG("%f milliseconds",		(float)(DURATION(TIMENOW() - t) / (1e6)))		
+#define TIME_MILLI_float(t)			(float)(DURATION(TIMENOW() - t) / (1e6))		
+#define TIME_SECOND(t)				PRINTPARLONG("%f seconds",			(float)(DURATION(TIMENOW() - t) / (1e9)))	
 #define TIME_SECOND_float(t)		(float)(DURATION(TIMENOW() - t) / (1e9))		
 #endif // DEBUG
 
