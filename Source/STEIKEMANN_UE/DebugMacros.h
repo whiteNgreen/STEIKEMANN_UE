@@ -33,6 +33,4 @@ typedef std::chrono::high_resolution_clock::time_point TIMER;
 #define TIME_SECOND_float(t)		(float)(DURATION(TIMENOW() - t) / (1e9))		
 #endif // DEBUG
 
-#include "Coreminimal.h"
 
-DECLARE_MULTICAST_DELEGATE(FHeightReached)

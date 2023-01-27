@@ -173,7 +173,8 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Red, FString::Printf(TEXT("CorruptionCore : %i"), CollectibleCorruptionCore));
 	GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Red, FString::Printf(TEXT("Health : %i"), Health), true, FVector2D(3));
 
-	if (IsDead()) { return; }
+	//if (IsDead()) { return; }
+	if (bIsDead) { return; }
 
 	//switch (m_PromptState)
 	//{
@@ -1266,7 +1267,13 @@ void ASteikemannCharacter::LookUpAtRate(float rate)
 
 void ASteikemannCharacter::Landed(const FHitResult& Hit)
 {
-	PRINTLONG("Landed");
+	if (bIsDead)
+	{
+		DeathDelegate.Execute();
+		DeathDelegate.Unbind();
+		return;
+	}
+
 	UE_LOG(LogTemp, Display, TEXT("Landed"));
 	switch (m_EState)
 	{
@@ -1308,15 +1315,11 @@ void ASteikemannCharacter::Landed(const FHitResult& Hit)
 		break;
 	}
 
-
-
 	//if (bPB_Groundpound_PredeterminedPogoHit)
 		//return;
 
 	OnLanded(Hit);
-
 	LandedDelegate.Broadcast(Hit);
-
 
 	bPB_Groundpound_PredeterminedPogoHit = false;
 	//m_EPogoTickCheck = EPogoTickCheck::PB_Tick_None;
@@ -1983,7 +1986,8 @@ void ASteikemannCharacter::GainHealth(int amount)
 //void ASteikemannCharacter::PTakeDamage(int damage, FVector launchdirection)
 void ASteikemannCharacter::PTakeDamage(int damage, AActor* otheractor, int i/* = 0*/)
 {
-	if (IsDead()) { return; }
+	//if (IsDead()) { return; }
+	if (bIsDead) { return; }
 
 	bPlayerCanTakeDamage = false;
 	Health = FMath::Clamp(Health -= damage, 0, MaxHealth);
@@ -1994,6 +1998,13 @@ void ASteikemannCharacter::PTakeDamage(int damage, AActor* otheractor, int i/* =
 	/* Launch player */
 	FVector direction = (GetActorLocation() - otheractor->GetActorLocation()).GetSafeNormal();
 	direction = (direction + FVector::UpVector).GetSafeNormal();
+
+	auto ITag = Cast<IGameplayTagAssetInterface>(otheractor);
+	if (ITag)
+	{
+		if (ITag->HasMatchingGameplayTag(Tag::AubergineDoggo()))
+			SetActorRotation(FRotator(0, (-direction).Rotation().Yaw, 0));
+	}
 	//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (direction * 1000.f), FColor::Red, true, 0, 0, 5.f);
 
 	FTimerHandle TH;
@@ -2011,6 +2022,9 @@ void ASteikemannCharacter::PTakeDamage(int damage, AActor* otheractor, int i/* =
 	/* Damage launch */
 	GetMoveComponent()->Velocity *= 0.f;
 	GetMoveComponent()->AddImpulse(direction * SelfDamageLaunchStrength, true);
+
+	// Animation
+	Anim_TakeDamage();
 }
 
 void ASteikemannCharacter::Death()
@@ -2021,10 +2035,15 @@ void ASteikemannCharacter::Death()
 	if (GetPlayerController())
 		DisableInput(GetPlayerController());
 
-	/* Set respawn timer */
-	FTimerHandle h;
-	GetWorldTimerManager().SetTimer(h, this, &ASteikemannCharacter::Respawn, RespawnTimer);
-	// Do death related stuff here
+	// Delegate called on land
+	DeathDelegate.BindLambda([this]() {
+		/* Set respawn timer */
+		FTimerHandle h;
+		GetWorldTimerManager().SetTimer(h, this, &ASteikemannCharacter::Respawn, RespawnTimer);
+		// Do death related stuff here
+		CancelAnimation();
+		Anim_Death();
+		});
 }
 
 void ASteikemannCharacter::Respawn()
@@ -2038,6 +2057,7 @@ void ASteikemannCharacter::Respawn()
 	CloseHazards.Empty();
 	EnableInput(GetPlayerController());
 	GetMoveComponent()->Velocity *= 0;
+	CancelAnimation();
 
 	if (Checkpoint) {
 		FTransform T = Checkpoint->GetSpawnTransform();

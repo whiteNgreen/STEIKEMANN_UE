@@ -15,10 +15,14 @@
 #include "../StaticActors/Collectible.h"
 #include "../WallDetectionComponent.h"
 
+#include "../Delegates_Shared.h"
+
 #include "SteikemannCharacter.generated.h"
 
 #define GRAPPLE_HOOK ECC_GameTraceChannel1
 #define ECC_PogoCollision ECC_GameTraceChannel2
+
+
 
 class UNiagaraSystem;
 class UNiagaraComponent;
@@ -500,7 +504,7 @@ public:
 	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump|NewJump")
 		//float Jump_TopFloatTime{ 1.f };
 
-	/* Cancels Any currently running Animation montage */
+	/* Cancels the currently running Animation montage */
 	UFUNCTION(BlueprintImplementableEvent)
 		void CancelAnimation();
 #pragma endregion //Basic_Movement
@@ -677,11 +681,17 @@ public:
 	void GainHealth(int amount);
 	//void PTakeDamage(int damage, FVector launchdirection);
 	void PTakeDamage(int damage, AActor* otheractor, int i = 0);
+
+	UFUNCTION(BlueprintImplementableEvent)
+		void Anim_TakeDamage();
 	
 	bool bIsDead{};
-	bool IsDead() const { return bIsDead; }
+	//bool IsDead() const { return bIsDead; }
 
+	FDeath DeathDelegate;
 	void Death();
+	UFUNCTION(BlueprintImplementableEvent)
+		void Anim_Death();
 
 	FTransform StartTransform;
 	class APlayerRespawn* Checkpoint{ nullptr };
