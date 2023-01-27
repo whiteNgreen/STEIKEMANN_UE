@@ -100,6 +100,8 @@ void ASteikemannCharacter::BeginPlay()
 		if (NS_CrouchSlide) { NiComp_CrouchSlide->SetAsset(NS_CrouchSlide); }
 	}
 	
+	// Delegates
+	PostLockedMovementDelegate.BindUObject(this, &ASteikemannCharacter::CancelAnimationMontageIfMoving);
 	
 	/* Attack Collider */
 	AttackCollider->OnComponentBeginOverlap.AddDynamic(this, &ASteikemannCharacter::OnAttackColliderBeginOverlap);
@@ -141,6 +143,8 @@ UNiagaraComponent* ASteikemannCharacter::CreateNiagaraComponent(FName Name, USce
 
 void ASteikemannCharacter::NS_Land_Implementation(const FHitResult& Hit)
 {
+	if (IsGroundPounding() || m_EAttackState == EAttackState::Post_GroundPound)
+		PRINTLONG("NS LAND GROUND POUND");
 	/* Play Landing particle effect */
 	float Velocity = GetVelocity().Size();
 	UNiagaraComponent* NiagaraPlayer{ nullptr };
@@ -157,7 +161,7 @@ void ASteikemannCharacter::NS_Land_Implementation(const FHitResult& Hit)
 
 	NiagaraPlayer->SetAsset(NS_Land);
 	NiagaraPlayer->SetNiagaraVariableInt("User.SpawnAmount", static_cast<int>(Velocity * NSM_Land_ParticleAmount));
-	NiagaraPlayer->SetNiagaraVariableFloat("User.Velocity", IsGroundPounding() ? Velocity * 3.f * NSM_Land_ParticleSpeed : Velocity * NSM_Land_ParticleSpeed);	// Change pending on character is groundpounding or not
+	NiagaraPlayer->SetNiagaraVariableFloat("User.Velocity", m_EAttackState == EAttackState::Post_GroundPound ? Velocity * 3.f * NSM_Land_ParticleSpeed : Velocity * NSM_Land_ParticleSpeed);	// Change pending on character is groundpounding or not
 	NiagaraPlayer->SetWorldLocationAndRotation(Hit.ImpactPoint, Hit.ImpactNormal.Rotation());
 	NiagaraPlayer->Activate(true);
 }
@@ -1157,18 +1161,34 @@ void ASteikemannCharacter::SetDefaultState()
 
 void ASteikemannCharacter::AllowActionCancelationWithInput()
 {
-	m_EMovementInputState = EMovementInput::Open;
-
-	//MoveForward(InputVectorRaw.X);
-	//MoveRight(InputVectorRaw.Y);
+	switch (m_EMovementInputState)
+	{
+	case EMovementInput::Open:
+		break;
+	case EMovementInput::Locked:
+		m_EMovementInputState = EMovementInput::Open;
+		break;
+	case EMovementInput::PeriodLocked:
+		break;
+	default:
+		break;
+	}
 }
 
 bool ASteikemannCharacter::BreakMovementInput(float value)
 {
-	if (m_EMovementInputState == EMovementInput::Locked) return true;
+	if (m_EMovementInputState == EMovementInput::Locked || m_EMovementInputState == EMovementInput::PeriodLocked) return true;
+	//else if (m_EMovementInputState == EMovementInput::PeriodLocked) {
+	//	return true;
+	//}
 	switch (m_EState)
 	{
 	case EState::STATE_OnGround:
+		if (m_EAttackState == EAttackState::Post_GroundPound && (value > 0.3f || value < -0.3f)) {
+			m_EAttackState = EAttackState::None;
+			PRINTLONG("STOP GroundPound Anim Montage");
+			StopAnimMontage();
+		}
 		break;
 	case EState::STATE_InAir:
 		break;
@@ -1194,6 +1214,7 @@ bool ASteikemannCharacter::BreakMovementInput(float value)
 
 void ASteikemannCharacter::MoveForward(float value)
 {
+	PRINTPAR("Moving Forward %f", value);
 	InputVectorRaw.X = value;
 
 	if (BreakMovementInput(value)) return;
@@ -1265,8 +1286,19 @@ void ASteikemannCharacter::LookUpAtRate(float rate)
 	AddControllerPitchInput(rate * TurnRate * GetWorld()->GetDeltaSeconds());
 }
 
+void ASteikemannCharacter::LockMovementForPeriod(float time, TFunction<void()> lambdaCall)
+{
+	m_EMovementInputState = EMovementInput::PeriodLocked;
+	GetWorldTimerManager().SetTimer(TH_MovementPeriodLocked, [this, lambdaCall]() { 
+		m_EMovementInputState = EMovementInput::Open; 
+		PostLockedMovementDelegate.Execute(lambdaCall);
+		}, time, false);
+}
+
 void ASteikemannCharacter::Landed(const FHitResult& Hit)
 {
+	//CancelAnimation();
+
 	if (bIsDead)
 	{
 		DeathDelegate.Execute();
@@ -1282,14 +1314,17 @@ void ASteikemannCharacter::Landed(const FHitResult& Hit)
 	case EState::STATE_OnGround:
 		break;
 	case EState::STATE_InAir:
-		switch (m_EAirState)
-		{
-		case EAirState::AIR_None:		break;
-		case EAirState::AIR_Freefall:	break;
-		case EAirState::AIR_Jump:		break;
-		case EAirState::AIR_Pogo:		return;
-		default:						break;
-		}
+		if (m_EAirState == EAirState::AIR_Pogo)
+			return;
+		Anim_Land();
+		//switch (m_EAirState)
+		//{
+		//case EAirState::AIR_None:		break;
+		//case EAirState::AIR_Freefall:	break;
+		//case EAirState::AIR_Jump:		break;
+		//case EAirState::AIR_Pogo:		return;
+		//default:						break;
+		//}
 		break;
 	case EState::STATE_OnWall:
 		break;
@@ -1298,12 +1333,13 @@ void ASteikemannCharacter::Landed(const FHitResult& Hit)
 			return;
 		if (m_EAttackState == EAttackState::GroundPound)
 		{
-			bool groundpound{};
+			//bool groundpound{};
 			if (IsGroundPounding()) {
 				GroundPoundLand(Hit);
+
 				//m_EAttackState = EAttackState::None;
 				//ResetState();
-				groundpound = true;
+				//groundpound = true;
 			}
 		}
 		//if (m_EPogoType == EPogoType::POGO_Groundpound)
@@ -1610,6 +1646,14 @@ bool ASteikemannCharacter::IsOnGround() const
 {
 	if (!GetMoveComponent().IsValid()) { return false; }
 	return GetMoveComponent()->MovementMode == MOVE_Walking;
+}
+
+void ASteikemannCharacter::CancelAnimationMontageIfMoving(TFunction<void()> lambdaCall)
+{
+	if (InputVectorRaw.SquaredLength() > 0.5)
+		StopAnimMontage();
+	if (lambdaCall)
+		lambdaCall;
 }
 
 bool ASteikemannCharacter::PB_TargetBeneath()
@@ -2041,7 +2085,7 @@ void ASteikemannCharacter::Death()
 		FTimerHandle h;
 		GetWorldTimerManager().SetTimer(h, this, &ASteikemannCharacter::Respawn, RespawnTimer);
 		// Do death related stuff here
-		CancelAnimation();
+		//CancelAnimation();
 		Anim_Death();
 		});
 }
@@ -2645,6 +2689,9 @@ void ASteikemannCharacter::UnClick_ScoopAttack()
 
 void ASteikemannCharacter::PostScoopJump()
 {
+	if (!ScoopedActor)
+		return;
+
 	m_EState = EState::STATE_InAir;
 	m_EAirState = EAirState::AIR_PostScoopJump;
 	
@@ -2926,6 +2973,9 @@ void ASteikemannCharacter::Start_GroundPound()
 	GetMoveComponent()->GP_PreLaunch();
 
 	GetWorldTimerManager().SetTimer(THandle_GPHangTime, this, &ASteikemannCharacter::Launch_GroundPound, GP_PrePoundAirtime);
+
+	// Animation
+	Anim_GroundPound_Initial();
 }
 
 void ASteikemannCharacter::Deactivate_GroundPound()
@@ -2956,6 +3006,13 @@ void ASteikemannCharacter::GroundPoundLand(const FHitResult& Hit)
 	GroundPoundCollider->SetSphereRadius(MaxGroundPoundRadius, true);
 
 	GetWorldTimerManager().SetTimer(THandle_GPReset, this, &ASteikemannCharacter::Deactivate_GroundPound, GroundPoundExpandTime);
+
+	// Locking movement for a period, GP_MovementPeriodLocket	// Setting AttackState as Post Groundpound, read in BreakMovementInput for animation montage canceling
+	m_EAttackState = EAttackState::Post_GroundPound;
+	LockMovementForPeriod(GP_MovementPeriodLocked, nullptr);
+
+	// Animation
+	Anim_GroundPound_Land_Ground();
 }
 
 void ASteikemannCharacter::Do_GroundPound_Pure(IAttackInterface* OtherInterface, AActor* OtherActor)

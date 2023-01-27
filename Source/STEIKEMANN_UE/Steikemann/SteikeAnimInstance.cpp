@@ -39,6 +39,9 @@ void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		/* Jump */
 		bJumping = SteikeOwner->IsJumping();
 
+		// GroundPound
+		bGroundPound = SteikeOwner->IsGroundPounding();
+
 		/* Dash */
 		//bDashing = SteikeOwner->IsDashing();
 

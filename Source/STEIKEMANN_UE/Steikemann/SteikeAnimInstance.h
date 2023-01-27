@@ -89,9 +89,9 @@ public:
 		bool bGrappling{};
 #pragma endregion //Grappling
 
-#pragma region Dash
+#pragma region GroundPound
 	/* Checks if character is dashing */
 	UPROPERTY(BlueprintReadOnly)
-		bool bDashing{};
-#pragma endregion //Dash
+		bool bGroundPound{};
+#pragma endregion //GroundPound
 };

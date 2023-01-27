@@ -32,7 +32,8 @@ UENUM()
 enum class EMovementInput : int8
 {
 	Open,
-	Locked
+	Locked,
+	PeriodLocked
 };
 UENUM()
 enum class EState : int8
@@ -109,6 +110,8 @@ enum class EAttackState : int8
 	Smack,
 	Scoop,
 	GroundPound
+
+	,Post_GroundPound
 };
 
 UENUM()
@@ -426,6 +429,9 @@ public:
 	void TurnAtRate(float rate);
 	void LookUpAtRate(float rate);
 
+	FTimerHandle TH_MovementPeriodLocked;
+	FPostLockedMovement PostLockedMovementDelegate;
+	void LockMovementForPeriod(float time, TFunction<void()> lambdaCall = nullptr);
 
 	bool bActivateJump{};
 	UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
@@ -474,6 +480,8 @@ public:
 		void Anim_Activate_Jump();
 	UFUNCTION(BlueprintImplementableEvent)
 		void Anim_Activate_DoubleJump();
+	UFUNCTION(BlueprintImplementableEvent)
+		void Anim_Land();
 
 	bool CanDoubleJump() const;
 	bool IsJumping() const;
@@ -507,6 +515,7 @@ public:
 	/* Cancels the currently running Animation montage */
 	UFUNCTION(BlueprintImplementableEvent)
 		void CancelAnimation();
+	void CancelAnimationMontageIfMoving(TFunction<void()> lambdaCall);
 #pragma endregion //Basic_Movement
 
 #pragma region Pogo
@@ -1129,7 +1138,8 @@ public:
 	#pragma region GroundPound
 
 	bool bGroundPoundPress{};
-	bool IsGroundPounding() const { return m_EState == EState::STATE_Attacking && m_EAttackState == EAttackState::GroundPound; }
+	UFUNCTION(BlueprintCallable)
+		bool IsGroundPounding() const { return m_EState == EState::STATE_Attacking && m_EAttackState == EAttackState::GroundPound; }
 
 	void Click_GroundPound();
 	void UnClick_GroundPound();
@@ -1143,10 +1153,18 @@ public:
 	/* The launch strength the enemies will recieve */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|GroundPound")
 		float GP_LaunchStrength{ 2500.f };
+	/* How long the movement will be locked after landing with ground pound */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|GroundPound")
+		float GP_MovementPeriodLocked{ 1.f };
 	FTimerHandle THandle_GPHangTime;
 
 
 	void Launch_GroundPound();
+
+	UFUNCTION(BlueprintImplementableEvent)
+		void Anim_GroundPound_Initial();
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
+		void Anim_GroundPound_Land_Ground();
 
 	/* Collider */
 	/* Time it takes for the ground pound collider to expand to max size */
