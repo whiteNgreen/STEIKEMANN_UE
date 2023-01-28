@@ -43,6 +43,10 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		bool bOnGround{};
 
+	/* Deciding when the lower body should blend to the default state machine _ IN AIR ONLY */
+	UPROPERTY(BlueprintReadOnly)
+		bool bBlendLowerBody_Air{};
+
 #pragma region Crouch
 
 	UPROPERTY(BlueprintReadOnly)
@@ -77,20 +81,22 @@ public:
 #pragma endregion //WallSticking
 
 #pragma region LedgeGrab
-
 	UPROPERTY(BlueprintReadOnly)
 		bool bLedgeGrab{};
-
-
 #pragma endregion //LedgeGrab
 
 #pragma region Grappling
 	UPROPERTY(BlueprintReadWrite)
 		bool bGrappling{};
+	UPROPERTY(BlueprintReadOnly)
+		FVector GrappledTarget{};
+	UPROPERTY(BlueprintReadOnly)
+		bool bControlRigLerp{};
+	UPROPERTY(BlueprintReadOnly)
+		float ControlRig_LeafAlpha{};
 #pragma endregion //Grappling
 
 #pragma region GroundPound
-	/* Checks if character is dashing */
 	UPROPERTY(BlueprintReadOnly)
 		bool bGroundPound{};
 #pragma endregion //GroundPound

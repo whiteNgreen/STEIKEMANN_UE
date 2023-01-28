@@ -37,5 +37,7 @@ public:
 	virtual void ExecuteAttackBuffer		(){}
 	virtual void EndAttackBufferPeriod		(){}
 
+	virtual void StartAnimLerp_ControlRig	(){}
+
 	//virtual void EndComboHold				(){}
 };

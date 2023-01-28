@@ -830,6 +830,7 @@ public:	// Launch Functions
 
 	void GH_Stop();
 
+	
 public:	// Animation functions
 	UFUNCTION(BlueprintImplementableEvent)
 		void Anim_Grapple_Start();
@@ -837,6 +838,13 @@ public:	// Animation functions
 		void Anim_Grapple_Middle();
 	UFUNCTION(BlueprintImplementableEvent)
 		void Anim_Grapple_End();
+	void Anim_Grapple_End_Pure();
+	void GH_StopControlRig();
+
+	// For the control rig 
+	FVector GH_GetTargetLocation() const;
+	bool bGH_LerpControlRig{};
+	virtual void StartAnimLerp_ControlRig() override;
 
 public:
 	UPROPERTY(BlueprintReadOnly)
@@ -846,6 +854,7 @@ private:
 	EGrappleType m_EGrappleType = EGrappleType::None;
 	TWeakObjectPtr<AActor> GrappledActor{ nullptr };
 	TWeakObjectPtr<AActor> Active_GrappledActor{ nullptr };
+	TWeakObjectPtr<AActor> GrappledEnemy{ nullptr };
 
 public:	// UPROPERTY Variables
 	// How long movement input will be disabled after pulling a dynamic target free from being stuck
@@ -1073,8 +1082,9 @@ public:
 
 	//bool bIsSmackAttacking{};
 
-	bool bCanBeSmackAttacked{ true };
+	bool IsSmackAttacking() const;
 
+	bool bCanBeSmackAttacked{ true };
 
 
 	void Do_SmackAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override;

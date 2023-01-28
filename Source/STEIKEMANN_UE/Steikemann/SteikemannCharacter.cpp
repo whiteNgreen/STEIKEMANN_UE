@@ -644,6 +644,8 @@ void ASteikemannCharacter::RightTriggerClick()
 	IGrappleTargetInterface* IGrapple = Cast<IGrappleTargetInterface>(Active_GrappledActor.Get());
 	if (!ITag || !IGrapple) return;
 
+	if (ITag->HasMatchingGameplayTag(Tag::AubergineDoggo()))
+		GrappledEnemy = Active_GrappledActor;
 	JumpCurrentCount = 1;	// Reset DoubleJump
 
 	GH_SetGrappleType(ITag, IGrapple);
@@ -720,6 +722,10 @@ void ASteikemannCharacter::GH_PreLaunch_Static(void(ASteikemannCharacter::* Laun
 
 	// End GrappleHook Timer
 	GetWorldTimerManager().SetTimer(TH_Grapplehook_End_Launch, this, &ASteikemannCharacter::GH_Stop, GrappleDrag_PreLaunch_Timer_Length + GrappleHook_PostLaunchTimer);
+
+	// End control rig 
+	FTimerHandle h;
+	GetWorldTimerManager().SetTimer(h, this, &ASteikemannCharacter::GH_StopControlRig, GrappleDrag_PreLaunch_Timer_Length + (GrappleHook_PostLaunchTimer * 0.3));
 }
 
 void ASteikemannCharacter::GH_PreLaunch_Dynamic(IGrappleTargetInterface* IGrapple, bool OnGround)
@@ -737,12 +743,16 @@ void ASteikemannCharacter::GH_PreLaunch_Dynamic(IGrappleTargetInterface* IGrappl
 			IGrapple->HookedPure(GetActorLocation(), OnGround);
 
 			// Animations
-			Anim_Grapple_End();
+			Anim_Grapple_End_Pure();
 		},
 		GrappleDrag_PreLaunch_Timer_Length, false);
 
 	// End GrappleHook Timer
 	GetWorldTimerManager().SetTimer(TH_Grapplehook_End_Launch, this, &ASteikemannCharacter::GH_Stop, GrappleDrag_PreLaunch_Timer_Length + GrappleHook_PostLaunchTimer);
+
+	// End control rig 
+	FTimerHandle h;
+	GetWorldTimerManager().SetTimer(h, this, &ASteikemannCharacter::GH_StopControlRig, GrappleDrag_PreLaunch_Timer_Length + (GrappleHook_PostLaunchTimer * 0.3));
 }
 
 void ASteikemannCharacter::GH_PreLaunch()
@@ -773,7 +783,7 @@ void ASteikemannCharacter::GH_Launch_Static()
 	GetMoveComponent()->AddImpulse(Direction * LaunchStrength, true);
 
 	// Animations
-	Anim_Grapple_End();
+	Anim_Grapple_End_Pure();
 }
 
 
@@ -804,11 +814,42 @@ void ASteikemannCharacter::GH_Launch_Static_StuckEnemy()
 void ASteikemannCharacter::GH_Stop()
 {
 	Active_GrappledActor = nullptr;
+	//GrappledEnemy = nullptr;
 
 	m_EState = EState::STATE_None;
 	m_EGrappleState = EGrappleState::None;
 	m_EGrappleType = EGrappleType::None;
 	SetDefaultState();
+
+}
+
+FVector ASteikemannCharacter::GH_GetTargetLocation() const
+{
+	if (Active_GrappledActor.IsValid())
+		return Active_GrappledActor->GetActorLocation();
+	if (GrappledActor.IsValid())
+		 return GrappledActor->GetActorLocation();
+	if (GrappledEnemy.IsValid())
+		return GrappledEnemy->GetActorLocation();
+	return FVector();
+}
+
+void ASteikemannCharacter::StartAnimLerp_ControlRig()
+{
+	bGH_LerpControlRig = true;
+}
+
+void ASteikemannCharacter::Anim_Grapple_End_Pure()
+{
+	//bGH_LerpControlRig = false;
+
+	Anim_Grapple_End();
+}
+
+void ASteikemannCharacter::GH_StopControlRig()
+{
+	// Animation
+	bGH_LerpControlRig = false;
 }
 
 
@@ -2542,6 +2583,11 @@ void ASteikemannCharacter::Activate_SmackAttack()
 void ASteikemannCharacter::Deactivate_SmackAttack()	// Decrepid
 {
 	bSmackAttackMoveCharacter = false;
+}
+
+bool ASteikemannCharacter::IsSmackAttacking() const
+{
+	return m_EState == EState::STATE_Attacking && m_EAttackState == EAttackState::Smack;
 }
 
 void ASteikemannCharacter::Click_Attack()

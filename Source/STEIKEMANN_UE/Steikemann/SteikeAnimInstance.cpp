@@ -42,22 +42,25 @@ void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		// GroundPound
 		bGroundPound = SteikeOwner->IsGroundPounding();
 
-		/* Dash */
-		//bDashing = SteikeOwner->IsDashing();
-
 		/* Grappling */
 		bGrappling = SteikeOwner->IsGrappling();
+		GrappledTarget = SteikeOwner->GH_GetTargetLocation();
+		//GrappledTarget = SteikeOwner->Active_GrappledActor_Location;
+		bControlRigLerp = SteikeOwner->bGH_LerpControlRig;
+		ControlRig_LeafAlpha = FMath::FInterpTo(ControlRig_LeafAlpha, (float)bControlRigLerp, DeltaSeconds, 33.f);
 
 		/* Wall Sticking */
 		bOnWall = SteikeOwner->Anim_IsOnWall();
 		
 		// Input angle on wall
-		//InputToActorForwardAngle // TODO: IMPLEMENT
 		WallInputAngle = SteikeOwner->WallInputDirection;
-
 
 		/* Ledge Grab */
 		bLedgeGrab = SteikeOwner->IsLedgeGrabbing();
+
+
+		// Booleans for blending various bodyparts
+		bBlendLowerBody_Air = bFalling && (bGrappling || SteikeOwner->IsSmackAttacking());
 	}
 	else {
 		SteikeOwner = Cast<ASteikemannCharacter>(TryGetPawnOwner());
