@@ -337,7 +337,7 @@ void USteikemannCharMovementComponent::PB_Launch_Active(FVector direction, float
 
 void USteikemannCharMovementComponent::Initial_OnWall_Hang(const Wall::WallData& wall, float time)
 {
-	PRINTLONG("ON WALL HANG");
+	//PRINTLONG("ON WALL HANG");
 
 	m_WallJumpData = wall;
 	m_WallState = EOnWallState::WALL_Hang;

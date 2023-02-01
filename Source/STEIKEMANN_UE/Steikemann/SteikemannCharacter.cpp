@@ -102,6 +102,11 @@ void ASteikemannCharacter::BeginPlay()
 	
 	// Delegates
 	PostLockedMovementDelegate.BindUObject(this, &ASteikemannCharacter::CancelAnimationMontageIfMoving);
+	DeathDelegate.BindLambda([this]() {
+		FTimerHandle h;
+		GetWorldTimerManager().SetTimer(h, this, &ASteikemannCharacter::Respawn, RespawnTimer);
+		Anim_Death();	// Do IsFalling check to determine which animation to play
+		});
 	
 	/* Attack Collider */
 	AttackCollider->OnComponentBeginOverlap.AddDynamic(this, &ASteikemannCharacter::OnAttackColliderBeginOverlap);
@@ -143,8 +148,6 @@ UNiagaraComponent* ASteikemannCharacter::CreateNiagaraComponent(FName Name, USce
 
 void ASteikemannCharacter::NS_Land_Implementation(const FHitResult& Hit)
 {
-	if (IsGroundPounding() || m_EAttackState == EAttackState::Post_GroundPound)
-		PRINTLONG("NS LAND GROUND POUND");
 	/* Play Landing particle effect */
 	float Velocity = GetVelocity().Size();
 	UNiagaraComponent* NiagaraPlayer{ nullptr };
@@ -173,45 +176,11 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	/* SHOW COLLECTIBLES */
-	GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Red, FString::Printf(TEXT("Common : %i"), CollectibleCommon));
-	GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Red, FString::Printf(TEXT("CorruptionCore : %i"), CollectibleCorruptionCore));
-	GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Red, FString::Printf(TEXT("Health : %i"), Health), true, FVector2D(3));
+	GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Red, FString::Printf(TEXT("Common : %i"), CollectibleCommon), true, FVector2D(1.5f));
+	GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Red, FString::Printf(TEXT("CorruptionCore : %i"), CollectibleCorruptionCore), true, FVector2D(1.5f));
+	GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Red, FString::Printf(TEXT("Health : %i"), Health), true, FVector2D(4));
 
-	//if (IsDead()) { return; }
 	if (bIsDead) { return; }
-
-	//switch (m_PromptState)
-	//{
-	//case EPromptState::None:
-	//	PRINT("Prompt: None");
-	//	break;
-	//case EPromptState::WithingArea:
-	//	PRINT("Prompt: WithinArea");
-	//	break;
-	//case EPromptState::InPrompt:
-	//	PRINT("Prompt: InPrompt");
-	//	break;
-	//default:
-	//	break;
-	//}
-	
-	//******* Camera Debugging
-	//static FVector previousCamPosition{};
-	//float delta = FVector(previousCamPosition - Camera->GetComponentLocation()).Size();
-	//if (delta > 100.f)
-	//{
-	//	GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, FString::Printf(TEXT("CAMERA GLITCH")));
-	//}
-	//previousCamPosition = Camera->GetComponentLocation();
-
-	static FRotator controlRot{};
-	float deltaYaw = FVector::DotProduct(controlRot.Vector(), GetControlRotation().Vector());
-	if (deltaYaw < 0.9)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, FString::Printf(TEXT("CAMERA GLITCH")));
-	}
-	controlRot = GetControlRotation();
-
 	/* Rotate Inputvector to match the playercontroller */
 	{
 		m_InputVector = InputVectorRaw;
@@ -221,29 +190,29 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		if (InputVectorRaw.Size() > 1.f || m_InputVector.Size() > 1.f)
 			m_InputVector.Normalize();
 	}
-	switch (m_EState)
-	{
-	case EState::STATE_OnGround:
-		PRINT("STATE_OnGround");
-		break;
-	case EState::STATE_InAir:
-		PRINT("STATE_InAir");
-		break;
-	case EState::STATE_OnWall:
-		PRINT("STATE_OnWall");
-		break;
-	case EState::STATE_Attacking:
-		PRINT("STATE_Attacking");
-		break;
-	case EState::STATE_Grappling:
-		PRINT("STATE_Grappling");
-		break;
-	default:
-		break;
-	}
-	PRINTPAR("Attack State :: %i", m_EAttackState);
-	PRINTPAR("Smack Attack State :: %i", m_ESmackAttackState);
-	PRINTPAR("Air State :: %i", m_EAirState);
+	//switch (m_EState)
+	//{
+	//case EState::STATE_OnGround:
+	//	PRINT("STATE_OnGround");
+	//	break;
+	//case EState::STATE_InAir:
+	//	PRINT("STATE_InAir");
+	//	break;
+	//case EState::STATE_OnWall:
+	//	PRINT("STATE_OnWall");
+	//	break;
+	//case EState::STATE_Attacking:
+	//	PRINT("STATE_Attacking");
+	//	break;
+	//case EState::STATE_Grappling:
+	//	PRINT("STATE_Grappling");
+	//	break;
+	//default:
+	//	break;
+	//}
+	//PRINTPAR("Attack State :: %i", m_EAttackState);
+	//PRINTPAR("Smack Attack State :: %i", m_ESmackAttackState);
+	//PRINTPAR("Air State :: %i", m_EAirState);
 	//PRINTPAR("Pogo Type :: %i", m_EPogoType);
 
 	/*		Resets Rotation Pitch and Roll		*/
@@ -293,7 +262,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 			PB_Passive_IMPL(m_PogoTarget);
 			break;
 		case EPogoType::POGO_Active:
-			PRINTLONG("Tick: POGO ACTIVE");
+			//PRINTLONG("Tick: POGO ACTIVE");
 			PB_Active_IMPL();
 			break;
 		default:
@@ -348,7 +317,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		case EAttackState::GroundPound:
 			if (m_EPogoType == EPogoType::POGO_Groundpound) 
 			{
-				PRINTLONG("Tick: POGO GROUND POUND");
+				//PRINTLONG("Tick: POGO GROUND POUND");
 				PB_Groundpound_IMPL(m_PogoTarget);
 				break;
 			}
@@ -468,21 +437,21 @@ void ASteikemannCharacter::LeavePromptArea()
 
 bool ASteikemannCharacter::ActivatePrompt()
 {
-	PRINTLONG("Activate Prompt");
+	//PRINTLONG("Activate Prompt");
 	bool b{};
 	switch (m_PromptState)
 	{
 	case EPromptState::None:			return false;
 
 	case EPromptState::WithingArea:
-		PRINTLONG("Steikemann: FIRST PROMPT");
+		//PRINTLONG("Steikemann: FIRST PROMPT");
 		m_EMovementInputState = EMovementInput::Locked;
 		m_PromptState = EPromptState::InPrompt;
 		// Get first prompt state
 		return m_PromptActor->GetNextPromptState(this, 0);
 
 	case EPromptState::InPrompt:
-		PRINTLONG("Steikemann: CONTINUE PROMPT");
+		//PRINTLONG("Steikemann: CONTINUE PROMPT");
 		// Get next prompt state
 		b = m_PromptActor->GetNextPromptState(this);
 		if (!b) m_EMovementInputState = EMovementInput::Open;
@@ -495,7 +464,7 @@ bool ASteikemannCharacter::ActivatePrompt()
 
 bool ASteikemannCharacter::ExitPrompt()
 {
-	PRINTLONG("Exit Prompt");
+	//PRINTLONG("Exit Prompt");
 	m_EMovementInputState = EMovementInput::Open;
 	m_PromptState = EPromptState::WithingArea;
 	// Notify DialoguePrompt of exiting
@@ -509,7 +478,7 @@ bool ASteikemannCharacter::ExitPrompt()
 
 bool ASteikemannCharacter::LerpCameraBackToBoom(float DeltaTime)
 {
-	PRINT("Camera lerp back to Camera Boom");
+	//PRINT("Camera lerp back to Camera Boom");
 	m_CameraLerpAlpha_PostPrompt = FMath::Min(m_CameraLerpAlpha_PostPrompt += DeltaTime * CameraLerpSpeed_Prompt, 1.f);
 	FTransform TargetTransform = CameraBoom->GetSocketTransform(USpringArmComponent::SocketName);
 	m_CameraTransform = Camera->GetComponentTransform();
@@ -523,7 +492,7 @@ bool ASteikemannCharacter::LerpCameraBackToBoom(float DeltaTime)
 	// End camera lerp
 	if (m_CameraLerpAlpha_PostPrompt >= 1.f)
 	{
-		PRINTLONG("POST PROMPT: Stop camera transform lerp");
+		//PRINTLONG("POST PROMPT: Stop camera transform lerp");
 		Camera->SetWorldTransform(m_CameraTransform);
 		return false;
 	}
@@ -1227,7 +1196,7 @@ bool ASteikemannCharacter::BreakMovementInput(float value)
 	case EState::STATE_OnGround:
 		if (m_EAttackState == EAttackState::Post_GroundPound && (value > 0.3f || value < -0.3f)) {
 			m_EAttackState = EAttackState::None;
-			PRINTLONG("STOP GroundPound Anim Montage");
+			//PRINTLONG("STOP GroundPound Anim Montage");
 			StopAnimMontage();
 		}
 		break;
@@ -1255,7 +1224,7 @@ bool ASteikemannCharacter::BreakMovementInput(float value)
 
 void ASteikemannCharacter::MoveForward(float value)
 {
-	PRINTPAR("Moving Forward %f", value);
+	//PRINTPAR("Moving Forward %f", value);
 	InputVectorRaw.X = value;
 
 	if (BreakMovementInput(value)) return;
@@ -1342,8 +1311,8 @@ void ASteikemannCharacter::Landed(const FHitResult& Hit)
 
 	if (bIsDead)
 	{
-		DeathDelegate.Execute();
-		DeathDelegate.Unbind();
+		DeathDelegate_Land.Execute();
+		DeathDelegate_Land.Unbind();
 		return;
 	}
 
@@ -1891,7 +1860,7 @@ bool ASteikemannCharacter::ValidLengthToCapsule(FVector HitLocation, FVector cap
 void ASteikemannCharacter::PB_Pogo()
 {
 	if (m_EAttackState == EAttackState::GroundPound) {
-		PRINTLONG("Collision: ENTER POGO GROUNDPOUND");
+		//PRINTLONG("Collision: ENTER POGO GROUNDPOUND");
 		m_EPogoType = EPogoType::POGO_Groundpound;
 		return;
 	}
@@ -2114,21 +2083,22 @@ void ASteikemannCharacter::PTakeDamage(int damage, AActor* otheractor, int i/* =
 
 void ASteikemannCharacter::Death()
 {
-	PRINTLONG("POTTITT IS DEAD");
+	PRINTLONG("POTITT IS DEAD");
 
 	bIsDead = true;
 	if (GetPlayerController())
 		DisableInput(GetPlayerController());
 
 	// Delegate called on land
-	DeathDelegate.BindLambda([this]() {
-		/* Set respawn timer */
-		FTimerHandle h;
-		GetWorldTimerManager().SetTimer(h, this, &ASteikemannCharacter::Respawn, RespawnTimer);
-		// Do death related stuff here
-		//CancelAnimation();
-		Anim_Death();
-		});
+	DeathDelegate_Land.BindLambda([this]() { DeathDelegate.Execute(); });
+}
+
+void ASteikemannCharacter::Death_Deathzone()
+{
+	Camera->DetachFromParent(true);
+
+	Death();
+	DeathDelegate.Execute();
 }
 
 void ASteikemannCharacter::Respawn()
@@ -2143,6 +2113,8 @@ void ASteikemannCharacter::Respawn()
 	EnableInput(GetPlayerController());
 	GetMoveComponent()->Velocity *= 0;
 	CancelAnimation();
+	DeathDelegate_Land.Unbind();
+	Camera->AttachToComponent(CameraBoom, FAttachmentTransformRules::SnapToTargetNotIncludingScale, USpringArmComponent::SocketName);
 
 	if (Checkpoint) {
 		FTransform T = Checkpoint->GetSpawnTransform();
@@ -2260,7 +2232,7 @@ void ASteikemannCharacter::OnWall_IMPL(float deltatime)
 		OnWall_Drag_IMPL(deltatime, (GetMoveComponent()->Velocity.Z/GetMoveComponent()->WJ_DragSpeed) * -1.f);	// VelocityZ scale from 0->1
 		break;
 	case EOnWallState::WALL_Ledgegrab:
-		DrawDebugArms(0.f);
+		//DrawDebugArms(0.f);
 		break;
 	case EOnWallState::WALL_Leave:
 		break;
@@ -2331,7 +2303,7 @@ void ASteikemannCharacter::OnCapsuleComponentBeginOverlap(UPrimitiveComponent* O
 
 	/* Player enters/falls into a DeathZone */
 	if (tags.HasTag(Tag::DeathZone())) {
-		Death();
+		Death_Deathzone();
 	}
 }
 

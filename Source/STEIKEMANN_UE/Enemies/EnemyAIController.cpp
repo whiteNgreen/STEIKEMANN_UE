@@ -104,7 +104,7 @@ void AEnemyAIController::SensePawn_Player()
 		if (!bIsSensingPawn) {
 			TM_AI.ClearTimer(TH_SpotPlayer);
 			ReDetermineState();
-			GEngine->AddOnScreenDebugMessage(0, 2.f, FColor::Purple, TEXT("No Longer sensing player"));
+			//GEngine->AddOnScreenDebugMessage(0, 2.f, FColor::Purple, TEXT("No Longer sensing player"));
 			SensedPawnsDelegate.Clear();
 		}
 	}
@@ -116,14 +116,14 @@ void AEnemyAIController::SensePawn_Player()
 
 void AEnemyAIController::SpotPlayer()
 {
-	GEngine->AddOnScreenDebugMessage(0, 2.f, FColor::Purple, TEXT("SPOTTING PLAYER"));
+	//GEngine->AddOnScreenDebugMessage(0, 2.f, FColor::Purple, TEXT("SPOTTING PLAYER"));
 	SetState(ESmallEnemyAIState::ChasingTarget);
 	BBComponent->SetValueAsObject("APlayer", m_PawnOwner->m_SensedPawn);
 }
 
 void AEnemyAIController::Attack()
 {
-	PRINTLONG("Attacking");
+	//PRINTLONG("Attacking");
 	auto player = Cast<ASteikemannCharacter>(m_PawnOwner->m_SensedPawn);
 	if (!player) return;
 	player->PTakeDamage(1, m_PawnOwner);

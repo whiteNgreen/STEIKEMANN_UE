@@ -698,7 +698,9 @@ public:
 	//bool IsDead() const { return bIsDead; }
 
 	FDeath DeathDelegate;
+	FDeath DeathDelegate_Land;
 	void Death();
+	void Death_Deathzone();
 	UFUNCTION(BlueprintImplementableEvent)
 		void Anim_Death();
 
