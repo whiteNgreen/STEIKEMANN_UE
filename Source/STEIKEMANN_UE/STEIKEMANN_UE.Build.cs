@@ -8,8 +8,9 @@ public class STEIKEMANN_UE : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore" , "Niagara" , "GameplayTags",
-            "RawInput", "InputDevice", "ApplicationCore"	// Lagt til angående gamepad support
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore" , "Niagara" , "GameplayTags"
+			,"AIModule", "GameplayTasks"		// AI Modules
+            ,"RawInput", "InputDevice", "ApplicationCore"	// Lagt til angående ps4 gamepad support
 		});	
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });

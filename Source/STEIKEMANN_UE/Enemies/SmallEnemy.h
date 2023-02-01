@@ -10,9 +10,15 @@
 #include "../DebugMacros.h"
 #include "GameplayTagAssetInterface.h"
 #include "../WallDetectionComponent.h"
+#include "Components/TimelineComponent.h"
 //#include "../GameplayTags.h"
+#include "EnemyAIController.h"
 
 #include "SmallEnemy.generated.h"
+
+DECLARE_DELEGATE(FIncapacitatedLandDelegation)
+DECLARE_DELEGATE(FIncapacitatedCollision)
+//DECLARE_DELEGATE
 
 /************************ ENUMS *****************************/
 UENUM()
@@ -47,6 +53,14 @@ enum class EWall : int8
 	WALL_Leaving
 };
 
+
+struct SpawnPointData
+{
+	FVector Location;
+	float Radius_Min;
+	float Radius_Max;
+};
+
 UCLASS()
 class STEIKEMANN_UE_API ASmallEnemy : public AAbstractCharacter,
 	public IAttackInterface,
@@ -72,6 +86,13 @@ public:
 		USphereComponent* PlayerPogoDetection{ nullptr };
 #pragma endregion //Base
 
+#pragma region SpawnRespawn
+	SpawnPointData m_SpawnPointData;
+	FVector GetRandomLocationNearSpawn();
+#pragma endregion // SpawnRespawn
+
+	void DisableCollisions();
+	void EnableCollisions();
 #pragma region GameplayTags
 	UPROPERTY(BlueprintReadOnly, Category = "GameplayTags")
 		FGameplayTagContainer GameplayTags;
@@ -79,11 +100,47 @@ public:
 	virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override { TagContainer = GameplayTags; return; }
 #pragma endregion //GameplayTags
 
+#pragma region AI
+public: // Variables
+	UPROPERTY(BlueprintReadOnly)
+		APawn* m_SensedPawn{ nullptr };
+	UPROPERTY(BlueprintReadOnly)
+		bool bSensingPawn{};
+/// <summary>
+/// DELEGATE:
+/// 	Funksjoner kalt at AI legger til i delegate.
+/// 	Delegate kalles på BTService
+/// </summary>
+public: // Functions
+	/* Returns true if the player is spotted, false if it spots something else */
+	FGameplayTag SensingPawn(APawn* pawn);
+
+#pragma endregion // AI
+
 #pragma region States
 public:	// STATES
 	EEnemyState m_State = EEnemyState::STATE_None;
 	EGravityState m_Gravity = EGravityState::Default;
 	void SetDefaultState();
+
+	virtual void Landed(const FHitResult& Hit) override;
+
+	void EnableGravity();
+	void DisableGravity();
+
+public: // Variables for calling AI
+	FIncapacitatedCollision IncapacitatedCollisionDelegate;
+	FIncapacitatedLandDelegation IncapacitatedLandDelegation;
+
+public: // Functinos calling AI controller
+	void Incapacitate(const EAIIncapacitatedType& IncapacitateType, float Time = -1.f, const ESmallEnemyAIState& NextState = ESmallEnemyAIState::None);
+	void IncapacitateUndeterminedTime(const EAIIncapacitatedType& IncapacitateType, void (ASmallEnemy::* landingfunction)() = nullptr);
+	void Capacitate(const EAIIncapacitatedType& IncapacitateType, float Time = -1.f, const ESmallEnemyAIState& NextState = ESmallEnemyAIState::None);
+
+private: // Functions Capacitate - Used for IncapacitatedLandingDelegate
+	void IncapacitatedLand();
+	void CollisionDelegate();
+	void Capacitate_Grappled();
 
 private: // Gravity
 	float GravityScale;
@@ -188,6 +245,16 @@ public:
 	bool GetCanBeSmackAttacked() const override { return bCanBeSmackAttacked; }
 	void ResetCanBeSmackAttacked() override { bCanBeSmackAttacked = true; }
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		UTimelineComponent* TimelineComponent{ nullptr };
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Scoop|Curve")
+		UCurveFloat* ScoopedZForceFloatCurve{ nullptr };
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Scoop|Curve")
+		float ScoopedCurveMultiplier{ 1.f };
+	UFUNCTION()
+		void TimelineComponentUpdate(float time);
+	UFUNCTION()
+		void TimelineComponentEnd();
 
 	void Do_ScoopAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override;	// Getting Scooped
 	void Receive_ScoopAttack_Pure(const FVector& Direction, const float& Strength) override;

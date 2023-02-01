@@ -34,7 +34,7 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 
 	/* -- Gravity -- */
 	SetGravityScale(DeltaTime);
-	PRINTPAR("GravityScale %f", GravityScale);
+	//PRINTPAR("GravityScale %f", GravityScale);
 
 	/* Crouch */
 	if (GetCharOwner()->IsCrouchSliding()) {
@@ -85,6 +85,16 @@ void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick
 
 }
 
+
+void USteikemannCharMovementComponent::EnableGravity()
+{
+	m_GravityMode = EGravityMode::Default;
+}
+
+void USteikemannCharMovementComponent::DisableGravity()
+{
+	m_GravityMode = EGravityMode::ForcedNone;
+}
 
 void USteikemannCharMovementComponent::SetGravityScale(float deltatime)
 {
@@ -246,6 +256,17 @@ void USteikemannCharMovementComponent::DoubleJump(const FVector& Direction, cons
 	InitialJumpVelocity = JumpDirection.Z;
 }
 
+void USteikemannCharMovementComponent::JumpHeight(const float Height, const float time)
+{
+	Velocity *= 0.f;
+	float t = time;
+
+	float gravZ = GetGravityZ();
+	float forceZ = (Height / t) + (0.5f * -gravZ * t);
+
+	AddImpulse(FVector(0, 0, forceZ), true);
+}
+
 void USteikemannCharMovementComponent::DetermineJump(float DeltaTime)
 {
 	if (bIsDoubleJumping)
@@ -316,7 +337,7 @@ void USteikemannCharMovementComponent::PB_Launch_Active(FVector direction, float
 
 void USteikemannCharMovementComponent::Initial_OnWall_Hang(const Wall::WallData& wall, float time)
 {
-	PRINTLONG("ON WALL HANG");
+	//PRINTLONG("ON WALL HANG");
 
 	m_WallJumpData = wall;
 	m_WallState = EOnWallState::WALL_Hang;

@@ -15,10 +15,14 @@
 #include "../StaticActors/Collectible.h"
 #include "../WallDetectionComponent.h"
 
+#include "../Delegates_Shared.h"
+
 #include "SteikemannCharacter.generated.h"
 
 #define GRAPPLE_HOOK ECC_GameTraceChannel1
 #define ECC_PogoCollision ECC_GameTraceChannel2
+
+
 
 class UNiagaraSystem;
 class UNiagaraComponent;
@@ -28,7 +32,8 @@ UENUM()
 enum class EMovementInput : int8
 {
 	Open,
-	Locked
+	Locked,
+	PeriodLocked
 };
 UENUM()
 enum class EState : int8
@@ -51,7 +56,8 @@ enum class EAirState : int8
 	AIR_None,
 	AIR_Freefall,
 	AIR_Jump,
-	AIR_Pogo
+	AIR_Pogo,
+	AIR_PostScoopJump
 };
 
 UENUM() 
@@ -104,6 +110,8 @@ enum class EAttackState : int8
 	Smack,
 	Scoop,
 	GroundPound
+
+	,Post_GroundPound
 };
 
 UENUM()
@@ -116,9 +124,26 @@ enum class ESmackAttackState : int8
 	Buffer,
 	Ready,
 
+	PostBuffer_Hold,
+
 	Leave
 };
 
+
+
+
+UENUM()
+enum class EPromptState : int8
+{
+	None,
+	WithingArea,
+	InPrompt
+};
+//UENUM()
+//enum class EPromptType : int8
+//{
+//	GilbertsDialogue
+//};
 
 
 UCLASS()
@@ -139,17 +164,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
 		class UCameraComponent* Camera{ nullptr };
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
-		class UPoseableMeshComponent* GrappleHookMesh{ nullptr };
 
 	/* testing */
-	//FGameplayTag Tag_Player;
-
-	FGameplayTag Tag_Enemy;
-	FGameplayTag Tag_EnemyAubergineDoggo;
-	FGameplayTag Tag_GrappleTarget;
-	FGameplayTag Tag_GrappleTarget_Static;
-	FGameplayTag Tag_GrappleTarget_Dynamic;
+	//FGameplayTag Tag_Enemy;
+	//FGameplayTag Tag_EnemyAubergineDoggo;
+	//FGameplayTag Tag_GrappleTarget;
+	//FGameplayTag Tag_GrappleTarget_Static;
+	//FGameplayTag Tag_GrappleTarget_Dynamic;
 
 
 protected:
@@ -164,9 +185,31 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	/* The Raw InputVector */
-	FVector InputVectorRaw;
+	UPROPERTY(BlueprintReadOnly)
+		FVector InputVectorRaw;
 	/* Input vector rotated to match the playercontrollers rotation */
-	FVector InputVector;
+	UPROPERTY(BlueprintReadOnly)
+		FVector m_InputVector;
+
+#pragma region Prompt Area
+	/* Player within prompt area */
+	UPROPERTY(BlueprintReadOnly)
+		EPromptState m_PromptState = EPromptState::None;
+	FVector m_PromptLocation;
+	class ADialoguePrompt* m_PromptActor{ nullptr };
+
+	UPROPERTY(BlueprintReadOnly)
+		bool bCameraLerpBack_PostPrompt{};
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Camera|Prompt")
+		float CameraLerpSpeed_Prompt{ 2.f };
+	float m_CameraLerpAlpha_PostPrompt{};
+	
+	void EnterPromptArea(ADialoguePrompt* promptActor, FVector promptLocation);
+	void LeavePromptArea();
+
+	bool ActivatePrompt();
+	bool ExitPrompt();
+#pragma endregion // Prompt Area
 
 	EMovementInput m_EMovementInputState = EMovementInput::Open;
 
@@ -271,6 +314,10 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 		void PlayCameraShake(TSubclassOf<UCameraShakeBase> shake, float falloff);
+
+	FTransform m_CameraTransform;
+	bool LerpCameraBackToBoom(float DeltaTime);
+
 
 #pragma region CameraGuide
 	
@@ -377,9 +424,14 @@ public:
 
 	void MoveForward(float value);
 	void MoveRight(float value);
+	virtual void AddControllerYawInput(float Val) override;
+	virtual void AddControllerPitchInput(float Val) override;
 	void TurnAtRate(float rate);
 	void LookUpAtRate(float rate);
 
+	FTimerHandle TH_MovementPeriodLocked;
+	FPostLockedMovement PostLockedMovementDelegate;
+	void LockMovementForPeriod(float time, TFunction<void()> lambdaCall = nullptr);
 
 	bool bActivateJump{};
 	UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
@@ -413,6 +465,8 @@ public:
 		float Jump_HeightHoldTimer{ 1.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump")
 		float JumpHeightHold_VelocityInterpSpeed{ 5.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump")
+		float PostScoop_JumpTime{ 0.3f };
 
 	void Landed(const FHitResult& Hit) override;
 
@@ -421,9 +475,13 @@ public:
 	void JumpRelease();
 	void CheckJumpInput(float DeltaTime) override;
 
+	/* Animation activation */
 	UFUNCTION(BlueprintImplementableEvent)
-		/* Animation activation */
 		void Anim_Activate_Jump();
+	UFUNCTION(BlueprintImplementableEvent)
+		void Anim_Activate_DoubleJump();
+	UFUNCTION(BlueprintImplementableEvent)
+		void Anim_Land();
 
 	bool CanDoubleJump() const;
 	bool IsJumping() const;
@@ -454,7 +512,10 @@ public:
 	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump|NewJump")
 		//float Jump_TopFloatTime{ 1.f };
 
-
+	/* Cancels the currently running Animation montage */
+	UFUNCTION(BlueprintImplementableEvent)
+		void CancelAnimation();
+	void CancelAnimationMontageIfMoving(TFunction<void()> lambdaCall);
 #pragma endregion //Basic_Movement
 
 #pragma region Pogo
@@ -535,6 +596,10 @@ private:
 	void PB_Exit();
 
 	bool ValidLengthToCapsule(FVector HitLocation, FVector capsuleLocation, float CapsuleHeight, float CapsuleRadius);
+
+public: // Animation
+	UFUNCTION(BlueprintImplementableEvent)
+		void Anim_Pogo_Passive();
 
 #pragma endregion //Pogo
 	
@@ -625,11 +690,19 @@ public:
 	void GainHealth(int amount);
 	//void PTakeDamage(int damage, FVector launchdirection);
 	void PTakeDamage(int damage, AActor* otheractor, int i = 0);
+
+	UFUNCTION(BlueprintImplementableEvent)
+		void Anim_TakeDamage();
 	
 	bool bIsDead{};
-	bool IsDead() const { return bIsDead; }
+	//bool IsDead() const { return bIsDead; }
 
+	FDeath DeathDelegate;
+	FDeath DeathDelegate_Land;
 	void Death();
+	void Death_Deathzone();
+	UFUNCTION(BlueprintImplementableEvent)
+		void Anim_Death();
 
 	FTransform StartTransform;
 	class APlayerRespawn* Checkpoint{ nullptr };
@@ -662,6 +735,8 @@ public:// Capsule
 		float LedgeGrab_Height{ 100.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|WallDetection|Ledge")
 		float LedgeGrab_Inwards{ 50.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|WallDetection|Ledge")
+		FVector LedgeGrab_ActorZOffset {};
 
 public: // OnWall
 	FTimerHandle TH_OnWall_Cancel;
@@ -689,10 +764,19 @@ public:	// Ledge grab
 public: // General
 	EOnWallState m_WallState = EOnWallState::WALL_None;
 
+	// Input direction to the wall 
+	float WallInputDirection{};	
+	void SetWallInputDirection();
+
 	void ExitOnWall(EState state);
 public: // Is funcitons
 	bool IsOnWall() const;
 	bool IsLedgeGrabbing() const;
+
+public: // Animation and Particle effects
+	bool Anim_IsOnWall() const;
+	UFUNCTION(BlueprintImplementableEvent)
+		void Anim_OnWallContact();
 
 private:
 	Wall::WallData m_Walldata;
@@ -748,6 +832,22 @@ public:	// Launch Functions
 
 	void GH_Stop();
 
+	
+public:	// Animation functions
+	UFUNCTION(BlueprintImplementableEvent)
+		void Anim_Grapple_Start();
+	UFUNCTION(BlueprintImplementableEvent)
+		void Anim_Grapple_Middle();
+	UFUNCTION(BlueprintImplementableEvent)
+		void Anim_Grapple_End();
+	void Anim_Grapple_End_Pure();
+	void GH_StopControlRig();
+
+	// For the control rig 
+	FVector GH_GetTargetLocation() const;
+	bool bGH_LerpControlRig{};
+	virtual void StartAnimLerp_ControlRig() override;
+
 public:
 	UPROPERTY(BlueprintReadOnly)
 		FVector Active_GrappledActor_Location{};
@@ -756,6 +856,7 @@ private:
 	EGrappleType m_EGrappleType = EGrappleType::None;
 	TWeakObjectPtr<AActor> GrappledActor{ nullptr };
 	TWeakObjectPtr<AActor> Active_GrappledActor{ nullptr };
+	TWeakObjectPtr<AActor> GrappledEnemy{ nullptr };
 
 public:	// UPROPERTY Variables
 	// How long movement input will be disabled after pulling a dynamic target free from being stuck
@@ -862,7 +963,7 @@ public:
 
 	void StartAttackBufferPeriod() override;
 	void ExecuteAttackBuffer() override;
-	//void EndAttackBufferPeriod() override;
+	void EndAttackBufferPeriod() override;
 
 	bool CanBeAttacked() override;
 
@@ -983,8 +1084,9 @@ public:
 
 	//bool bIsSmackAttacking{};
 
-	bool bCanBeSmackAttacked{ true };
+	bool IsSmackAttacking() const;
 
+	bool bCanBeSmackAttacked{ true };
 
 
 	void Do_SmackAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override;
@@ -1006,6 +1108,14 @@ public:
 		void Start_ScoopAttack_Pure();
 	void Click_ScoopAttack();
 	void UnClick_ScoopAttack();
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
+		float ScoopJump_Hangtime{ 1.f };
+	FHeightReached HeightReachedDelegate;
+	FTimerHandle TH_ScoopJumpGravityEnable;
+	AActor* ScoopedActor{ nullptr };
+	float Jump_HeightToReach{};
+	void PostScoopJump();
 
 	bool bIsScoopAttacking{};
 	bool bHasbeenScoopLaunched{};
@@ -1040,7 +1150,8 @@ public:
 	#pragma region GroundPound
 
 	bool bGroundPoundPress{};
-	bool IsGroundPounding() const { return m_EState == EState::STATE_Attacking && m_EAttackState == EAttackState::GroundPound; }
+	UFUNCTION(BlueprintCallable)
+		bool IsGroundPounding() const { return m_EState == EState::STATE_Attacking && m_EAttackState == EAttackState::GroundPound; }
 
 	void Click_GroundPound();
 	void UnClick_GroundPound();
@@ -1054,10 +1165,18 @@ public:
 	/* The launch strength the enemies will recieve */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|GroundPound")
 		float GP_LaunchStrength{ 2500.f };
+	/* How long the movement will be locked after landing with ground pound */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|GroundPound")
+		float GP_MovementPeriodLocked{ 1.f };
 	FTimerHandle THandle_GPHangTime;
 
 
 	void Launch_GroundPound();
+
+	UFUNCTION(BlueprintImplementableEvent)
+		void Anim_GroundPound_Initial();
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
+		void Anim_GroundPound_Land_Ground();
 
 	/* Collider */
 	/* Time it takes for the ground pound collider to expand to max size */

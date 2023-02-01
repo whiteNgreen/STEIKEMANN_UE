@@ -6,11 +6,17 @@
 namespace Tag {
 
 	// Player
-	static FGameplayTag Player() { return FGameplayTag::RequestGameplayTag("Pottit"); }
+	static FGameplayTag Player() { 
+		static FGameplayTag p{ FGameplayTag::RequestGameplayTag("Pottit") };
+		return p; 
+	}
 
 	// Enemies
 	static FGameplayTag Enemy() { return FGameplayTag::RequestGameplayTag("Enemy"); }
 	static FGameplayTag AubergineDoggo() { return FGameplayTag::RequestGameplayTag("Enemy.AubergineDoggo"); }
+
+	// Enemy Spawner
+	static FGameplayTag EnemySpawner() { return FGameplayTag::RequestGameplayTag("EnemySpawner"); }
 
 	// Pogo 
 	static FGameplayTag PogoTarget() { return FGameplayTag::RequestGameplayTag("PogoTarget"); }
