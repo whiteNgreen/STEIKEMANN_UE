@@ -55,11 +55,20 @@ public:
 	UFUNCTION(BlueprintNativeEvent, Category = "GrappleHook Targeting")
 		void Hooked();
 	virtual void HookedPure() = 0;
-	virtual void HookedPure(const FVector InstigatorLocation, bool PreAction = false) = 0;
+	virtual void HookedPure(const FVector InstigatorLocation, bool OnGround, bool PreAction = false) = 0;
 
 	UFUNCTION(BlueprintNativeEvent, Category = "GrappleHook Targeting")
 		void UnHooked();
 	virtual void UnHookedPure() = 0;
 
 
+
+	// Dynamic Object is Stuck - Use as a static target
+	UFUNCTION(BlueprintNativeEvent, Category = "GrappleHook Targeting")
+		bool IsStuck();
+	virtual bool IsStuck_Pure() { return false; }
+	// If Dynamic Object is Stuck - Pull it loose
+	UFUNCTION(BlueprintNativeEvent, Category = "GrappleHook Targeting")
+		void PullFree();
+	virtual void PullFree_Pure(const FVector InstigatorLocation){}
 };

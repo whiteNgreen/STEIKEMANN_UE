@@ -16,8 +16,8 @@ void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	Super::NativeUpdateAnimation(DeltaSeconds);
 
 
-	if (SteikeOwner.IsValid()) {
-	//if (SteikeOwner) {
+	//if (SteikeOwner.IsValid()) {
+	if (SteikeOwner) {
 
 		/* Set speed variables */
 		Speed = SteikeOwner->GetVelocity().Size();
@@ -47,8 +47,9 @@ void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 		/* Wall Sticking */
 		bOnWall = SteikeOwner->IsOnWall();
-		bStickingToWall = SteikeOwner->IsStickingToWall();
-		OnWallRotation = FMath::FInterpTo(OnWallRotation,FMath::Clamp(SteikeOwner->InputAngleToForward * -1.f, -90.f, 90.f), DeltaSeconds, SteikeOwner->OnWall_InterpolationSpeed);
+		
+		// Input angle on wall
+		//InputToActorForwardAngle // TODO: IMPLEMENT
 
 		/* Ledge Grab */
 		bLedgeGrab = SteikeOwner->IsLedgeGrabbing();

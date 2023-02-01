@@ -13,8 +13,9 @@ ASmallEnemy::ASmallEnemy()
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-
-
+	WallDetector = CreateDefaultSubobject<UWallDetectionComponent>(TEXT("Wall Detection Component"));
+	PlayerPogoDetection = CreateDefaultSubobject<USphereComponent>(TEXT("PlayerPogoDetection"));
+	PlayerPogoDetection->SetupAttachment(RootComponent);
 }
 
 // Called when the game starts or when spawned
@@ -22,12 +23,20 @@ void ASmallEnemy::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	/*
-	* Adding GameplayTags to the GameplayTagsContainer
-	*/
-	//Enemy = &Tag_EnemyAubergineDoggo;
-	//GameplayTags.AddTag(GetTag_EnemyAubergineDoggo());
+	WallDetector->SetCapsuleSize(WDC_Capsule_Radius, WDC_Capsule_Halfheight);
+	WallDetector->SetHeight(WDC_MinHeight, GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
+	WallDetector->SetDebugStatus(bWDC_Debug);
+
+	// Adding gameplay tags
 	GameplayTags.AddTag(Tag::AubergineDoggo());
+	GameplayTags.AddTag(Tag::GrappleTarget_Dynamic());
+	GameplayTags.AddTag(Tag::PogoTarget());
+
+	auto i = GetCharacterMovement();
+	GravityScale = i->GravityScale;
+	GravityZ = i->GetGravityZ();
+
+	PlayerPogoDetection->SetSphereRadius(PB_SphereRadius);
 }
 
 // Called every frame
@@ -35,6 +44,53 @@ void ASmallEnemy::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	SetDefaultState();
+	
+	const bool wall = WallDetector->DetectStickyWall(this, GetActorLocation(), GetActorForwardVector(), m_WallData, ECC_EnemyWallDetection);
+	if (wall && m_State == EEnemyState::STATE_InAir && m_WallState != EWall::WALL_Leaving)
+	{
+		m_State = EEnemyState::STATE_OnWall;
+		m_WallState = EWall::WALL_Stuck;
+		PlayerPogoDetection->SetSphereRadius(PB_SphereRadius_Stuck);
+	}
+
+	// State 
+	switch (m_State)
+	{
+	case EEnemyState::STATE_None:
+		break;
+	case EEnemyState::STATE_OnGround:
+		break;
+	case EEnemyState::STATE_InAir:
+		break;
+	case EEnemyState::STATE_OnWall:
+		StickToWall();
+		break;
+	default:
+		break;
+	}
+
+	// Gravity State
+	auto i = GetCharacterMovement();
+	switch (m_Gravity)
+	{
+	case EGravityState::Default:
+		i->GravityScale = GravityScale;
+		break;
+	case EGravityState::LerpToDefault:
+		break;
+	case EGravityState::None:
+		i->GravityScale = 0.f;
+		break;
+	case EGravityState::LerpToNone:
+		break;
+	case EGravityState::ForcedNone:
+		i->GravityScale = 0.f;
+		i->Velocity *= 0.f;
+		break;
+	default:
+		break;
+	}
 }
 
 // Called to bind functionality to input
@@ -42,6 +98,31 @@ void ASmallEnemy::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
+}
+
+void ASmallEnemy::SetDefaultState()
+{
+	switch (m_State)
+	{
+	case EEnemyState::STATE_None:
+		break;
+	case EEnemyState::STATE_OnGround:
+		break;
+	case EEnemyState::STATE_InAir:
+		break;
+	case EEnemyState::STATE_OnWall: return;
+	default:
+		break;
+	}
+
+	//auto i = Cast<UCharacterMovementComponent>(GetMovementComponent());
+	auto i = GetMovementComponent();
+	if (i->IsFalling()) {
+		m_State = EEnemyState::STATE_InAir;
+		return;
+	}
+	// Default Case
+	m_State = EEnemyState::STATE_OnGround;
 }
 
 void ASmallEnemy::RotateActorYawToVector(FVector AimVector, float DeltaTime)
@@ -61,6 +142,18 @@ void ASmallEnemy::RotateActorYawToVector(FVector AimVector, float DeltaTime)
 	if (RightDotProduct < 0.f) { Yaw *= -1.f; }
 
 	SetActorRotation(FRotator(GetActorRotation().Pitch, Yaw, 0.f), ETeleportType::TeleportPhysics);
+}
+
+void ASmallEnemy::StickToWall()
+{
+	m_Gravity = EGravityState::ForcedNone;
+}
+
+void ASmallEnemy::LeaveWall()
+{
+	PlayerPogoDetection->SetSphereRadius(PB_SphereRadius);
+	m_WallState = EWall::WALL_Leaving;
+	GetWorldTimerManager().SetTimer(TH_LeavingWall, [this]() { m_WallState = EWall::WALL_None; }, WDC_LeavingWallTimer, false);
 }
 
 void ASmallEnemy::TargetedPure()
@@ -89,13 +182,14 @@ void ASmallEnemy::HookedPure()
 	Execute_Hooked(this);
 }
 
-void ASmallEnemy::HookedPure(const FVector InstigatorLocation, bool PreAction /*=false*/)
+void ASmallEnemy::HookedPure(const FVector InstigatorLocation, bool OnGround, bool PreAction /*=false*/)
 {
 	/* During Pre Action, Rotate Actor towards instigator - Yaw */
 	if (PreAction)
 	{
 		FVector Direction = InstigatorLocation - GetActorLocation();
 		RotateActorYawToVector(Direction.GetSafeNormal());
+		m_Gravity = EGravityState::ForcedNone;
 		return;
 	}
 
@@ -104,32 +198,25 @@ void ASmallEnemy::HookedPure(const FVector InstigatorLocation, bool PreAction /*
 		GetCharacterMovement()->Velocity *= 0.f;
 
 		/* Rotate again towards Instigator - Yaw*/
-		FVector Direction3D = InstigatorLocation - GetActorLocation();
-		RotateActorYawToVector(Direction3D.GetSafeNormal());
+		FVector InstigatorDirection = (InstigatorLocation - FVector(0,0,GrappledInstigatorOffset)) - GetActorLocation();
+		FVector GoToLocation = InstigatorLocation + (InstigatorDirection.GetSafeNormal2D() * -GrappledInstigatorOffset);
+		FVector Direction = GoToLocation - GetActorLocation();
+		RotateActorYawToVector(InstigatorDirection);
 
-		/* 1st method. Static launch strength and angle */
-		if (bUseFirstGrappleLaunchMethod)
-		{
-			float angle = FMath::DegreesToRadians(GrappledLaunchAngle);
-			FVector LaunchDirection = (cosf(angle) * Direction3D.GetSafeNormal2D()) + (sinf(angle) * FVector::UpVector);
+		// Enable Gravity and Disable Collisions
+		m_Gravity = EGravityState::Default;
+		GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Falling);
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-			GetCharacterMovement()->AddImpulse(LaunchDirection * GrappledLaunchStrength, true);
-		}
-		/* 2nd method */
-		else
-		{
-			//PRINTLONG("Second Method Launch");
-			//FVector Direction3D = InstigatorLocation - GetActorLocation();
-			FVector Direction2D = Direction3D;
-			Direction3D.Z = 0.f;
-			//Direction2D.Normalize();
+		FVector Velocity{};
+		OnGround ?
+			Velocity = ((Direction) / GrappledLaunchTime) + (0.5f * FVector(0, 0, -GravityZ) * GrappledLaunchTime) :	// On Ground
+			Velocity = ((InstigatorDirection) / GrappledLaunchTime);													// In Air
 
-			FVector Velocity = Direction2D / GrappledLaunchTime;
+		GetCharacterMovement()->AddImpulse(Velocity, true);
 
-			Velocity.Z = 0.5f * GetCharacterMovement()->GetGravityZ() * GrappledLaunchTime * -1.f;
-
-			GetCharacterMovement()->AddImpulse(Velocity, true);
-		}
+		FTimerHandle h;
+		GetWorldTimerManager().SetTimer(h, [this](){ GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics); }, FMath::Clamp(GrappledLaunchTime - GrappledLaunchTime_CollisionActivation, 0.f, GrappledLaunchTime), false);
 
 		bCanBeGrappleHooked = false;
 		GetWorldTimerManager().SetTimer(Handle_GrappledCooldown, this, &ASmallEnemy::ResetCanBeGrappleHooked, GrappleHookedInternalCooldown);
@@ -139,6 +226,30 @@ void ASmallEnemy::HookedPure(const FVector InstigatorLocation, bool PreAction /*
 void ASmallEnemy::UnHookedPure()
 {
 	Execute_UnHooked(this);
+}
+
+void ASmallEnemy::PullFree_Pure(const FVector InstigatorLocation)
+{
+	m_State = EEnemyState::STATE_InAir;
+	
+	// Add Impulse towards instigator - 2D direction
+	FVector Direction = InstigatorLocation - GetActorLocation();
+	RotateActorYawToVector(Direction.GetSafeNormal2D());
+	GetCharacterMovement()->AddImpulse(Direction.GetSafeNormal2D() * Direction.Size() * Grappled_PulledFreeStrengthMultiplier, true);
+
+	// Enable Gravity and Disable Collisions
+	m_Gravity = EGravityState::Default;
+	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Falling);
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	FTimerHandle h;
+	GetWorldTimerManager().SetTimer(h, [this]() { GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics); }, Grappled_PulledFreeNoCollisionTimer, false);
+
+	// Leave wall
+	LeaveWall();
+
+	// Internal cooldown to getting grapplehooked
+	bCanBeGrappleHooked = false;
+	GetWorldTimerManager().SetTimer(Handle_GrappledCooldown, this, &ASmallEnemy::ResetCanBeGrappleHooked, GrappleHookedInternalCooldown);
 }
 
 bool ASmallEnemy::CanBeAttacked()
@@ -164,7 +275,7 @@ void ASmallEnemy::Receive_SmackAttack_Pure(const FVector& Direction, const float
 		GetCharacterMovement()->AddImpulse(Direction * s, true);
 
 		/* Sets a timer before character can be damaged by the same attack */
-		GetWorldTimerManager().SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, 0.5f, false);
+		GetWorldTimerManager().SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, SmackAttack_InternalTimer, false);
 	}
 }
 
@@ -201,4 +312,16 @@ void ASmallEnemy::Receive_GroundPound_Pure(const FVector& PoundDirection, const 
 
 	/* Sets a timer before character can be damaged by the same attack */
 	//GetWorldTimerManager().SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, 0.5f, false);
+}
+
+void ASmallEnemy::Receive_Pogo_GroundPound_Pure()
+{
+	FVector Direction = FVector::DownVector;
+	if (IsStuck_Pure())
+		Direction = (FVector::DownVector * (1.f - PB_Groundpound_LaunchWallNormal)) + (m_WallData.Normal * PB_Groundpound_LaunchWallNormal);
+	LeaveWall();
+	m_Gravity = EGravityState::Default;
+	m_State = EEnemyState::STATE_None;
+
+	GetCharacterMovement()->AddImpulse(Direction * PB_Groundpound_LaunchStrength, true);
 }

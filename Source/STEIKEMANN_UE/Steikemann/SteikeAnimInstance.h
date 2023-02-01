@@ -22,8 +22,8 @@ public:
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 
 	UPROPERTY(BlueprintReadOnly)
-		TWeakObjectPtr<class ASteikemannCharacter> SteikeOwner{ nullptr };
-		//class ASteikemannCharacter* SteikeOwner{ nullptr };
+		class ASteikemannCharacter* SteikeOwner{ nullptr };
+		//TWeakObjectPtr<class ASteikemannCharacter> SteikeOwner{ nullptr };
 
 	/* Walking Speed */
 	UPROPERTY(BlueprintReadOnly)
@@ -72,10 +72,7 @@ public:
 		bool bOnWall{};
 
 	UPROPERTY(BlueprintReadOnly)
-		bool bStickingToWall{};
-
-	UPROPERTY(BlueprintReadOnly)
-		float OnWallRotation{};
+		float InputToActorForwardAngle{};
 
 #pragma endregion //WallSticking
 

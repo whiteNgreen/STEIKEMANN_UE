@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "../AbstractClasses/AbstractCharacter.h"
 #include "../Interfaces/GrappleTargetInterface.h"
 #include "../Interfaces/AttackInterface.h"
 #include "../Interfaces/CameraGuideInterface.h"
@@ -12,7 +13,7 @@
 #include "SteikeAnimInstance.h"
 #include "GameplayTagAssetInterface.h"
 #include "../StaticActors/Collectible.h"
-
+#include "../WallDetectionComponent.h"
 
 #include "SteikemannCharacter.generated.h"
 
@@ -23,9 +24,105 @@ class UNiagaraSystem;
 class UNiagaraComponent;
 class USoundBase;
 
+UENUM()
+enum class EMovementInput : int8
+{
+	Open,
+	Locked
+};
+UENUM()
+enum class EState : int8
+{
+	STATE_None, // Used when leaving a state and reevaluating the next state
+
+	// Default States
+	STATE_OnGround,
+	STATE_InAir,
+	
+	// Advanced States
+	STATE_OnWall,
+	STATE_Attacking,
+	STATE_Grappling
+};
+
+UENUM()
+enum class EAirState : int8
+{
+	AIR_None,
+	AIR_Freefall,
+	AIR_Jump,
+	AIR_Pogo
+};
+
+UENUM() 
+enum class EPogoType : int8
+{
+	POGO_None,
+	POGO_Passive,
+	POGO_Active,
+	POGO_Groundpound,
+
+	POGO_Leave
+};
+//UENUM()
+//enum class EPogoTickCheck : int8
+//{
+//	PB_Tick_None,
+//	PB_Tick_Passive,
+//	PB_Tick_Active,
+//	PB_Tick_Groundpound
+//};
+
+UENUM()
+enum class EGrappleState : int8
+{
+	None,
+
+	Pre_Launch,
+	Post_Launch,
+	Leave
+};
+
+UENUM()
+enum class EGrappleType : int8
+{
+	None, 
+
+	Static,
+	Static_StuckEnemy_Air,
+	Static_StuckEnemy_Ground,
+	
+	Dynamic_Air,
+	Dynamic_Ground
+};
+
+UENUM()
+enum class EAttackState : int8
+{
+	None,
+
+	Smack,
+	Scoop,
+	GroundPound
+};
+
+UENUM()
+enum class ESmackAttackState : int8
+{
+	None,
+
+	Attack,
+	Hold,
+	Buffer,
+	Ready,
+
+	Leave
+};
+
+
 
 UCLASS()
-class STEIKEMANN_UE_API ASteikemannCharacter : public ACharacter, 
+class STEIKEMANN_UE_API ASteikemannCharacter : public AAbstractCharacter, 
 	public IGrappleTargetInterface,
 	public IAttackInterface,
 	public IGameplayTagAssetInterface,
@@ -71,6 +168,7 @@ public:
 	/* Input vector rotated to match the playercontrollers rotation */
 	FVector InputVector;
 
+	EMovementInput m_EMovementInputState = EMovementInput::Open;
 
 	TWeakObjectPtr<class USteikemannCharMovementComponent> MovementComponent;
 	/* Returns the custom MovementComponent. A TWeakPtr<class USteikemannCharMovementComponent> */
@@ -126,10 +224,10 @@ public:
 
 		/* The amount of particles that will spawn determined by the characters landing velocity, times this multiplier */
 		UPROPERTY(EditAnywhere, Category = "Particle Effects|Land")
-			float NSM_Land_ParticleAmount		UMETA(DisplayName = "Particle Amount Multiplier") { 0.5f };
+			float NSM_Land_ParticleAmount		/*UMETA(DisplayName = "Particle Amount Multiplier") */{ 0.5f };
 		/* The speed of the particles will be determined by the characters velocity when landing, times this multiplier */
 		UPROPERTY(EditAnywhere, Category = "Particle Effects|Land")
-			float NSM_Land_ParticleSpeed		UMETA(DisplayName = "Particle Speed Multiplier") { 0.5f };
+			float NSM_Land_ParticleSpeed		/*UMETA(DisplayName = "Particle Speed Multiplier")*/ { 0.5f };
 
 		#pragma endregion //Landing
 
@@ -139,7 +237,7 @@ public:
 			UNiagaraSystem* NS_WallSlide{ nullptr };
 		/* The amount of particles per second the system should emit */
 		UPROPERTY(EditAnywhere, Category = "Particle Effects|WallJump")
-			float NS_WallSlide_ParticleAmount	UMETA(DisplayName = "WallSlide ParticleAmount") { 1000.f };
+			float NS_WallSlide_ParticleAmount	/*UMETA(DisplayName = "WallSlide ParticleAmount")*/ { 1000.f };
 	#pragma endregion //OnWall
 
 	#pragma region Crouch
@@ -181,21 +279,21 @@ public:
 	float CameraGuide_Pitch{ 0.f };
 
 	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "500"))
-			float CameraGuide_Pitch_MIN		UMETA(DisplayName = "Pitch At Min") { 100.f };
+			float CameraGuide_Pitch_MIN		/*UMETA(DisplayName = "Pitch At Min")*/ { 100.f };
 
 	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "5000"))
-			float CameraGuide_Pitch_MAX		UMETA(DisplayName = "Pitch At Max") { 500.f };
+			float CameraGuide_Pitch_MAX		/*UMETA(DisplayName = "Pitch At Max")*/ { 500.f };
 
 	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "2"))
-			float CameraGuide_ZdiffMultiplier		UMETA(DisplayName = "Zdiff Multiplier") { 1.f };
+			float CameraGuide_ZdiffMultiplier		/*UMETA(DisplayName = "Zdiff Multiplier") */{ 1.f };
 			
 	/* Maximum distance for pitch adjustment */
 	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "10000"))
-			float CameraGuide_Pitch_DistanceMAX		UMETA(DisplayName = "Max Distance") { 2000.f };
+			float CameraGuide_Pitch_DistanceMAX		/*UMETA(DisplayName = "Max Distance") */{ 2000.f };
 
 	/* Minimum distance for pitch adjustment */
 	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "10000"))
-			float CameraGuide_Pitch_DistanceMIN		UMETA(DisplayName = "Min Distance") { 100.f };
+			float CameraGuide_Pitch_DistanceMIN		/*UMETA(DisplayName = "Min Distance") */{ 100.f };
 
 	EPointType CurrentCameraGuide;
 	EPointType PreviousCameraGuide;
@@ -218,15 +316,64 @@ public:
 		float SplineLerpSpeed{ 10.f };
 	virtual void SetSplineInputkey(const float SplineKey) override { Internal_SplineInputkey = SplineKey; }
 
+
+	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic", meta = (UIMin = "0", UIMax = "1"))
+		float GrappleDynamic_DefaultAlpha{ 0.3f };
+	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic", meta = (UIMin = "0", UIMax = "90"))
+		float GrappleDynamic_MaxYaw{ 30.f };
+	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic", meta = (UIMin = "0", UIMax = "1"))
+		float GrappleDynamic_YawAlpha{ 0.3f };
+	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic", meta = (UIMin = "0", UIMax = "1"))
+		float GrappleDynamic_MaxPitch{ 0.5f };
+	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic", meta = (UIMin = "0", UIMax = "1"))
+		float GrappleDynamic_PitchAlpha{ 0.2f };
+	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic", meta = (UIMin = "-1", UIMax = "1"))
+		float GrappleDynamic_DefaultPitch{ 0.2f };
+
+
+	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic|Pitch", meta = (UIMin = "0", UIMax = "1500"))
+		float GrappleDynamic_Pitch_DistanceMIN	 { 100.f };
+	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic|Pitch", meta = (UIMin = "0", UIMax = "500"))
+		float GrappleDynamic_Pitch_MIN{ 100.f };
+	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic|Pitch", meta = (UIMin = "0", UIMax = "5000"))
+		float GrappleDynamic_Pitch_MAX{ 100.f };
+	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic|Pitch", meta = (UIMin = "0", UIMax = "2"))
+		float GrappleDynamic_ZdiffMultiplier{ 1.f };
+
+	float InitialGrappleDynamicZ{};
+
+	float GrappleDynamic_SLerpAlpha{};
+	void GuideCameraTowardsVector(FVector vector, float alpha);
+	void GuideCameraPitch(float z, float alpha);
+	float GuideCameraPitchAdjustmentLookAt(FVector LookatLocation, float MinDistance, float MaxDistance, float PitchAtMin, float PitchAtMax, float ZdiffMultiplier);
+
+	void GrappleDynamicGuideCamera(float deltatime);
+
 #pragma endregion //CameraGuide
 
 #pragma endregion //Camera
 
 #pragma region Basic_Movement
-public:/* ------------------- Basic Movement ------------------- */
+public:	// States
+	EState GetState() const { return m_EState; }
+	void SetState(EState state) { m_EState = state; }
+	//void ReevaluateState();
+	UFUNCTION(BlueprintCallable)
+		void ResetState();
+	void SetDefaultState();
 
+	virtual void AllowActionCancelationWithInput() override;
+private:
+	EState m_EState = EState::STATE_OnGround;
+	EAirState m_EAirState = EAirState::AIR_None;
+	float m_BaseGravity{};
+
+public:/* ------------------- Basic Movement ------------------- */
+public:
 	UPROPERTY(EditAnywhere, Category = "Movement|Walk/Run", meta = (AllowPrivateAcces = "true"))
 	float TurnRate{ 50.f };
+
+	bool BreakMovementInput(float value);
 
 	void MoveForward(float value);
 	void MoveRight(float value);
@@ -308,35 +455,91 @@ public:/* ------------------- Basic Movement ------------------- */
 		//float Jump_TopFloatTime{ 1.f };
 
 
+#pragma endregion //Basic_Movement
 
-	/*
-	* -------------------- Player Pogo Jumping on enemy --------------------------
-	*/
+#pragma region Pogo
+private:
+	EPogoType m_EPogoType = EPogoType::POGO_None;
+	AActor* m_PogoTarget{ nullptr };
+
+public:
 	/* The strength of the pogo bounce */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce")
-		float PogoBounceStrength{ 2000.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Passive")
+		float PB_LaunchStrength_Z_Passive{ 1300.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Passive")
+		float PB_LaunchStrength_MultiXY_Passive{ 500.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Active")
+		float PB_LaunchStrength_Active{ 1800.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Groundpound")
+		float PB_LaunchStrength_Groundpound{ 2500.f };
 
+	// Detection
 	/* Extra contingency length checked between the player and the enemy they are falling towards, before the PogoBounce is called */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce")
-		float PogoContingency{ 50.f };
-
-
-	void CheckIfEnemyBeneath(const FHitResult& Hit);
-	UFUNCTION(BlueprintCallable)
-		bool CheckDistanceToEnemy(const FHitResult& Hit);
-
-
+		float PB_TargetLengthContingency{ 50.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce")
-		float PogoInputDirectionMultiplier{ 0.1f };
+		float PB_Max2DTargetDistance{ 100.f };
 
-	UFUNCTION(BlueprintCallable)
-		void PogoBounce(const FVector& EnemyLocation);
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Active", meta = (DisplayPriority = "2"))
+		float PB_ActiveDetection_CapsuleZLocation{ 100.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Active", meta = (PrioDisplayPriorityrity = "3"))
+		float PB_ActiveDetection_CapsuleHalfHeight{ 100.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Active", meta = (PrioDisplayPriorityrity = "4"))
+		float PB_ActiveDetection_CapsuleRadius{ 70.f };
 
-#pragma endregion //Basic_Movement
+	// Minimum time the pogo state lasts - Will disable some mechanics while in that state
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Passive", meta = (DisplayPriority = "1"))
+		float PB_StateTimer_Passive{ 0.1f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Active", meta = (DisplayPriority = "1"))
+		float PB_StateTimer_Active{ 0.3f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Groundpound", meta = (DisplayPriority = "1"))
+		float PB_StateTimer_Groundpound{ 0.4f };
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Passive")
+		float PB_InputMulti_Passive{ 0.6f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Active")
+		float PB_InputMulti_Active{ 0.3f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Groundpound")
+		float PB_InputMulti_Groundpound{ 0.05f };
 	
-	/* Includes all actions related to the crouch button */
+private: // Within Collision bools
+	//EPogoTickCheck m_EPogoTickCheck = EPogoTickCheck::PB_Tick_None;
+	//bool bPB_TickCheck_Passive{};
+	//bool bPB_TickCheck_Groundpound{};
+	//bool bPB_PassiveLaunched{};
+	bool bPB_Groundpound_PredeterminedPogoHit{};
+
+	FTimerHandle TH_PB_ExitHandle; // Timer handle holding exit time. For validating buffering of PB_Active inputs
+	FTimerHandle TH_Pogo;
+
+public:	// Target detection
+	bool PB_TargetBeneath();
+	bool PB_ValidTargetDistance(const FVector OtherActorLocation);
+
+	bool PB_Active_TargetDetection();
+
+private:  
+	void PB_Pogo();
+	void PB_EnterPogoState(float time);
+
+	bool PB_Passive_IMPL(AActor* OtherActor);
+	void PB_Launch_Passive();
+
+	void PB_Active_IMPL();
+	void PB_Launch_Active();
+
+	bool PB_Groundpound_IMPL(AActor* OtherActor);
+	bool PB_Groundpound_Predeterminehit();
+	void PB_Launch_Groundpound();
+
+	void PB_Exit();
+
+	bool ValidLengthToCapsule(FVector HitLocation, FVector capsuleLocation, float CapsuleHeight, float CapsuleRadius);
+
+#pragma endregion //Pogo
+	
 #pragma region Crouch		
-	
+public:
 	bool bPressedCrouch{};
 	bool bIsCrouchWalking{};
 	bool IsCrouchWalking() const { return bIsCrouchWalking; }
@@ -345,7 +548,7 @@ public:/* ------------------- Basic Movement ------------------- */
 	/* Regular Crouch */
 	/* Crouch slide will only start if the player is walking with a speed above this */
 	UPROPERTY(EditAnywhere, Category = "Movement|Crouch")
-		float Crouch_WalkToSlideSpeed  UMETA(DisplayName = "Walk To Crouch Slide Speed") { 400.f };
+		float Crouch_WalkToSlideSpeed  /*UMETA(DisplayName = "Walk To Crouch Slide Speed") */{ 400.f };
 	void Start_Crouch();
 	void Stop_Crouch();
 
@@ -357,11 +560,11 @@ public:/* ------------------- Basic Movement ------------------- */
 
 	/* How long will the crouch slide last */
 	UPROPERTY(EditAnywhere, Category = "Movement|Crouch")
-		float CrouchSlide_Time  UMETA(DisplayName = "Crouch Slide Time") { 0.5f };
+		float CrouchSlide_Time  /*UMETA(DisplayName = "Crouch Slide Time")*/ { 0.5f };
 
 	/* How long before a new crouchslide can begin */
 	UPROPERTY(EditAnywhere, Category = "Movement|Crouch")
-		float Post_CrouchSlide_Time  UMETA(DisplayName = "Crouch Slide Wait Time") { 0.5f };
+		float Post_CrouchSlide_Time  /*UMETA(DisplayName = "Crouch Slide Wait Time")*/ { 0.5f };
 
 	/* Initial CrouchSlide Speed */
 	UPROPERTY(EditAnywhere, Category = "Movement|Crouch")
@@ -389,7 +592,7 @@ public:/* ------------------- Basic Movement ------------------- */
 #pragma endregion //Crouch	
 
 #pragma region Collectibles & Health
-
+public:
 	void ReceiveCollectible(ECollectibleType type);
 
 	UPROPERTY(BlueprintReadWrite, Category = "Collectibles")
@@ -438,132 +641,80 @@ public:/* ------------------- Basic Movement ------------------- */
 
 /* ---------------------------------- ON WALL ----------------------------------- */
 #pragma region OnWall
+public:// Capsule
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall")
+		bool bWDC_Debug{};
 
-	/* How far from the player walls will be detected */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall")
-		float WallDetectionRange		UMETA(DisplayName = "Wall Detection Range") { 200.f };
+	UWallDetectionComponent* WallDetector{ nullptr };
 	
-	/* If the player is within this length from the wall, WallJump / WallSlide mechanics are enabled. Should NOT be higher than Wall Detection Range */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall")
-		float WallJump_ActivationRange	UMETA(DisplayName = "Wall-Jump/Slide Activation Length") { 80.f };
+	// Wall Decetion
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|WallDetection")
+		float WDC_Capsule_Radius{ 40.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|WallDetection")
+		float WDC_Capsule_Halfheight{ 90.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|WallDetection")
+		float Wall_HeightCriteria{ 20.f };
+	// On Wall
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|WallDetection|WallJump")
+		float WDC_Length{ 40.f };
+	// Ledge Grab
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|WallDetection|Ledge")
+		float LedgeGrab_Height{ 100.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|WallDetection|Ledge")
+		float LedgeGrab_Inwards{ 50.f };
+
+public: // OnWall
+	FTimerHandle TH_OnWall_Cancel;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall")
+		float OnWall_CancelTimer{ 0.5f };
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall")
+		float OnWall_HangTime{ 0.5f };
+
+public: // Walljump
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|Walljump")
+		float OnWall_Reset_OnWallJump_Timer{ 1.f };
+
+	/* How long after a regular jump before OnWall mechanics are activated */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall")
+		float OnWallActivation_PostJumpingOnGround{ 0.5f };
+	/* After grapplehooking to a stuck enemy, disable wall jump for 'time' + time to stuck enemy */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall")
+		float OnWallActivation_PostStuckEnemyGrappled{ 0.5f };
+
+public:	// Ledge grab
+
+
 	
-	/* Activate ledgegrab if a wall + ledge is detected and the player is within this range */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall")
-		float LedgeGrab_ActivationRange		UMETA(DisplayName = " Ledgegrab Activation Length") { 120.f };
+public: // General
+	EOnWallState m_WallState = EOnWallState::WALL_None;
 
-	/* How far, including the capsule radius, should the character be from the wall during OnWall mechanics 
-	 * Functions more as a contingency */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall")
-		float OnWall_ExtraCharacterLengthFromWall UMETA(DisplayName = "Length from wall") { 10.f };
+	void ExitOnWall(EState state);
+public: // Is funcitons
+	bool IsOnWall() const;
+	bool IsLedgeGrabbing() const;
 
-	void Do_OnWallMechanics(float DeltaTime);
+private:
+	Wall::WallData m_Walldata;
+	Wall::WallData m_WallJumpData;
+	Wall::LedgeData m_Ledgedata;
 
-	FVector Wall_Normal{};
-	FHitResult WallHit{};
-	bool DetectNearbyWall();
-	bool bFoundWall{};
+	void DrawDebugArms(const float& InputAngle);
 
+	bool Validate_Ledge(FHitResult& hit);
+	void Initial_LedgeGrab();
+	void LedgeGrab();
 
-	FVector FromActorToWall{};
-	float ActorToWall_Length{};
+	bool ValidateWall();
 
-	/* The angle between the actors forward axis and the players input during OnWall Mechanics */
-	float InputAngleToForward{};
-	/* The angle between the actors forward axis and the players input during OnWall Mechanics */
-	float InputDotProdToForward{};
+	void OnWall_IMPL(float deltatime);
+	void OnWall_Drag_IMPL(float deltatime, float velocityZ);
 
-	void CalcAngleFromActorForwardToInput();
+	void ExitOnWall_GROUND();
 
-	void ResetWallJumpAndLedgeGrab();
-
-	#pragma region Wall Jump
-		/* ------------------------ Wall Jump --------------------- */
-
-		/* The maximum time the character can hold on to the wall they stick to during wall jump */
-		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall|Wall Jump")
-			float WallJump_MaxStickTimer UMETA(DisplayName = "Max Sticking Time") { 1.f };
-		float WallJump_StickTimer{};
-
-		/* Time until character can stick to wall again */
-		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall|Wall Jump")
-			float WallJump_MaxNonStickTimer UMETA(DisplayName = "No Stick Timer") { 0.5f };
-		float WallJump_NonStickTimer{};
-
-		bool bStickingToWall{};
-		bool bFoundStickableWall{};
-		bool bCanStickToWall{ true };
-		bool bOnWallActive{ true };
-		FVector StickingSpot{};
-
-		void SetActorLocation_WallJump(float DeltaTime);
-
-		bool bPostWallJump{};
-		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall|Wall Jump")
-			float fPostWallJumpTimer{ 0.2f };
-
-		/* WallJump activation range on Jump, different from the passive activation range of On_Wall mechanics */
-		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall|Wall Jump")
-			float WallJump_JumpWallActivation{ 200.f };
-
-		bool Jump_DetectWall();
-		void WallJump_Reset();
-
-		/* Is currently sticking to a wall */
-		bool IsStickingToWall() const;
-		/* Is in contact with a wall and slowing down */
-		bool IsOnWall() const;
-
-		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|OnWall|Wall Jump|Animation")
-			float OnWall_InterpolationSpeed{ 10.f };
-
-	#pragma endregion //Wall Jump
-
-	#pragma region LedgeGrab
-
-		UPROPERTY(BlueprintReadOnly)
-			bool bFoundLedge{};
-		UPROPERTY(BlueprintReadOnly)
-			bool bIsLedgeGrabbing{};
-		//UPROPERTY(BlueprintReadOnly)
-			//bool bShouldLedgeGrabNextFrame{};
-
-
-		FHitResult LedgeHit{};
-		FVector LedgeLocation{};
-		float LengthToLedge{};
-		FVector PlayersLedgeLocation{};
-		bool DetectLedge(FVector& Out_IntendedPlayerLedgeLocation, const FHitResult& In_WallHit, FHitResult& Out_Ledge, float Vertical_GrabLength, float Horizontal_GrabLength);
-	
-
-		bool IsLedgeGrabbing() const { return bIsLedgeGrabbing; }
-
-		bool Do_LedgeGrab(float DeltaTime);
-
-		/* How far above ifself the character will be able to grab a ledge */
-		//UPROPERTY(EditAnywhere, Category = "Movement|OnWall|LedgeGrab")
-			//float LedgeGrab_GrabLength				UMETA(DisplayName = "GrabLength")	{ 100.f };
-		/* Vertical Grab length */
-		UPROPERTY(EditAnywhere, Category = "Movement|OnWall|LedgeGrab")
-			float LedgeGrab_VerticalGrabLength		UMETA(DisplayName = "Vertical GrabLength") { 100.f };
-		/* Horizontal Grab length */
-		UPROPERTY(EditAnywhere, Category = "Movement|OnWall|LedgeGrab")
-			float LedgeGrab_HorizontalGrabLength	UMETA(DisplayName = "Horizontal GrabLength") { 100.f };
-		/* How far below from the ledge will the character hold itself */
-		UPROPERTY(EditAnywhere, Category = "Movement|OnWall|LedgeGrab")
-			float LedgeGrab_HoldLength				UMETA(DisplayName = "HoldLength")	{ 100.f };
-
-		/* The positional interpolation alpha for each frame between the actors location and the intended ledgegrab location */
-		UPROPERTY(EditAnywhere, Category = "Movement|OnWall|LedgeGrab")
-			float PositionLerpAlpha{ 0.5f };
-		void MoveActorToLedge(float DeltaTime);
-
-		void DrawDebugArms(const float& InputAngle);
-
-	#pragma endregion //LedgeGrab
+	void CancelOnWall();
 
 #pragma endregion //OnWall
-
-
 
 
 	/* ----------------------- Actor Rotation Functions ---------------------------------- */
@@ -573,9 +724,45 @@ public:/* ------------------- Basic Movement ------------------- */
 		void RotateActorYawPitchToVector(FVector AimVector, float DeltaTime = 0);	//Old
 	void RollActorTowardsLocation(FVector Point, float DeltaTime = 0);
 
+	// Other Functions
 
 /* -------------------------------- GRAPPLEHOOK ----------------------------- */
 #pragma region GrappleHook
+	//NEW--------------------------------------------
+public:
+	void RightTriggerClick();
+	void RightTriggerUn_Click();
+	void GH_SetGrappleType(IGameplayTagAssetInterface* ITag, IGrappleTargetInterface* IGrapple);
+
+	UFUNCTION(BlueprintCallable)
+		bool IsGrappling() const { return m_EState == EState::STATE_Grappling; }
+	UFUNCTION(BlueprintCallable)
+		bool Is_GH_PreLaunch() const { return IsGrappling() && m_EGrappleState == EGrappleState::Pre_Launch; }
+public:	// Launch Functions
+	void GH_PreLaunch();
+	void GH_PreLaunch_Static(void(ASteikemannCharacter::* LaunchFunction)(), IGrappleTargetInterface* IGrapple);
+	void GH_PreLaunch_Dynamic(IGrappleTargetInterface* IGrapple, bool OnGround);
+
+	void GH_Launch_Static();
+	void GH_Launch_Static_StuckEnemy();
+
+	void GH_Stop();
+
+public:
+	UPROPERTY(BlueprintReadOnly)
+		FVector Active_GrappledActor_Location{};
+private:
+	EGrappleState m_EGrappleState = EGrappleState::None;
+	EGrappleType m_EGrappleType = EGrappleType::None;
+	TWeakObjectPtr<AActor> GrappledActor{ nullptr };
+	TWeakObjectPtr<AActor> Active_GrappledActor{ nullptr };
+
+public:	// UPROPERTY Variables
+	// How long movement input will be disabled after pulling a dynamic target free from being stuck
+	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
+		float GH_PostPullingTargetFreeTime{ 0.5f };
+	//-----------------------------------------------
+
 public: 
 	/* ------- GrappleTargetInterface ------ */
 	virtual void TargetedPure() override {}
@@ -583,22 +770,14 @@ public:
 	virtual void UnTargetedPure() override {}
 
 	virtual void HookedPure() override {}
-	virtual void HookedPure(const FVector InstigatorLocation, bool PreAction = false) override {}
+	virtual void HookedPure(const FVector InstigatorLocation, bool OnGround, bool PreAction = false) override {}
 
 	virtual void UnHookedPure() override {}
 
-	//virtual FGameplayTag GetGrappledGameplayTag_Pure() const override { return Player; }
-
 	/* ------- Native Variables and functions -------- */
-	void RightTriggerClick();
-	void RightTriggerUn_Click();
 	void LeftTriggerClick();
 	void LeftTriggerUn_Click();
 
-	UPROPERTY(BlueprintReadOnly)
-		TWeakObjectPtr<AActor> GrappledActor{ nullptr };
-	UPROPERTY(BlueprintReadOnly)
-		TWeakObjectPtr<AActor> Active_GrappledActor{ nullptr };
 
 	UPROPERTY(BlueprintReadOnly)
 		FGameplayTag GpT_GrappledActorTag;
@@ -623,28 +802,14 @@ public:
 	/* The added percentage of the screens height that is added to the aiming location. A higher number turns it closer to the
 		middle, with a lower number further up. 0 directly to the middle */
 	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Targeting")
-		float GrappleAimYChange_Base UMETA(DisplayName = "GrappleAimYDifference") { 4.f };
+		float GrappleAimYChange_Base /*UMETA(DisplayName = "GrappleAimYDifference") */{ 4.f };
 	float GrappleAimYChange{};
 
-	void GetGrappleTarget();
+	void GH_GrappleAiming();
 
 	FTimerHandle TH_Grapplehook_Start;
+	FTimerHandle TH_Grapplehook_Pre_Launch;
 	FTimerHandle TH_Grapplehook_End_Launch;
-
-	UPROPERTY(BlueprintReadOnly)
-		bool bIsGrapplehooking{};
-	UPROPERTY(BlueprintReadOnly)
-		bool bIsPostGrapplehooking{};
-
-	void Initial_GrappleHook();
-	void Start_GrappleHook();
-	void Launch_GrappleHook();
-	void Stop_GrappleHook();
-
-	UPROPERTY(BlueprintReadOnly)
-		bool bGrapple_PreLaunch{};
-	UPROPERTY(BlueprintReadOnly)
-		bool bGrapple_Launch{};
 	
 	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
 		float GrappleHook_LaunchSpeed{ 2000.f };
@@ -656,37 +821,48 @@ public:
 		float GrappleHook_DividingFactor{ 2.f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
-		float GrappleHook_PostLaunchTimer UMETA(DisplayName = "Post Launch Timer") { 1.f };
+		float GrappleHook_PostLaunchTimer /*UMETA(DisplayName = "Post Launch Timer")*/ { 1.f };
 
 
 	/* How long the player will be held in the air before being launched towards the grappled actor */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
-		float GrappleDrag_PreLaunch_Timer_Length UMETA(DisplayName = "PreLaunch Timer")  { 0.25f };
+		float GrappleDrag_PreLaunch_Timer_Length /*UMETA(DisplayName = "PreLaunch Timer")*/  { 0.25f };
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Grappling Hook|StuckEnemy")
+		float GrappleHook_Time_ToStuckEnemy /*UMETA(DisplayName = "Time To Stuck Enemy")*/ { 0.3f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Grappling Hook|StuckEnemy")
+		float GrappleHook_AboveStuckEnemy /*UMETA(DisplayName = "Z Above Stuck Enemy")*/ { 50.f };
 
 	/* -- GRAPPLE CAMERA VARIABLES -- */
 	/* Interpolation speed of the camera rotation during grapplehook Drag */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag|Camera Rotation")
-		float GrappleDrag_Camera_InterpSpeed			UMETA(DisplayName = "Interpolation Speed")		{ 3.f };
+		float GrappleDrag_Camera_InterpSpeed			/*UMETA(DisplayName = "Interpolation Speed")	*/	{ 3.f };
 
 	/* Pitch adjustment for the camera rotation during the Pre_Launch of Grapple Drag  */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag|Camera Rotation")
-		float GrappleDrag_Camera_PitchPoint				UMETA(DisplayName = "Pitch Point")				{ 20.f };
-
-	void GrappleHook_Drag_RotateCamera(float DeltaTime);
-	void RotateActor_GrappleHook_Drag(float DeltaTime);
-
-	bool bGrapplingStaticTarget{};
-	bool bGrapplingDynamicTarget{};
-
-	UFUNCTION(BlueprintCallable)
-		bool IsGrappling() const;
-	UFUNCTION(BlueprintCallable)
-		bool IsPostGrapple() const { return bIsPostGrapplehooking; }		
+		float GrappleDrag_Camera_PitchPoint				/*UMETA(DisplayName = "Pitch Point")	*/			{ 20.f };
 
 #pragma endregion //GrappleHook
 
 /* ----------------------------------------- ATTACKS ----------------------------------------------- */
 #pragma region Attacks
+	EAttackState m_EAttackState = EAttackState::None;
+	FTimerHandle TH_BufferAttack;
+
+	// Time removed from
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|SmackAttack")
+		float SmackAttack_GH_TimerRemoval{ 0.1f };
+
+	UFUNCTION(BlueprintCallable)
+		void Activate_AttackCollider() override;
+
+	UFUNCTION(BlueprintCallable)
+		void Deactivate_AttackCollider() override;
+
+	void StartAttackBufferPeriod() override;
+	void ExecuteAttackBuffer() override;
+	//void EndAttackBufferPeriod() override;
 
 	bool CanBeAttacked() override;
 
@@ -699,21 +875,13 @@ public:
 
 
 	UFUNCTION(BlueprintImplementableEvent)
-		void Start_Attack();
+		void AttackSmack_Start();
 	UFUNCTION(BlueprintCallable)
-		void Start_Attack_Pure();
+		void AttackSmack_Start_Pure();
 
 	UFUNCTION(BlueprintCallable)
 		void Stop_Attack();
 
-	UFUNCTION(BlueprintCallable)
-		void Activate_AttackCollider();
-
-	UFUNCTION(BlueprintCallable)
-		void Deactivate_AttackCollider();
-
-	UFUNCTION(BlueprintPure)
-		bool DecideAttackType();
 
 	void RotateToAttack();
 
@@ -741,53 +909,58 @@ public:
 	 * If the player still holds the attack button, the character will perform the scoop attack. 
 	 *  Else if the button is not held at this time, the character will perform the regular SmackAttack */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|SmackAttack")
-		float SmackAttack_Anticipation_Rate		UMETA(DisplayName = "1. Smack Anticipation Rate") { 4.5f };
+		float SmackAttack_Anticipation_Rate		/*UMETA(DisplayName = "1. Smack Anticipation Rate")*/ { 4.5f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|SmackAttack")
-		float SmackAttack_Action_Rate			UMETA(DisplayName = "2. Smack Action Rate") { 5.f };
+		float SmackAttack_Action_Rate			/*UMETA(DisplayName = "2. Smack Action Rate")*/ { 5.f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|SmackAttack")
-		float SmackAttack_Reaction_Rate			UMETA(DisplayName = "3. Smack Reaction Rate") { 2.f };
+		float SmackAttack_Reaction_Rate			/*UMETA(DisplayName = "3. Smack Reaction Rate")*/ { 2.f };
 	
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|ScoopAttack")
-		float ScoopAttack_Anticipation_Rate		UMETA(DisplayName = "1. Scoop Anticipation Rate") { 10.f };
+		float ScoopAttack_Anticipation_Rate		/*UMETA(DisplayName = "1. Scoop Anticipation Rate")*/ { 10.f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|ScoopAttack")
-		float ScoopAttack_Action_Rate			UMETA(DisplayName = "2. Scoop Action Rate") { 7.f };
+		float ScoopAttack_Action_Rate			/*UMETA(DisplayName = "2. Scoop Action Rate")*/ { 7.f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|ScoopAttack")
-		float ScoopAttack_Reaction_Rate			UMETA(DisplayName = "3. Scoop Reaction Rate") { 2.f };
+		float ScoopAttack_Reaction_Rate			/*UMETA(DisplayName = "3. Scoop Reaction Rate")*/ { 2.f };
 
 
 
 
 	/* --------------------------------- SMACK ATTACK ----------------------------- */
 	#pragma region SmackAttack
-
+	ESmackAttackState m_ESmackAttackState = ESmackAttackState::None;
 
 	bool bAttackPress{};
 
-	UFUNCTION(BlueprintCallable)
-		bool GetAttackPress() const { return bAttackPress; }
-	/* When the button can be pressed again */
-	bool bCanAttack{ true };
-	/* Related to collider and locking movement */
-	bool bAttacking{};
-	bool IsAttacking() const { return bAttacking; }
-	
-	/* When TRUE the characters rotation is decided by the players input direction 
-	 * When FALSE the characters rotation is decided by the direction of the camera */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
-		bool bSmackDirectionDecidedByInput{ true };
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
-		bool bDisableMovementDuringAttack{ true };
 
+	/* SMACK DIRECTION 
+	 *  0. None of the below
+	 *  1. Based on input 
+	 *  2. Based on camera direction
+	 *  3. Mixture of both 
+	 * Currently no aiming method outside of this */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|SmackDirection", meta = (UIMin = "0", UIMax = "3"))
+		uint8 SmackDirectionType{ 1 };
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|SmackDirection", meta = (UIMin = "1.0", UIMax = "4.0", EditCondition = "SmackDirectionType == 2 || SmackDirectionType == 3", EditConditionHides))
+		float SmackDirection_CameraMultiplier	/*UMETA(DisplayName = "Camera Multiplier")*/ { 1.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|SmackDirection", meta = (UIMin = "1.0", UIMax = "4.0", EditCondition = "SmackDirectionType == 1 || SmackDirectionType == 3", EditConditionHides))
+		float SmackDirection_InputMultiplier	/*UMETA(DisplayName = "Input Multiplier")*/ { 1.f };
+
+	
 	/* The angle from the ground the enemy will be smacked. 0 degrees: Is parallel to the ground. 90 degrees: Is directly upwards */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
 		float SmackUpwardAngle{ 30.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
 		float SmackAttackStrength{ 1500.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks", meta = (UIMin = "0", UIMax = "1"))
+		float SmackAttack_InputAngleMultiplier			/*UMETA(DisplayName = "Input Angle Multiplier")*/ { 0.2 };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks", meta = (UIMin = "0", UIMax = "1"))
+		float SmackAttack_InputStrengthMultiplier		/*UMETA(DisplayName = "Input Strength Multiplier")*/ { 0.2 };
 
 	/* ---- Moving Character During SmackAttack ---- */
 	/* How far the character will move forward during Smack Attack. Happens during The Action when the collider is active */
@@ -797,20 +970,23 @@ public:
 	bool bSmackAttackMoveCharacter{};
 	void SmackAttackMoveCharacter(float DeltaTime);
 
-
+	// Combo
+	int AttackComboCount{};
+	UFUNCTION(BlueprintImplementableEvent)
+		void ComboAttack(int combo);
+	void ComboAttack_Pure();
 
 	UFUNCTION(BlueprintCallable)
 		void Activate_SmackAttack();
 	UFUNCTION(BlueprintCallable)
 		void Deactivate_SmackAttack();
 
-	bool bIsSmackAttacking{};
+	//bool bIsSmackAttacking{};
 
 	bool bCanBeSmackAttacked{ true };
 
 
 
-	//void Do_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength) override;
 	void Do_SmackAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override;
 	void Receive_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength) override;
 
@@ -864,8 +1040,7 @@ public:
 	#pragma region GroundPound
 
 	bool bGroundPoundPress{};
-	bool bCanGroundPound{ true };
-	bool bIsGroundPounding{};
+	bool IsGroundPounding() const { return m_EState == EState::STATE_Attacking && m_EAttackState == EAttackState::GroundPound; }
 
 	void Click_GroundPound();
 	void UnClick_GroundPound();
@@ -873,6 +1048,10 @@ public:
 	/* Movement */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GroundPound")
 		float GP_PrePoundAirtime{ 0.3f };
+	/* How fast, visually, the player will launch */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|GroundPound")
+		float GP_VisualLaunchStrength{ 2500.f };
+	/* The launch strength the enemies will recieve */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|GroundPound")
 		float GP_LaunchStrength{ 2500.f };
 	FTimerHandle THandle_GPHangTime;
