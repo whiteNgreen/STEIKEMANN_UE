@@ -104,3 +104,12 @@ public:
 	UPROPERTY(EditAnywhere)
 		EActorType m_ActorType;
 };
+
+UCLASS()
+class STEIKEMANN_UE_API UANStartControlRigLerp : public UAnimNotify
+{
+	GENERATED_BODY()
+
+public:
+	virtual void Notify(class USkeletalMeshComponent* MeshComp, class UAnimSequenceBase* Animation) override;
+};
