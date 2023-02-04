@@ -24,8 +24,8 @@
 
 
 
-class UNiagaraSystem;
-class UNiagaraComponent;
+//class UNiagaraSystem;
+//class UNiagaraComponent;
 class USoundBase;
 
 UENUM()
@@ -147,7 +147,7 @@ enum class EPromptState : int8
 
 
 UCLASS()
-class STEIKEMANN_UE_API ASteikemannCharacter : public AAbstractCharacter, 
+class STEIKEMANN_UE_API ASteikemannCharacter : public ABaseCharacter, 
 	public IGrappleTargetInterface,
 	public IAttackInterface,
 	public IGameplayTagAssetInterface,
@@ -242,7 +242,13 @@ public:
 
 
 #pragma endregion //Audio
-
+#pragma region Material
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Materialss", meta = (DisplayPriority = "1"))
+		class UMaterialParameterCollection* MPC_Player;
+	void Material_UpdateParameterCollection_Player(float DeltaTime);
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Materialss", meta = (DisplayPriority = "2"))
+		UCurveFloat* Curve_DecalAlpha;
+#pragma endregion //Material
 #pragma region ParticleEffects
 
 	/* ------------------- Particle Effects ------------------- */
@@ -250,10 +256,8 @@ public:
 		UNiagaraComponent* Component_Niagara{ nullptr };
 
 	/* Create tmp niagara component */
-	UNiagaraComponent* CreateNiagaraComponent(FName Name, USceneComponent* Parent = nullptr, FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules::SnapToTargetIncludingScale, bool bTemp = false);
+	//UNiagaraComponent* CreateNiagaraComponent(FName Name, USceneComponent* Parent = nullptr, FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules::SnapToTargetIncludingScale, bool bTemp = false);
 
-	/* Temporary niagara components created when main component is busy */
-	TArray<UNiagaraComponent*> TempNiagaraComponents;
 
 	#pragma region Landing
 		/* ------------------- PE: Landing ------------------- */
@@ -286,7 +290,7 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Particle Effects|Attack")
 		UNiagaraSystem* NS_AttackContact{ nullptr };
 
-	#pragma region //Attack
+	#pragma endregion //Attack
 
 	#pragma region Crouch
 		UNiagaraComponent* NiComp_CrouchSlide{ nullptr };

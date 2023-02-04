@@ -3,26 +3,39 @@
 
 #include "../Steikemann/SteikemannCharacter.h"
 #include "../Steikemann/SteikemannCharMovementComponent.h"
-#include "GameFramework/SpringArmComponent.h"
-#include "Camera/CameraComponent.h"
 #include "DrawDebugHelpers.h"
-#include "PhysicalMaterials/PhysicalMaterial.h"
+
+// Kismet GameplayStatics
 #include "Kismet/GameplayStatics.h"
-#include "Components/PoseableMeshComponent.h"
+
+// Material
+#include "PhysicalMaterials/PhysicalMaterial.h"
+#include "Kismet/KismetMaterialLibrary.h"
+#include "Materials/MaterialParameterCollection.h"
+
+// Components
 #include "Components/CapsuleComponent.h"
-#include "NiagaraFunctionLibrary.h"
-#include "NiagaraComponent.h"
-#include "Components/AudioComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/SphereComponent.h"
-#include "../GameplayTags.h"
+// Camera
+#include "Camera/CameraComponent.h"
+#include "GameFramework/SpringArmComponent.h"
+
 #include "Components/SplineComponent.h"
+
+// Audio
+#include "Components/AudioComponent.h"
+
+// World
+#include "GameFrameWork/WorldSettings.h"
+
+// Steikemann
+#include "../GameplayTags.h"
 #include "../StaticActors/Collectible.h"
 #include "../StaticActors/PlayerRespawn.h"
 #include "../Dialogue/DialoguePrompt.h"
 #include "../Spawner/EnemySpawner.h"
 #include "../Enemies/SmallEnemy.h"
-#include "GameFrameWork/WorldSettings.h"
 
 // Sets default values
 ASteikemannCharacter::ASteikemannCharacter(const FObjectInitializer& ObjectInitializer)
@@ -106,10 +119,11 @@ void ASteikemannCharacter::BeginPlay()
 	PostLockedMovementDelegate.BindUObject(this, &ASteikemannCharacter::CancelAnimationMontageIfMoving);
 	DeathDelegate.BindLambda([this]() {
 		FTimerHandle h;
-		GetWorldTimerManager().SetTimer(h, this, &ASteikemannCharacter::Respawn, RespawnTimer);
+		TimerManager.SetTimer(h, this, &ASteikemannCharacter::Respawn, RespawnTimer);
 		Anim_Death();	// Do IsFalling check to determine which animation to play
 		});
 	AttackContactDelegate.BindUObject(this, &ASteikemannCharacter::AttackContact);
+	Delegate_MaterialUpdate.AddUObject(this, &ASteikemannCharacter::Material_UpdateParameterCollection_Player);
 	
 	/* Attack Collider */
 	AttackCollider->OnComponentBeginOverlap.AddDynamic(this, &ASteikemannCharacter::OnAttackColliderBeginOverlap);
@@ -138,16 +152,12 @@ void ASteikemannCharacter::BeginPlay()
 	mFocusPoints.Empty();
 }
 
-UNiagaraComponent* ASteikemannCharacter::CreateNiagaraComponent(FName Name, USceneComponent* Parent, FAttachmentTransformRules AttachmentRule, bool bTemp /*= false*/)
+void ASteikemannCharacter::Material_UpdateParameterCollection_Player(float DeltaTime)
 {
-	UNiagaraComponent* TempNiagaraComp = NewObject<UNiagaraComponent>(this, Name);
-	if (Parent)
-		TempNiagaraComp->AttachToComponent(Parent, AttachmentRule);
-	TempNiagaraComp->RegisterComponent();
-
-	if (bTemp) { TempNiagaraComponents.Add(TempNiagaraComp); } // Adding as temp comp
-
-	return TempNiagaraComp;
+	UKismetMaterialLibrary::SetScalarParameterValue(GetWorld(), MPC_Player, "CapsuleRadius",	GetCapsuleComponent()->GetScaledCapsuleRadius() + 5.f);
+	UKismetMaterialLibrary::SetVectorParameterValue(GetWorld(), MPC_Player, "PlayerLocation",	FLinearColor(GetActorLocation()));
+	UKismetMaterialLibrary::SetVectorParameterValue(GetWorld(), MPC_Player, "Velocity",			FLinearColor(GetVelocity()));
+	UKismetMaterialLibrary::SetVectorParameterValue(GetWorld(), MPC_Player, "Forward",			FLinearColor(GetActorForwardVector()));
 }
 
 void ASteikemannCharacter::NS_Land_Implementation(const FHitResult& Hit)
@@ -372,6 +382,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		bCameraLerpBack_PostPrompt = LerpCameraBackToBoom(DeltaTime);
 	GuideCamera(DeltaTime);
 
+	EndTick(DeltaTime);
 	/* ----------------------- COMBAT TICKS ------------------------------ */
 	//PreBasicAttackMoveCharacter(DeltaTime);
 	//SmackAttackMoveCharacter(DeltaTime);
@@ -684,21 +695,21 @@ void ASteikemannCharacter::GH_PreLaunch_Static(void(ASteikemannCharacter::* Laun
 	IGrapple->HookedPure();
 
 	//FTimerHandle h;
-	GetWorldTimerManager().SetTimer(TH_Grapplehook_Pre_Launch,
+	TimerManager.SetTimer(TH_Grapplehook_Pre_Launch,
 		[this]()
 		{
 			m_EGrappleState = EGrappleState::Post_Launch;
 			GetMoveComponent()->m_GravityMode = EGravityMode::Default;
 		},
 		GrappleDrag_PreLaunch_Timer_Length, false);
-	GetWorldTimerManager().SetTimer(TH_Grapplehook_Start, this, LaunchFunction, GrappleDrag_PreLaunch_Timer_Length);
+	TimerManager.SetTimer(TH_Grapplehook_Start, this, LaunchFunction, GrappleDrag_PreLaunch_Timer_Length);
 
 	// End GrappleHook Timer
-	GetWorldTimerManager().SetTimer(TH_Grapplehook_End_Launch, this, &ASteikemannCharacter::GH_Stop, GrappleDrag_PreLaunch_Timer_Length + GrappleHook_PostLaunchTimer);
+	TimerManager.SetTimer(TH_Grapplehook_End_Launch, this, &ASteikemannCharacter::GH_Stop, GrappleDrag_PreLaunch_Timer_Length + GrappleHook_PostLaunchTimer);
 
 	// End control rig 
 	FTimerHandle h;
-	GetWorldTimerManager().SetTimer(h, this, &ASteikemannCharacter::GH_StopControlRig, GrappleDrag_PreLaunch_Timer_Length + (GrappleHook_PostLaunchTimer * 0.3));
+	TimerManager.SetTimer(h, this, &ASteikemannCharacter::GH_StopControlRig, GrappleDrag_PreLaunch_Timer_Length + (GrappleHook_PostLaunchTimer * 0.3));
 }
 
 void ASteikemannCharacter::GH_PreLaunch_Dynamic(IGrappleTargetInterface* IGrapple, bool OnGround)
@@ -708,7 +719,7 @@ void ASteikemannCharacter::GH_PreLaunch_Dynamic(IGrappleTargetInterface* IGrappl
 	IGrapple->HookedPure(GetActorLocation(), OnGround, true);
 
 	//FTimerHandle h;
-	GetWorldTimerManager().SetTimer(TH_Grapplehook_Pre_Launch,
+	TimerManager.SetTimer(TH_Grapplehook_Pre_Launch,
 		[this, IGrapple, OnGround]()
 		{
 			m_EGrappleState = EGrappleState::Post_Launch;
@@ -721,11 +732,11 @@ void ASteikemannCharacter::GH_PreLaunch_Dynamic(IGrappleTargetInterface* IGrappl
 		GrappleDrag_PreLaunch_Timer_Length, false);
 
 	// End GrappleHook Timer
-	GetWorldTimerManager().SetTimer(TH_Grapplehook_End_Launch, this, &ASteikemannCharacter::GH_Stop, GrappleDrag_PreLaunch_Timer_Length + GrappleHook_PostLaunchTimer);
+	TimerManager.SetTimer(TH_Grapplehook_End_Launch, this, &ASteikemannCharacter::GH_Stop, GrappleDrag_PreLaunch_Timer_Length + GrappleHook_PostLaunchTimer);
 
 	// End control rig 
 	FTimerHandle h;
-	GetWorldTimerManager().SetTimer(h, this, &ASteikemannCharacter::GH_StopControlRig, GrappleDrag_PreLaunch_Timer_Length + (GrappleHook_PostLaunchTimer * 0.3));
+	TimerManager.SetTimer(h, this, &ASteikemannCharacter::GH_StopControlRig, GrappleDrag_PreLaunch_Timer_Length + (GrappleHook_PostLaunchTimer * 0.3));
 }
 
 void ASteikemannCharacter::GH_PreLaunch()
@@ -778,7 +789,7 @@ void ASteikemannCharacter::GH_Launch_Static_StuckEnemy()
 	// When grapple hooking to stuck enemy, set a wall jump activation timer 
 	m_WallState = EOnWallState::WALL_Leave;
 	FTimerHandle h;
-	GetWorldTimerManager().SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, GrappleHook_Time_ToStuckEnemy + OnWallActivation_PostStuckEnemyGrappled, false);
+	TimerManager.SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, GrappleHook_Time_ToStuckEnemy + OnWallActivation_PostStuckEnemyGrappled, false);
 
 	// Animations
 	Anim_Grapple_End();
@@ -1298,7 +1309,7 @@ void ASteikemannCharacter::LookUpAtRate(float rate)
 void ASteikemannCharacter::LockMovementForPeriod(float time, TFunction<void()> lambdaCall)
 {
 	m_EMovementInputState = EMovementInput::PeriodLocked;
-	GetWorldTimerManager().SetTimer(TH_MovementPeriodLocked, [this, lambdaCall]() { 
+	TimerManager.SetTimer(TH_MovementPeriodLocked, [this, lambdaCall]() { 
 		m_EMovementInputState = EMovementInput::Open; 
 		PostLockedMovementDelegate.Execute(lambdaCall);
 		}, time, false);
@@ -1386,7 +1397,7 @@ void ASteikemannCharacter::Jump()
 			GetMoveComponent()->Jump(JumpStrength);
 			Anim_Activate_Jump();
 
-			GetWorldTimerManager().SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, OnWallActivation_PostJumpingOnGround, false);
+			TimerManager.SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, OnWallActivation_PostJumpingOnGround, false);
 			m_WallState = EOnWallState::WALL_Leave;
 			break;
 		}
@@ -1437,7 +1448,7 @@ void ASteikemannCharacter::Jump()
 				m_WallState = EOnWallState::WALL_Leave;
 				GetMoveComponent()->LedgeJump(m_InputVector, JumpStrength);
 				GetMoveComponent()->m_GravityMode = EGravityMode::LerpToDefault;
-				GetWorldTimerManager().SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, 0.5f, false);
+				TimerManager.SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, 0.5f, false);
 				break;
 			}
 
@@ -1451,7 +1462,7 @@ void ASteikemannCharacter::Jump()
 			else
 				RotateActorYawToVector(m_WallJumpData.Normal);
 
-			GetWorldTimerManager().SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, OnWall_Reset_OnWallJump_Timer, false);
+			TimerManager.SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, OnWall_Reset_OnWallJump_Timer, false);
 			GetMoveComponent()->WallJump(m_InputVector, JumpStrength);
 			Anim_Activate_Jump();//Anim_Activate_WallJump
 			break;
@@ -1589,12 +1600,12 @@ void ASteikemannCharacter::PB_Active_IMPL()
 {
 	m_EAirState = EAirState::AIR_Pogo;
 	m_EPogoType = EPogoType::POGO_Leave;
-	//GetWorldTimerManager().ClearTimer(TH_Pogo);
+	//TimerManager.ClearTimer(TH_Pogo);
 
 	PB_Launch_Active();
 	PB_EnterPogoState(PB_StateTimer_Active);
 
-	GetWorldTimerManager().SetTimer(TH_PB_ExitHandle, [this](){ m_EPogoType = EPogoType::POGO_None; }, PB_StateTimer_Active, false);
+	TimerManager.SetTimer(TH_PB_ExitHandle, [this](){ m_EPogoType = EPogoType::POGO_None; }, PB_StateTimer_Active, false);
 
 	// Visual Effects
 	Anim_Activate_Jump();
@@ -1710,7 +1721,7 @@ void ASteikemannCharacter::PB_Pogo()
 void ASteikemannCharacter::PB_EnterPogoState(float time)
 {
 	m_EAirState = EAirState::AIR_Pogo;
-	GetWorldTimerManager().SetTimer(TH_Pogo, [this](){ m_EAirState = EAirState::AIR_Freefall;  }, time, false);
+	TimerManager.SetTimer(TH_Pogo, [this](){ m_EAirState = EAirState::AIR_Freefall;  }, time, false);
 }
 
 void ASteikemannCharacter::Start_Crouch()
@@ -1774,16 +1785,16 @@ void ASteikemannCharacter::Click_Slide()
 			if (!IGrapple) return;
 			IGrapple->PullFree_Pure(GetActorLocation());
 
-			GetWorldTimerManager().ClearTimer(TH_Grapplehook_Start);
-			GetWorldTimerManager().ClearTimer(TH_Grapplehook_Pre_Launch);
-			GetWorldTimerManager().ClearTimer(TH_Grapplehook_End_Launch);
+			TimerManager.ClearTimer(TH_Grapplehook_Start);
+			TimerManager.ClearTimer(TH_Grapplehook_Pre_Launch);
+			TimerManager.ClearTimer(TH_Grapplehook_End_Launch);
 
 			GetMoveComponent()->m_GravityMode = EGravityMode::Default;
 			GH_Stop();
 
 			m_EMovementInputState = EMovementInput::Locked;
 			FTimerHandle h;
-			GetWorldTimerManager().SetTimer(h, [this]() { m_EMovementInputState = EMovementInput::Open; }, GH_PostPullingTargetFreeTime, false);
+			TimerManager.SetTimer(h, [this]() { m_EMovementInputState = EMovementInput::Open; }, GH_PostPullingTargetFreeTime, false);
 			return;
 		}
 		return;
@@ -1833,7 +1844,7 @@ void ASteikemannCharacter::Start_CrouchSliding()
 		}
 		GetMoveComponent()->Initiate_CrouchSlide(SlideDirection);
 
-		GetWorldTimerManager().SetTimer(CrouchSlide_TimerHandle, this, &ASteikemannCharacter::Stop_CrouchSliding, CrouchSlide_Time);
+		TimerManager.SetTimer(CrouchSlide_TimerHandle, this, &ASteikemannCharacter::Stop_CrouchSliding, CrouchSlide_Time);
 	}
 }
 
@@ -1842,7 +1853,7 @@ void ASteikemannCharacter::Stop_CrouchSliding()
 	bCrouchSliding = false;
 	bCanCrouchSlide = false;
 	NiComp_CrouchSlide->Deactivate();
-	GetWorldTimerManager().SetTimer(Post_CrouchSlide_TimerHandle, this, &ASteikemannCharacter::Reset_CrouchSliding, Post_CrouchSlide_Time);
+	TimerManager.SetTimer(Post_CrouchSlide_TimerHandle, this, &ASteikemannCharacter::Reset_CrouchSliding, Post_CrouchSlide_Time);
 
 	if (bPressedCrouch) { Start_Crouch(); return; }	// If player is still holding the crouch button, move over to crouch movement
 
@@ -1899,7 +1910,7 @@ void ASteikemannCharacter::PTakeDamage(int damage, AActor* otheractor, int i/* =
 	}
 
 	FTimerHandle TH;
-	GetWorldTimerManager().SetTimer(TH, 
+	TimerManager.SetTimer(TH, 
 		[this, otheractor, i]()
 		{ 
 		for (auto& it : CloseHazards) {
@@ -1978,7 +1989,7 @@ void ASteikemannCharacter::ExitOnWall(EState state)
 	m_EState = state;
 	m_WallState = EOnWallState::WALL_Leave;
 	FTimerHandle h;
-	GetWorldTimerManager().SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, 0.5f, false);
+	TimerManager.SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, 0.5f, false);
 }
 
 bool ASteikemannCharacter::IsOnWall() const
@@ -2100,7 +2111,7 @@ void ASteikemannCharacter::CancelOnWall()
 	ResetState();
 	m_WallState = EOnWallState::WALL_Leave;
 	GetMoveComponent()->CancelOnWall();
-	GetWorldTimerManager().SetTimer(TH_OnWall_Cancel, [this]() { m_WallState = EOnWallState::WALL_None; }, OnWall_CancelTimer, false);
+	TimerManager.SetTimer(TH_OnWall_Cancel, [this]() { m_WallState = EOnWallState::WALL_None; }, OnWall_CancelTimer, false);
 }
 
 void ASteikemannCharacter::OnCapsuleComponentBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
@@ -2430,11 +2441,11 @@ void ASteikemannCharacter::Click_Attack()
 		/* Buffer Attack if Grappling to Dynamic Target */
 		if (m_EGrappleType == EGrappleType::Dynamic_Ground)
 		{
-			if (GetWorldTimerManager().IsTimerActive(TH_BufferAttack)) return;
+			if (TimerManager.IsTimerActive(TH_BufferAttack)) return;
 
-			float t = GetWorldTimerManager().GetTimerRemaining(TH_Grapplehook_End_Launch) - SmackAttack_GH_TimerRemoval;
+			float t = TimerManager.GetTimerRemaining(TH_Grapplehook_End_Launch) - SmackAttack_GH_TimerRemoval;
 			if (t > 0.f) {
-				GetWorldTimerManager().SetTimer(TH_BufferAttack, [this]()
+				TimerManager.SetTimer(TH_BufferAttack, [this]()
 					{
 						m_EState = EState::STATE_OnGround; 
 						AttackSmack_Start_Pure();
@@ -2504,10 +2515,10 @@ void ASteikemannCharacter::Click_ScoopAttack()
 		/* Buffer Attack if Grappling to Dynamic Target */
 		if (m_EGrappleType == EGrappleType::Dynamic_Ground)
 		{
-			if (GetWorldTimerManager().IsTimerActive(TH_BufferAttack)) return;
-			float t = GetWorldTimerManager().GetTimerRemaining(TH_Grapplehook_End_Launch) - SmackAttack_GH_TimerRemoval;
+			if (TimerManager.IsTimerActive(TH_BufferAttack)) return;
+			float t = TimerManager.GetTimerRemaining(TH_Grapplehook_End_Launch) - SmackAttack_GH_TimerRemoval;
 			if (t > 0.f) {
-				GetWorldTimerManager().SetTimer(TH_BufferAttack, [this]()
+				TimerManager.SetTimer(TH_BufferAttack, [this]()
 					{
 						m_EState = EState::STATE_OnGround;
 				Start_ScoopAttack_Pure();
@@ -2548,7 +2559,7 @@ void ASteikemannCharacter::PostScoopJump()
 	ASmallEnemy* enemy = Cast<ASmallEnemy>(ScoopedActor);
 	enemy->DisableGravity();
 	HeightReachedDelegate.AddLambda([this, enemy]() {
-		GetWorldTimerManager().SetTimer(TH_ScoopJumpGravityEnable,
+		TimerManager.SetTimer(TH_ScoopJumpGravityEnable,
 		[this, enemy]()
 		{
 			GetMoveComponent()->EnableGravity();
@@ -2614,11 +2625,11 @@ void ASteikemannCharacter::AttackContact(AActor* instigator, AActor* target)
 	target->CustomTimeDilation = Statics::AttackContactTimeDilation;
 
 	FTimerHandle h;
-	GetWorldTimerManager().SetTimer(h, [instigator, target]() {
+	GetWorldTimerManager().SetTimer(h, [instigator, target]() {		// Using world timer manager for more advanced
 		instigator->CustomTimeDilation = 1.f;
 		target->CustomTimeDilation = 1.f;
 		}, AttackContactTimer, false);
-
+	
 	// Particles
 	AttackContact_Particles(AttackCollider->GetComponentLocation(), AttackCollider->GetComponentQuat());
 }
@@ -2822,7 +2833,7 @@ void ASteikemannCharacter::Start_GroundPound()
 
 	GetMoveComponent()->GP_PreLaunch();
 
-	GetWorldTimerManager().SetTimer(THandle_GPHangTime, this, &ASteikemannCharacter::Launch_GroundPound, GP_PrePoundAirtime);
+	TimerManager.SetTimer(THandle_GPHangTime, this, &ASteikemannCharacter::Launch_GroundPound, GP_PrePoundAirtime);
 
 	// Animation
 	Anim_GroundPound_Initial();
@@ -2855,7 +2866,7 @@ void ASteikemannCharacter::GroundPoundLand(const FHitResult& Hit)
 
 	GroundPoundCollider->SetSphereRadius(MaxGroundPoundRadius, true);
 
-	GetWorldTimerManager().SetTimer(THandle_GPReset, this, &ASteikemannCharacter::Deactivate_GroundPound, GroundPoundExpandTime);
+	TimerManager.SetTimer(THandle_GPReset, this, &ASteikemannCharacter::Deactivate_GroundPound, GroundPoundExpandTime);
 
 	// Locking movement for a period, GP_MovementPeriodLocket	// Setting AttackState as Post Groundpound, read in BreakMovementInput for animation montage canceling
 	m_EAttackState = EAttackState::Post_GroundPound;

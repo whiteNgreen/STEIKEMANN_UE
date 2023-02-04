@@ -18,7 +18,6 @@
 
 DECLARE_DELEGATE(FIncapacitatedLandDelegation)
 DECLARE_DELEGATE(FIncapacitatedCollision)
-//DECLARE_DELEGATE
 
 /************************ ENUMS *****************************/
 UENUM()
@@ -62,7 +61,7 @@ struct SpawnPointData
 };
 
 UCLASS()
-class STEIKEMANN_UE_API ASmallEnemy : public AAbstractCharacter,
+class STEIKEMANN_UE_API ASmallEnemy : public ABaseCharacter,
 	public IAttackInterface,
 	public IGameplayTagAssetInterface,
 	public IGrappleTargetInterface
@@ -81,9 +80,22 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-public:
+public:	// Components
+	// Collision
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
 		USphereComponent* PlayerPogoDetection{ nullptr };
+
+	// Timelines
+	UPROPERTY(BlueprintReadOnly)
+		UTimelineComponent* TlComp_Scooped { nullptr };
+	UPROPERTY(BlueprintReadOnly)
+		UTimelineComponent* TlComp_Smacked { nullptr };
+
+	// Particles
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Particles")
+		UNiagaraSystem* NS_Trail{ nullptr };
+	UNiagaraComponent* NComp_AirTrailing;
+
 #pragma endregion //Base
 
 #pragma region SpawnRespawn
@@ -245,16 +257,14 @@ public:
 	bool GetCanBeSmackAttacked() const override { return bCanBeSmackAttacked; }
 	void ResetCanBeSmackAttacked() override { bCanBeSmackAttacked = true; }
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		UTimelineComponent* TimelineComponent{ nullptr };
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Scoop|Curve")
-		UCurveFloat* ScoopedZForceFloatCurve{ nullptr };
+		UCurveFloat* Curve_ScoopedZForceFloat{ nullptr };
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Scoop|Curve")
 		float ScoopedCurveMultiplier{ 1.f };
 	UFUNCTION()
-		void TimelineComponentUpdate(float time);
+		void Tl_Scooped(float value);
 	UFUNCTION()
-		void TimelineComponentEnd();
+		void Tl_ScoopedEnd();
 
 	void Do_ScoopAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override;	// Getting Scooped
 	void Receive_ScoopAttack_Pure(const FVector& Direction, const float& Strength) override;
@@ -262,6 +272,25 @@ public:
 	void Do_GroundPound_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override {}
 	void Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength) override;
 
+public: // Particles for getting smacked
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Particles|Trail")
+		float NS_Trail_SpawnRate{ 50.f };
+	float NS_Trail_SpawnRate_Internal{};
+	/* Multiplied by velocity */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Particles|Trail")
+		float NS_Trail_SpeedMin{ 0.4f };
+	/* Multiplied by velocity */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Particles|Trail")
+		float NS_Trail_SpeedMax{ 1.0f };
+	bool bTrailingParticles{};
+	void NS_Start_Trail(FVector direction);
+	void NS_Update_Trail(float DeltaTime);
+	void NS_Stop_Trail();
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Particles|Trail")
+		UCurveFloat* Curve_NSTrail{ nullptr };
+	UFUNCTION()
+		void Tl_Smacked(float value);
 
 #pragma endregion //GettingSmacked
 #pragma region Pogo

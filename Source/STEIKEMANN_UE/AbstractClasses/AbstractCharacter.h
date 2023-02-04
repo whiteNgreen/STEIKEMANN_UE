@@ -4,6 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+
+// Particles
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
+
 #include "AbstractCharacter.generated.h"
 
 UCLASS(Abstract)
@@ -12,24 +17,7 @@ class STEIKEMANN_UE_API AAbstractCharacter : public ACharacter
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this character's properties
-	//AAbstractCharacter(const FObjectInitializer& ObjectInitializer){}
-
-protected:
-	// Called when the game starts or when spawned
-	//virtual void BeginPlay() override;
-
-public:	
-	// Called every frame
-	//virtual void Tick(float DeltaTime) override;
-
-	// Called to bind functionality to input
-	//virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
-//protected:
 	virtual void AllowActionCancelationWithInput(){}
-
-
 
 	virtual void Activate_AttackCollider	(){}
 	virtual void Deactivate_AttackCollider	(){}
@@ -39,6 +27,32 @@ public:
 	virtual void EndAttackBufferPeriod		(){}
 
 	virtual void StartAnimLerp_ControlRig	(){}
+};
 
-	//virtual void EndComboHold				(){}
+
+DECLARE_MULTICAST_DELEGATE_OneParam(FParticleUpdate, float /* DeltaTime */)
+DECLARE_MULTICAST_DELEGATE_OneParam(FMaterialUpdate, float /* DeltaTime */)
+class UNiagaraSystem;
+class UNiagaraComponent;
+
+UCLASS(Abstract)
+class STEIKEMANN_UE_API ABaseCharacter : public AAbstractCharacter
+{
+	GENERATED_BODY()
+
+public:
+	ABaseCharacter();
+	ABaseCharacter(const FObjectInitializer& ObjectInitializer);
+	virtual void Tick(float DeltaTime) override;
+	virtual void EndTick(float DeltaTime);
+
+	FTimerManager TimerManager;
+	FParticleUpdate Delegate_ParticleUpdate;
+	FMaterialUpdate Delegate_MaterialUpdate;
+
+	/* Temporary niagara components created when main component is busy */
+	TArray<UNiagaraComponent*> TempNiagaraComponents;
+	/* Create tmp niagara component */
+	UNiagaraComponent* CreateNiagaraComponent(FName Name, USceneComponent* Parent = nullptr, FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules::SnapToTargetIncludingScale, bool bTemp = false);
+
 };

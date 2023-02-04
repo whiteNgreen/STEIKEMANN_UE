@@ -19,7 +19,8 @@ ASmallEnemy::ASmallEnemy()
 	PlayerPogoDetection = CreateDefaultSubobject<USphereComponent>(TEXT("PlayerPogoDetection"));
 	PlayerPogoDetection->SetupAttachment(RootComponent);
 
-	TimelineComponent = CreateDefaultSubobject<UTimelineComponent>("Timeline Component");
+	TlComp_Scooped = CreateDefaultSubobject<UTimelineComponent>("Timeline_Scooped");
+	TlComp_Smacked = CreateDefaultSubobject<UTimelineComponent>("Timeline_Smacked");
 }
 
 // Called when the game starts or when spawned
@@ -42,16 +43,23 @@ void ASmallEnemy::BeginPlay()
 
 	PlayerPogoDetection->SetSphereRadius(PB_SphereRadius);
 
-	// Initialize TimelineComponent
-	//TimelineComponent->SetTimelineLength(3.f);
+	// Niagara
+	NComp_AirTrailing = CreateNiagaraComponent("TrailinigParticle", RootComponent, FAttachmentTransformRules::SnapToTargetIncludingScale);
+	NComp_AirTrailing->SetAsset(NS_Trail);
+	NComp_AirTrailing->Deactivate();
+	Delegate_ParticleUpdate.AddUObject(this, &ASmallEnemy::NS_Update_Trail);
 
-	FOnTimelineFloatStatic floatStatic;
-	floatStatic.BindUObject(this, &ASmallEnemy::TimelineComponentUpdate);
-	TimelineComponent->AddInterpFloat(ScoopedZForceFloatCurve, floatStatic);
+	// Timeline Components
+	FOnTimelineFloatStatic FloatBind;
+	FloatBind.BindUObject(this, &ASmallEnemy::Tl_Scooped);
+	TlComp_Scooped->AddInterpFloat(Curve_ScoopedZForceFloat, FloatBind);
 
 	FOnTimelineEventStatic EventStatic;
-	EventStatic.BindUObject(this, &ASmallEnemy::TimelineComponentEnd);
-	TimelineComponent->SetTimelineFinishedFunc(EventStatic);
+	EventStatic.BindUObject(this, &ASmallEnemy::Tl_ScoopedEnd);
+	TlComp_Scooped->SetTimelineFinishedFunc(EventStatic);
+
+	FloatBind.BindUObject(this, &ASmallEnemy::Tl_Smacked);
+	TlComp_Smacked->AddInterpFloat(Curve_NSTrail, FloatBind);
 }
 
 // Called every frame
@@ -109,6 +117,8 @@ void ASmallEnemy::Tick(float DeltaTime)
 	default:
 		break;
 	}
+
+	EndTick(DeltaTime);
 }
 
 // Called to bind functionality to input
@@ -190,6 +200,8 @@ void ASmallEnemy::Landed(const FHitResult& Hit)
 
 	if (IncapacitatedCollisionDelegate.ExecuteIfBound())
 		IncapacitatedCollisionDelegate.Unbind();
+
+	NS_Stop_Trail();
 }
 
 void ASmallEnemy::EnableGravity()
@@ -269,7 +281,7 @@ void ASmallEnemy::LeaveWall()
 {
 	PlayerPogoDetection->SetSphereRadius(PB_SphereRadius);
 	m_WallState = EWall::WALL_Leaving;
-	GetWorldTimerManager().SetTimer(TH_LeavingWall, [this]() { m_WallState = EWall::WALL_None; }, WDC_LeavingWallTimer, false);
+	TimerManager.SetTimer(TH_LeavingWall, [this]() { m_WallState = EWall::WALL_None; }, WDC_LeavingWallTimer, false);
 
 	//AI - Register collision delegate
 	IncapacitateUndeterminedTime(EAIIncapacitatedType::Grappled, &ASmallEnemy::CollisionDelegate);
@@ -338,10 +350,10 @@ void ASmallEnemy::HookedPure(const FVector InstigatorLocation, bool OnGround, bo
 		GetCharacterMovement()->AddImpulse(Velocity, true);
 
 		FTimerHandle h;
-		GetWorldTimerManager().SetTimer(h, [this](){ GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics); }, FMath::Clamp(GrappledLaunchTime - GrappledLaunchTime_CollisionActivation, 0.f, GrappledLaunchTime), false);
+		TimerManager.SetTimer(h, [this](){ GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics); }, FMath::Clamp(GrappledLaunchTime - GrappledLaunchTime_CollisionActivation, 0.f, GrappledLaunchTime), false);
 
 		bCanBeGrappleHooked = false;
-		GetWorldTimerManager().SetTimer(Handle_GrappledCooldown, this, &ASmallEnemy::ResetCanBeGrappleHooked, GrappleHookedInternalCooldown);
+		TimerManager.SetTimer(Handle_GrappledCooldown, this, &ASmallEnemy::ResetCanBeGrappleHooked, GrappleHookedInternalCooldown);
 	}
 }
 
@@ -364,14 +376,14 @@ void ASmallEnemy::PullFree_Pure(const FVector InstigatorLocation)
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Falling);
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	FTimerHandle h;
-	GetWorldTimerManager().SetTimer(h, [this]() { GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics); }, Grappled_PulledFreeNoCollisionTimer, false);
+	TimerManager.SetTimer(h, [this]() { GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics); }, Grappled_PulledFreeNoCollisionTimer, false);
 
 	// Leave wall
 	LeaveWall();
 
 	// Internal cooldown to getting grapplehooked
 	bCanBeGrappleHooked = false;
-	GetWorldTimerManager().SetTimer(Handle_GrappledCooldown, this, &ASmallEnemy::ResetCanBeGrappleHooked, GrappleHookedInternalCooldown);
+	TimerManager.SetTimer(Handle_GrappledCooldown, this, &ASmallEnemy::ResetCanBeGrappleHooked, GrappleHookedInternalCooldown);
 }
 
 bool ASmallEnemy::CanBeAttacked()
@@ -401,19 +413,22 @@ void ASmallEnemy::Receive_SmackAttack_Pure(const FVector& Direction, const float
 		Incapacitate(EAIIncapacitatedType::Stunned, 1.5f/* Stun timer */);
 
 		/* Sets a timer before character can be damaged by the same attack */
-		GetWorldTimerManager().SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, SmackAttack_InternalTimer, false);
+		TimerManager.SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, SmackAttack_InternalTimer, false);
+
+		// Particles
+		NS_Start_Trail(Direction);
 	}
 }
 
-void ASmallEnemy::TimelineComponentUpdate(float time)
+void ASmallEnemy::Tl_Scooped(float value)
 {
-	// Just hardcoding in scoop force
+	// Just hardcoding in scoop force	// TODO - CHANGE TO BE BASED ON STATE, to be used on several occations
 	auto c = GetCharacterMovement();
 	float PositiveGravity = c->GetGravityZ() * -1.f * c->Mass;
-	GetCharacterMovement()->AddForce(FVector(0, 0, PositiveGravity * time * ScoopedCurveMultiplier));
+	GetCharacterMovement()->AddForce(FVector(0, 0, PositiveGravity * value * ScoopedCurveMultiplier));
 }
 
-void ASmallEnemy::TimelineComponentEnd()
+void ASmallEnemy::Tl_ScoopedEnd()
 {
 }
 
@@ -425,10 +440,7 @@ void ASmallEnemy::Receive_ScoopAttack_Pure(const FVector& Direction, const float
 {
 	if (GetCanBeSmackAttacked())
 	{
-		//PRINTPARLONG("IM(%s) BEING ATTACKED", *GetName());
-		//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (Direction * Strength), FColor::Yellow, false, 2.f, 0, 3.f);
-		
-		TimelineComponent->PlayFromStart();
+		TlComp_Scooped->PlayFromStart();
 
 		bCanBeSmackAttacked = false;
 		SetActorRotation(FVector(Direction.GetSafeNormal2D() * -1.f).Rotation(), ETeleportType::TeleportPhysics);
@@ -436,22 +448,52 @@ void ASmallEnemy::Receive_ScoopAttack_Pure(const FVector& Direction, const float
 		GetCharacterMovement()->AddImpulse(Direction * Strength, true);
 
 		/* Sets a timer before character can be damaged by the same attack */
-		GetWorldTimerManager().SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, 0.2f, false);
+		TimerManager.SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, 0.2f, false);
 	}
 }
 
 void ASmallEnemy::Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength)
 {
-	//PRINTPARLONG("IM(%s) BEING GROUNDPOUNDED", *GetName());
-	//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (PoundDirection * GP_Strength), FColor::Yellow, false, 2.f, 0, 3.f);
-
-	//bCanBeSmackAttacked = false;
 	SetActorRotation(FVector(PoundDirection.GetSafeNormal2D() * -1.f).Rotation(), ETeleportType::TeleportPhysics);
 	GetCharacterMovement()->Velocity *= 0.f;
 	GetCharacterMovement()->AddImpulse(PoundDirection * GP_Strength, true);
 
 	/* Sets a timer before character can be damaged by the same attack */
-	//GetWorldTimerManager().SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, 0.5f, false);
+	//TimerManager.SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, 0.5f, false);
+	
+	// Particles
+	NS_Start_Trail(PoundDirection);
+}
+
+void ASmallEnemy::NS_Start_Trail(FVector direction)
+{
+	bTrailingParticles = true;
+	NComp_AirTrailing->Activate(true);
+	TlComp_Smacked->PlayFromStart();
+}
+
+void ASmallEnemy::NS_Update_Trail(float DeltaTime)
+{
+	if (!bTrailingParticles) return;
+
+	FVector vel = GetVelocity();
+	float fVel = GetVelocity().Length();
+	FRotator dir = vel.Rotation();
+	NComp_AirTrailing->SetNiagaraVariableVec3("Direction", FVector(dir.Yaw, dir.Pitch, dir.Roll));
+	NComp_AirTrailing->SetNiagaraVariableFloat("SpawnRate", fVel * DeltaTime * NS_Trail_SpawnRate * NS_Trail_SpawnRate_Internal);
+	NComp_AirTrailing->SetNiagaraVariableFloat("Speed_Min", fVel * NS_Trail_SpeedMin);
+	NComp_AirTrailing->SetNiagaraVariableFloat("Speed_Max", fVel * NS_Trail_SpeedMax);
+}
+
+void ASmallEnemy::NS_Stop_Trail()
+{
+	bTrailingParticles = false;
+	NComp_AirTrailing->Deactivate();
+}
+
+void ASmallEnemy::Tl_Smacked(float value)
+{
+	NS_Trail_SpawnRate_Internal = value;
 }
 
 void ASmallEnemy::Receive_Pogo_GroundPound_Pure()
@@ -464,4 +506,7 @@ void ASmallEnemy::Receive_Pogo_GroundPound_Pure()
 	m_State = EEnemyState::STATE_None;
 
 	GetCharacterMovement()->AddImpulse(Direction * PB_Groundpound_LaunchStrength, true);
+
+	// Particles
+	//UNiagaraFunctionLibrary::SpawnSystemAtLocation()
 }
