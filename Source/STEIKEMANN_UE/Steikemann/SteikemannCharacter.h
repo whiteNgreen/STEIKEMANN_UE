@@ -243,8 +243,6 @@ public:
 
 #pragma endregion //Audio
 
-
-
 #pragma region ParticleEffects
 
 	/* ------------------- Particle Effects ------------------- */
@@ -252,7 +250,7 @@ public:
 		UNiagaraComponent* Component_Niagara{ nullptr };
 
 	/* Create tmp niagara component */
-	UNiagaraComponent* CreateNiagaraComponent(FName Name, USceneComponent* Parent, FAttachmentTransformRules AttachmentRule, bool bTemp = false);
+	UNiagaraComponent* CreateNiagaraComponent(FName Name, USceneComponent* Parent = nullptr, FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules::SnapToTargetIncludingScale, bool bTemp = false);
 
 	/* Temporary niagara components created when main component is busy */
 	TArray<UNiagaraComponent*> TempNiagaraComponents;
@@ -283,6 +281,13 @@ public:
 			float NS_WallSlide_ParticleAmount	/*UMETA(DisplayName = "WallSlide ParticleAmount")*/ { 1000.f };
 	#pragma endregion //OnWall
 
+	#pragma region Attack
+	UNiagaraComponent* NiagaraComp_Attack{ nullptr };
+	UPROPERTY(EditAnywhere, Category = "Particle Effects|Attack")
+		UNiagaraSystem* NS_AttackContact{ nullptr };
+
+	#pragma region //Attack
+
 	#pragma region Crouch
 		UNiagaraComponent* NiComp_CrouchSlide{ nullptr };
 
@@ -292,8 +297,6 @@ public:
 	#pragma endregion //Crouch
 
 #pragma endregion //ParticleEffects
-
-
 
 #pragma region Slipping
 
@@ -438,13 +441,6 @@ public:
 		bool bJumping{};
 	UPROPERTY(BlueprintReadOnly)
 		bool bCanEdgeJump{};
-	//UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
-	//	bool bAddJumpVelocity{};
-	///* How long the jump key can be held to add upwards velocity */
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
-	//	float fJumpTimerMax UMETA(DisplayName = "JumpHoldTimer") { 0.2f };
-	//UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
-	//	float fJumpTimer{};
 
 	/* How long after walking off an edge the player is still allowed to jump */
 	UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump")
@@ -471,9 +467,7 @@ public:
 	void Landed(const FHitResult& Hit) override;
 
 	void Jump() override;
-	void StopJumping() override;
 	void JumpRelease();
-	void CheckJumpInput(float DeltaTime) override;
 
 	/* Animation activation */
 	UFUNCTION(BlueprintImplementableEvent)
@@ -800,7 +794,6 @@ private:
 
 #pragma endregion //OnWall
 
-
 	/* ----------------------- Actor Rotation Functions ---------------------------------- */
 	void ResetActorRotationPitchAndRoll(float DeltaTime);
 	void RotateActorYawToVector(FVector AimVector, float DeltaTime = 0);
@@ -951,6 +944,18 @@ public:
 	EAttackState m_EAttackState = EAttackState::None;
 	FTimerHandle TH_BufferAttack;
 
+		
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|AttackContact")
+		float AttackContactTimer{ 0.3f };
+	FAttackContactDelegate AttackContactDelegate;
+
+	/*	*	When attacking with the staff keep a list of actors hit during the attack
+		*	The 'void Attack Contact Function' will only be called once per actor	
+		*	This array is cleaned in 'void StopAttack'								*/
+	TArray<AActor*> AttackContactedActors;
+	void AttackContact(AActor* instigator, AActor* target);
+	void AttackContact_Particles(FVector location, FQuat direction);
+
 	// Time removed from
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|SmackAttack")
 		float SmackAttack_GH_TimerRemoval{ 0.1f };
@@ -983,10 +988,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 		void Stop_Attack();
 
-
 	void RotateToAttack();
-
-
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Attack")
 		class UBoxComponent* AttackCollider{ nullptr };
@@ -1002,7 +1004,6 @@ public:
 		float PreBasicAttackMovementLength{ 50.f };
 	bool bPreBasicAttackMoveCharacter{};
 	void PreBasicAttackMoveCharacter(float DeltaTime);
-
 
 	/* -------- Animation Variables -------- */
 	/* The speed of the anticipation to the regular attack. Which is shared between SmackAttack and ScoopAttack.
@@ -1030,7 +1031,7 @@ public:
 
 
 
-
+	
 	/* --------------------------------- SMACK ATTACK ----------------------------- */
 	#pragma region SmackAttack
 	ESmackAttackState m_ESmackAttackState = ESmackAttackState::None;

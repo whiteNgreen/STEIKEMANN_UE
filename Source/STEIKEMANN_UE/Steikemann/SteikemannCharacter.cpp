@@ -22,6 +22,7 @@
 #include "../Dialogue/DialoguePrompt.h"
 #include "../Spawner/EnemySpawner.h"
 #include "../Enemies/SmallEnemy.h"
+#include "GameFrameWork/WorldSettings.h"
 
 // Sets default values
 ASteikemannCharacter::ASteikemannCharacter(const FObjectInitializer& ObjectInitializer)
@@ -99,6 +100,7 @@ void ASteikemannCharacter::BeginPlay()
 		NiComp_CrouchSlide->bAutoActivate = false;
 		if (NS_CrouchSlide) { NiComp_CrouchSlide->SetAsset(NS_CrouchSlide); }
 	}
+	NiagaraComp_Attack = CreateNiagaraComponent("Niagara_Attack");
 	
 	// Delegates
 	PostLockedMovementDelegate.BindUObject(this, &ASteikemannCharacter::CancelAnimationMontageIfMoving);
@@ -107,6 +109,7 @@ void ASteikemannCharacter::BeginPlay()
 		GetWorldTimerManager().SetTimer(h, this, &ASteikemannCharacter::Respawn, RespawnTimer);
 		Anim_Death();	// Do IsFalling check to determine which animation to play
 		});
+	AttackContactDelegate.BindUObject(this, &ASteikemannCharacter::AttackContact);
 	
 	/* Attack Collider */
 	AttackCollider->OnComponentBeginOverlap.AddDynamic(this, &ASteikemannCharacter::OnAttackColliderBeginOverlap);
@@ -138,7 +141,8 @@ void ASteikemannCharacter::BeginPlay()
 UNiagaraComponent* ASteikemannCharacter::CreateNiagaraComponent(FName Name, USceneComponent* Parent, FAttachmentTransformRules AttachmentRule, bool bTemp /*= false*/)
 {
 	UNiagaraComponent* TempNiagaraComp = NewObject<UNiagaraComponent>(this, Name);
-	TempNiagaraComp->AttachToComponent(Parent, AttachmentRule);
+	if (Parent)
+		TempNiagaraComp->AttachToComponent(Parent, AttachmentRule);
 	TempNiagaraComp->RegisterComponent();
 
 	if (bTemp) { TempNiagaraComponents.Add(TempNiagaraComp); } // Adding as temp comp
@@ -1188,15 +1192,11 @@ void ASteikemannCharacter::AllowActionCancelationWithInput()
 bool ASteikemannCharacter::BreakMovementInput(float value)
 {
 	if (m_EMovementInputState == EMovementInput::Locked || m_EMovementInputState == EMovementInput::PeriodLocked) return true;
-	//else if (m_EMovementInputState == EMovementInput::PeriodLocked) {
-	//	return true;
-	//}
 	switch (m_EState)
 	{
 	case EState::STATE_OnGround:
 		if (m_EAttackState == EAttackState::Post_GroundPound && (value > 0.3f || value < -0.3f)) {
 			m_EAttackState = EAttackState::None;
-			//PRINTLONG("STOP GroundPound Anim Montage");
 			StopAnimMontage();
 		}
 		break;
@@ -1224,7 +1224,6 @@ bool ASteikemannCharacter::BreakMovementInput(float value)
 
 void ASteikemannCharacter::MoveForward(float value)
 {
-	//PRINTPAR("Moving Forward %f", value);
 	InputVectorRaw.X = value;
 
 	if (BreakMovementInput(value)) return;
@@ -1327,14 +1326,6 @@ void ASteikemannCharacter::Landed(const FHitResult& Hit)
 		if (m_EAirState == EAirState::AIR_Pogo)
 			return;
 		Anim_Land();
-		//switch (m_EAirState)
-		//{
-		//case EAirState::AIR_None:		break;
-		//case EAirState::AIR_Freefall:	break;
-		//case EAirState::AIR_Jump:		break;
-		//case EAirState::AIR_Pogo:		return;
-		//default:						break;
-		//}
 		break;
 	case EState::STATE_OnWall:
 		break;
@@ -1343,17 +1334,10 @@ void ASteikemannCharacter::Landed(const FHitResult& Hit)
 			return;
 		if (m_EAttackState == EAttackState::GroundPound)
 		{
-			//bool groundpound{};
 			if (IsGroundPounding()) {
 				GroundPoundLand(Hit);
-
-				//m_EAttackState = EAttackState::None;
-				//ResetState();
-				//groundpound = true;
 			}
 		}
-		//if (m_EPogoType == EPogoType::POGO_Groundpound)
-			//return;
 		break;
 	case EState::STATE_Grappling:
 		break;
@@ -1361,14 +1345,10 @@ void ASteikemannCharacter::Landed(const FHitResult& Hit)
 		break;
 	}
 
-	//if (bPB_Groundpound_PredeterminedPogoHit)
-		//return;
-
 	OnLanded(Hit);
 	LandedDelegate.Broadcast(Hit);
 
 	bPB_Groundpound_PredeterminedPogoHit = false;
-	//m_EPogoTickCheck = EPogoTickCheck::PB_Tick_None;
 }
 
 void ASteikemannCharacter::Jump()
@@ -1489,150 +1469,10 @@ void ASteikemannCharacter::Jump()
 	}
 }
 
-
-void ASteikemannCharacter::StopJumping()
-{
-	//PRINTLONG("STOP JUMP");
-	//PRINTPARLONG("JumpHeight: %f", GetActorLocation().Z - GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
-	//GetMoveComponent()->StopJump();
-	//bJumpClick = false;
-
-	/* Old Jump */
-	//bPressedJump = false;
-	//bActivateJump = false;
-	//bJumping = false;
-	//bAddJumpVelocity = false;
-	//bCanEdgeJump = false;
-	//bCanPostEdgeJump = false;
-	//
-	//if (GetMoveComponent().IsValid())
-	//{
-	//	GetMoveComponent()->bWallJump = false;
-	//	GetMoveComponent()->bLedgeJump = false;
-	//	GetMoveComponent()->EndCrouchJump();
-	//	GetMoveComponent()->EndCrouchSlideJump();	// Kan KANSKJE sette inn at CrouchSlide Jump må kjøre x antall frames før det kan stoppes, og at det ikke tvangsstoppes når man slepper jump knappen. En TIMER basically
-	//}
-
-	//ResetJumpState();
-}
-
 void ASteikemannCharacter::JumpRelease()
 {
 	bJumpClick = false;
-	bJumping = false;
-	GetMoveComponent()->StopJump();
 }
-
-void ASteikemannCharacter::CheckJumpInput(float DeltaTime)
-{
-	JumpCurrentCountPreJump = JumpCurrentCount;
-
-	if (GetCharacterMovement())
-	{
-		if (bPressedJump)
-		{
-			/* Crouch- and Slide- Jump */
-			if (IsCrouching() && GetMoveComponent()->IsWalking())
-			{
-				/* Crouch Jump */
-				if (IsCrouchWalking())
-				{
-					//PRINTLONG("--CrouchJump--");
-					JumpCurrentCount++;
-					/*bAddJumpVelocity = */CanCrouchJump();
-					GetMoveComponent()->StartCrouchJump();
-					Anim_Activate_Jump();	// Anim_Activate_CrouchJump()
-					return;
-				}
-
-				/* CrouchSlide Jump */
-				if (IsCrouchSliding())
-				{
-					JumpCurrentCount++;
-					{
-						FVector CrouchSlideDirection = GetVelocity();
-						CrouchSlideDirection.Normalize();
-						/*bAddJumpVelocity = */GetMoveComponent()->CrouchSlideJump(CrouchSlideDirection, m_InputVector);
-					}
-					Anim_Activate_Jump();	// Anim_Activate_CrouchSlideJump()
-					return;
-				}
-			}
-
-			/* If player is LedgeGrabbing */
-			//if ((GetMoveComponent()->bLedgeGrab) && GetMoveComponent()->IsFalling())
-			//{
-			//	JumpCurrentCount = 1;
-			//	/*bAddJumpVelocity = */GetMoveComponent()->LedgeJump(LedgeLocation, JumpStrength);
-			//	ResetWallJumpAndLedgeGrab();
-			//	Anim_Activate_Jump();	//	Anim_Activate_LedgeGrabJump
-			//	return;
-			//}
-
-			///* If player is sticking to a wall */
-			//if ((GetMoveComponent()->bStickingToWall || bFoundStickableWall ) && GetMoveComponent()->IsFalling())
-			//{	
-			//	if (JumpCurrentCount == 2)
-			//	{
-			//		//JumpCurrentCount++;
-			//	}
-			//	Anim_Activate_Jump();	//	Anim_Activate_WallJump
-			//	return;
-			//}
-
-
-			/* If player walks off edge with no jumpcount and the post edge timer is valid */
-			if (GetCharacterMovement()->IsFalling() && JumpCurrentCount == 0 && PostEdge_JumpTimer < PostEdge_JumpTimer_Length) 
-			{
-				//PRINTLONG("POST EDGE JUMP");
-				bCanPostEdgeRegularJump = true;
-				JumpCurrentCount++;
-				Anim_Activate_Jump();
-				//bAddJumpVelocity = GetCharacterMovement()->DoJump(bClientUpdating);
-				return;
-			}
-			/* If player walks off edge with no jumpcount after post edge timer is valid */
-			if (GetCharacterMovement()->IsFalling() && JumpCurrentCount == 0)
-			{
-				bCanEdgeJump = true;
-				JumpCurrentCount += 2;
-				Anim_Activate_Jump();
-				//bAddJumpVelocity = GetCharacterMovement()->DoJump(bClientUpdating);
-				return;
-			}
-
-			// If this is the first jump and we're already falling,
-			// then increment the JumpCount to compensate.
-			const bool bFirstJump = JumpCurrentCount == 0;
-			if (bFirstJump && GetCharacterMovement()->IsFalling())
-			{
-				Anim_Activate_Jump();
-				JumpCurrentCount++;
-			}
-			if (CanDoubleJump() && GetCharacterMovement()->IsFalling())
-			{
-				Anim_Activate_Jump();
-				GetCharacterMovement()->DoJump(bClientUpdating);
-				JumpCurrentCount++;
-			}
-
-			const bool bDidJump = CanJump() && GetCharacterMovement()->DoJump(bClientUpdating);
-			if (bDidJump)
-			{
-				Anim_Activate_Jump();
-				// Transition from not (actively) jumping to jumping.
-				if (!bWasJumping)
-				{
-					JumpCurrentCount++;
-					JumpForceTimeRemaining = GetJumpMaxHoldTime();
-					OnJumped();
-				}
-			}
-			bWasJumping = bDidJump;
-		}
-	}
-}
-
 
 bool ASteikemannCharacter::CanDoubleJump() const
 {
@@ -2037,10 +1877,8 @@ void ASteikemannCharacter::GainHealth(int amount)
 	Health = FMath::Clamp(Health += amount, 0, MaxHealth);
 }
 
-//void ASteikemannCharacter::PTakeDamage(int damage, FVector launchdirection)
 void ASteikemannCharacter::PTakeDamage(int damage, AActor* otheractor, int i/* = 0*/)
 {
-	//if (IsDead()) { return; }
 	if (bIsDead) { return; }
 
 	bPlayerCanTakeDamage = false;
@@ -2059,7 +1897,6 @@ void ASteikemannCharacter::PTakeDamage(int damage, AActor* otheractor, int i/* =
 		if (ITag->HasMatchingGameplayTag(Tag::AubergineDoggo()))
 			SetActorRotation(FRotator(0, (-direction).Rotation().Yaw, 0));
 	}
-	//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (direction * 1000.f), FColor::Red, true, 0, 0, 5.f);
 
 	FTimerHandle TH;
 	GetWorldTimerManager().SetTimer(TH, 
@@ -2095,7 +1932,8 @@ void ASteikemannCharacter::Death()
 
 void ASteikemannCharacter::Death_Deathzone()
 {
-	Camera->DetachFromParent(true);
+	//Camera->DetachFromParent(true);
+	Camera->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
 
 	Death();
 	DeathDelegate.Execute();
@@ -2322,9 +2160,6 @@ void ASteikemannCharacter::OnCapsuleComponentEndOverlap(UPrimitiveComponent* Ove
 		{
 			if (m_EPogoType == EPogoType::POGO_None)
 				m_PogoTarget = nullptr;
-			//if (m_EAirState == EAirState::AIR_Pogo || m_EPogoType != EPogoType::POGO_None)
-			//	if (m_EAttackState == EAttackState::GroundPound)
-			//		m_EAttackState = EAttackState::None;
 		}
 	}
 
@@ -2522,8 +2357,6 @@ void ASteikemannCharacter::Activate_ScoopAttack()
 	/* Character movement during attack */
 	bPreBasicAttackMoveCharacter = false;
 	bScoopAttackMoveCharacter = true;
-
-	//bIsScoopAttacking = true;
 }
 
 void ASteikemannCharacter::Deactivate_ScoopAttack()	// Decrepid
@@ -2548,8 +2381,6 @@ void ASteikemannCharacter::Activate_SmackAttack()
 	/* Character movement during attack */
 	bPreBasicAttackMoveCharacter = false;
 	bSmackAttackMoveCharacter = true;
-
-	//bIsSmackAttacking = true;
 }
 
 void ASteikemannCharacter::Deactivate_SmackAttack()	// Decrepid
@@ -2646,10 +2477,8 @@ void ASteikemannCharacter::Click_ScoopAttack()
 	{
 	case EState::STATE_OnGround:
 	{
-		//AttackSmack_Start_Pure();
 		Start_ScoopAttack_Pure();
 		RotateToAttack();
-		//AttackSmack_Start();
 		break;
 	}
 	case EState::STATE_InAir:
@@ -2673,25 +2502,22 @@ void ASteikemannCharacter::Click_ScoopAttack()
 	case EState::STATE_Grappling:
 	{
 		/* Buffer Attack if Grappling to Dynamic Target */
-		//if (m_EGrappleType == EGrappleType::Dynamic_Ground)
-		//{
-		//	if (GetWorldTimerManager().IsTimerActive(TH_BufferAttack)) return;
-
-		//	float t = GetWorldTimerManager().GetTimerRemaining(TH_Grapplehook_End_Launch) - SmackAttack_GH_TimerRemoval;
-		//	if (t > 0.f) {
-		//		GetWorldTimerManager().SetTimer(TH_BufferAttack, [this]()
-		//			{
-		//				m_EState = EState::STATE_OnGround;
-		//		//AttackSmack_Start_Pure();
-		//		//AttackSmack_Start();
-		//			},
-		//			t, false);
-		//		return;
-		//	}
-		//	//AttackSmack_Start_Pure();
-		//	//AttackSmack_Start();
-		//	return;
-		//}
+		if (m_EGrappleType == EGrappleType::Dynamic_Ground)
+		{
+			if (GetWorldTimerManager().IsTimerActive(TH_BufferAttack)) return;
+			float t = GetWorldTimerManager().GetTimerRemaining(TH_Grapplehook_End_Launch) - SmackAttack_GH_TimerRemoval;
+			if (t > 0.f) {
+				GetWorldTimerManager().SetTimer(TH_BufferAttack, [this]()
+					{
+						m_EState = EState::STATE_OnGround;
+				Start_ScoopAttack_Pure();
+					},
+					t, false);
+				return;
+			}
+			Start_ScoopAttack_Pure();
+			return;
+		}
 		break;
 	}
 	default:
@@ -2745,7 +2571,9 @@ void ASteikemannCharacter::AttackSmack_Start_Pure()
 
 void ASteikemannCharacter::Stop_Attack()
 {
+	PRINTLONG("STOP ATTACK");
 	AttackComboCount = 0;
+	AttackContactedActors.Empty();
 	m_EAttackState = EAttackState::None;
 	m_EState = EState::STATE_None;
 	m_EMovementInputState = EMovementInput::Open;
@@ -2773,9 +2601,39 @@ void ASteikemannCharacter::EndAttackBufferPeriod()
 	m_ESmackAttackState = ESmackAttackState::Ready;
 }
 
+void ASteikemannCharacter::AttackContact(AActor* instigator, AActor* target)
+{
+	// Cancel function if target has already been hit
+	if (!AttackContactedActors.Find(target)) {
+		return;	
+	}
+	AttackContactedActors.Add(target);
+
+	instigator->CustomTimeDilation = Statics::AttackContactTimeDilation;
+	// Do Whatever needs to be done to the actor here	// Like f.ex starting an animation before starting the time dilation
+	target->CustomTimeDilation = Statics::AttackContactTimeDilation;
+
+	FTimerHandle h;
+	GetWorldTimerManager().SetTimer(h, [instigator, target]() {
+		instigator->CustomTimeDilation = 1.f;
+		target->CustomTimeDilation = 1.f;
+		}, AttackContactTimer, false);
+
+	// Particles
+	AttackContact_Particles(AttackCollider->GetComponentLocation(), AttackCollider->GetComponentQuat());
+}
+
+void ASteikemannCharacter::AttackContact_Particles(FVector location, FQuat direction)
+{
+	NiagaraComp_Attack->SetWorldLocationAndRotation(location, direction, false, nullptr, ETeleportType::TeleportPhysics);
+
+	NiagaraComp_Attack->SetAsset(NS_AttackContact);
+	NiagaraComp_Attack->Activate(true);
+}
+
 void ASteikemannCharacter::Activate_AttackCollider()
 {
-			AttackCollider->SetHiddenInGame(false);	// For Debugging
+	AttackCollider->SetHiddenInGame(false);	// For Debugging
 	AttackCollider->SetGenerateOverlapEvents(true);
 	AttackCollider->SetRelativeScale3D(AttackColliderScale);
 }
@@ -2783,30 +2641,13 @@ void ASteikemannCharacter::Activate_AttackCollider()
 void ASteikemannCharacter::Deactivate_AttackCollider()
 {
 	AttackDirection *= 0;
+	AttackContactedActors.Empty();
 
 	AttackCollider->SetHiddenInGame(true);	// For Debugging
 	AttackCollider->SetGenerateOverlapEvents(false);
 	AttackCollider->SetRelativeScale3D(FVector(0, 0, 0));
 }
 
-//bool ASteikemannCharacter::DecideAttackType()
-//{
-//	/* Stop moving character using the PreBasicAttackMoveCharacter */
-//	bPreBasicAttackMoveCharacter = false;
-//
-//	/* Do SCOOP ATTACK if attack button is still held */
-//	if (bAttackPress && !GetMoveComponent()->IsFalling())
-//	{
-//		Activate_ScoopAttack();
-//		bIsSmackAttacking = false;
-//		return true;
-//	}
-//
-//	/* SMACK ATTACK if button is not held */
-//	Activate_SmackAttack();
-//	bIsSmackAttacking = true;
-//	return false;
-//}
 
 void ASteikemannCharacter::RotateToAttack()
 {
@@ -2848,15 +2689,17 @@ void ASteikemannCharacter::OnAttackColliderBeginOverlap(UPrimitiveComponent* Ove
 		}
 
 		/* Smack attack collider */
-		if (OverlappedComp == AttackCollider)
+		if (OverlappedComp == AttackCollider && OtherComp->GetClass() == UCapsuleComponent::StaticClass())
 		{
+			AttackContactDelegate.Execute(this, OtherActor);
 			switch (m_EAttackState)
 			{
 			case EAttackState::None:
 				break;
 			case EAttackState::Smack:
-				return Do_SmackAttack_Pure(IAttack, OtherActor);
-				/*break;*/
+				Do_SmackAttack_Pure(IAttack, OtherActor);
+				//return;
+				break;
 			case EAttackState::Scoop:
 				Do_ScoopAttack_Pure(IAttack, OtherActor);
 				break;
@@ -2890,15 +2733,6 @@ void ASteikemannCharacter::Do_SmackAttack_Pure(IAttackInterface* OtherInterface,
 
 	if (b)
 	{
-		//IGameplayTagAssetInterface* tag = Cast<IGameplayTagAssetInterface>(OtherActor);
-		//if (tag) {
-		//	FGameplayTagContainer con;
-		//	tag->GetOwnedGameplayTags(con);
-		//	if (con.HasTag(Tag::AubergineDoggo()) || con.HasTag(Tag::GrappleTarget_Dynamic())) {
-		//		Stop_GrappleHook();
-		//	}
-		//}
-
 		FVector Direction{ OtherActor->GetActorLocation() - GetActorLocation() };
 		Direction = Direction.GetSafeNormal2D();
 
@@ -2914,7 +2748,6 @@ void ASteikemannCharacter::Do_SmackAttack_Pure(IAttackInterface* OtherInterface,
 		angle = angle + (angle * (InputVectorRaw.X * SmackAttack_InputAngleMultiplier));
 
 		Direction = (cosf(angle) * Direction) + (sinf(angle) * FVector::UpVector);
-		//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (Direction * 1000.f), FColor::Red, false, 2.f, 0, 4.f);
 		OtherInterface->Receive_SmackAttack_Pure(Direction, SmackAttackStrength + (SmackAttackStrength * (InputVectorRaw.X * SmackAttack_InputStrengthMultiplier)));
 	}
 }
@@ -2943,7 +2776,6 @@ void ASteikemannCharacter::Do_ScoopAttack_Pure(IAttackInterface* OtherInterface,
 		/* Launch player in air together with enemy when doing a Scoop Attack */
 		if (!bStayOnGroundDuringScoop && !bHasbeenScoopLaunched)
 		{
-			//GetMoveComponent()->AddImpulse(FVector::UpVector * ScoopStrength * 0.9f, true);
 			GetMoveComponent()->AddImpulse(Direction * ScoopStrength * 0.9f, true);
 			bHasbeenScoopLaunched = true;
 		}

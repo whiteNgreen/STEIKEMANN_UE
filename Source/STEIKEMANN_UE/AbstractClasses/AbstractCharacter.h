@@ -30,6 +30,7 @@ public:
 	virtual void AllowActionCancelationWithInput(){}
 
 
+
 	virtual void Activate_AttackCollider	(){}
 	virtual void Deactivate_AttackCollider	(){}
 
