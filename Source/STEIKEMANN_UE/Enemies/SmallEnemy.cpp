@@ -4,6 +4,7 @@
 #include "../Enemies/SmallEnemy.h"
 #include "EnemyAIController.h"
 #include "../CommonFunctions.h"
+#include "EnemyAnimInstance.h"
 #include "DrawDebugHelpers.h"
 #include "Components/CapsuleComponent.h"
 #include "Gameframework/CharacterMovementComponent.h"
@@ -70,7 +71,7 @@ void ASmallEnemy::Tick(float DeltaTime)
 	SetDefaultState();
 	
 	const bool wall = WallDetector->DetectStickyWall(this, GetActorLocation(), GetActorForwardVector(), m_WallData, ECC_EnemyWallDetection);
-	if (wall && m_State == EEnemyState::STATE_InAir && m_WallState != EWall::WALL_Leaving)
+	if (wall && (m_State == EEnemyState::STATE_InAir || m_State == EEnemyState::STATE_Launched) && m_WallState != EWall::WALL_Leaving)
 	{
 		m_State = EEnemyState::STATE_OnWall;
 		m_WallState = EWall::WALL_Stuck;
@@ -88,6 +89,10 @@ void ASmallEnemy::Tick(float DeltaTime)
 	case EEnemyState::STATE_OnGround:
 		break;
 	case EEnemyState::STATE_InAir:
+		break;
+	case EEnemyState::STATE_Launched:
+		PRINT("LAUNCHED");
+		RotateActorYawToVector(GetVelocity() * -1.f);
 		break;
 	case EEnemyState::STATE_OnWall:
 		StickToWall();
@@ -126,6 +131,12 @@ void ASmallEnemy::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
+}
+
+void ASmallEnemy::Anim_Attacked_Pure(FVector direction)
+{
+	Anim_Attacked();
+	AnimInstance->SetLaunchedInAir(direction);
 }
 
 FVector ASmallEnemy::GetRandomLocationNearSpawn()
@@ -176,6 +187,7 @@ void ASmallEnemy::SetDefaultState()
 		break;
 	case EEnemyState::STATE_InAir:
 		break;
+	case EEnemyState::STATE_Launched: return;
 	case EEnemyState::STATE_OnWall: return;
 	default:
 		break;
@@ -201,6 +213,8 @@ void ASmallEnemy::Landed(const FHitResult& Hit)
 	if (IncapacitatedCollisionDelegate.ExecuteIfBound())
 		IncapacitatedCollisionDelegate.Unbind();
 
+	m_State = EEnemyState::STATE_OnGround;
+	AnimInstance->bIsLaunchedInAir = false;
 	NS_Stop_Trail();
 }
 
@@ -415,6 +429,11 @@ void ASmallEnemy::Receive_SmackAttack_Pure(const FVector& Direction, const float
 		/* Sets a timer before character can be damaged by the same attack */
 		TimerManager.SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, SmackAttack_InternalTimer, false);
 
+			/// PUTTE DETTE I EN EGEN DELEGATION? Delegate_Launched.Execute()?
+		m_State = EEnemyState::STATE_Launched;
+		RotateActorYawToVector(Direction * -1.f);
+		// Animation
+		Anim_Attacked_Pure(Direction * -1.f);
 		// Particles
 		NS_Start_Trail(Direction);
 	}

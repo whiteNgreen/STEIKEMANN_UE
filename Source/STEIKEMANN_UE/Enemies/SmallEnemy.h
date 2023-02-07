@@ -38,6 +38,7 @@ enum class EEnemyState : int8
 
 	STATE_OnGround,
 	STATE_InAir,
+		STATE_Launched,
 
 	STATE_OnWall
 };
@@ -97,6 +98,16 @@ public:	// Components
 	UNiagaraComponent* NComp_AirTrailing;
 
 #pragma endregion //Base
+
+#pragma region Animation
+public:	// Variables
+	class UEnemyAnimInstance* AnimInstance{ nullptr };
+
+public: // Functions
+	UFUNCTION(BlueprintImplementableEvent)
+		void Anim_Attacked();
+	void Anim_Attacked_Pure(FVector direction);
+#pragma endregion // Animation
 
 #pragma region SpawnRespawn
 	SpawnPointData m_SpawnPointData;
