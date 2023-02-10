@@ -17,6 +17,8 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/SphereComponent.h"
+#include "Components/TimelineComponent.h"
+
 // Camera
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -97,15 +99,19 @@ void ASteikemannCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// Base stuff
 	MovementComponent = Cast<USteikemannCharMovementComponent>(GetCharacterMovement());
 	PlayerController = Cast<APlayerController>(GetController());
-	Base_CameraBoomLength = CameraBoom->TargetArmLength;
 	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &ASteikemannCharacter::OnCapsuleComponentBeginOverlap);
 	GetCapsuleComponent()->OnComponentEndOverlap.AddDynamic(this, &ASteikemannCharacter::OnCapsuleComponentEndOverlap);
 	MaxHealth = Health;
 	StartTransform = GetActorTransform();
 	m_BaseGravity = MovementComponent->GetGravityZ();
 	ResetState();
+
+	// Camera
+	Base_CameraBoomLength = CameraBoom->TargetArmLength;
+	CameraBoom_Location = CameraBoom->GetComponentLocation() - RootComponent->GetComponentLocation();
 
 	/* Creating Niagara Compnents */
 	NiComp_CrouchSlide = CreateNiagaraComponent("Niagara_CrouchSlide", RootComponent, FAttachmentTransformRules::SnapToTargetIncludingScale);
@@ -132,7 +138,6 @@ void ASteikemannCharacter::BeginPlay()
 		
 
 	GroundPoundCollider->OnComponentBeginOverlap.AddDynamic(this, &ASteikemannCharacter::OnAttackColliderBeginOverlap);
-	//GroundPoundColliderScale = GroundPoundCollider->GetRelativeScale3D();
 	
 	/* Grapple Targeting Detection Sphere */
 	GrappleTargetingDetectionSphere->OnComponentBeginOverlap.AddDynamic(this, &ASteikemannCharacter::OnGrappleTargetDetectionBeginOverlap);
@@ -145,9 +150,8 @@ void ASteikemannCharacter::BeginPlay()
 	WallDetector->SetDebugStatus(bWDC_Debug);
 	WallDetector->SetHeight(Wall_HeightCriteria, GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
 	WallDetector->SetMinLengthToWall(WDC_Length);
-	/*
-	* Adding GameplayTags to the GameplayTagsContainer
-	*/
+
+	/* Adding GameplayTags to the GameplayTagsContainer */
 	GameplayTags.AddTag(Tag::Player());
 	mFocusPoints.Empty();
 }
@@ -228,13 +232,13 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	//PRINTPAR("Smack Attack State :: %i", m_ESmackAttackState);
 	//PRINTPAR("Air State :: %i", m_EAirState);
 	//PRINTPAR("Pogo Type :: %i", m_EPogoType);
-	PRINTPAR("Jump Count = %i", JumpCurrentCount);
+	//PRINTPAR("Jump Count = %i", JumpCurrentCount);
+	//PRINTPAR("MovementInputState = %i", m_EMovementInputState);
 
 	/*		Resets Rotation Pitch and Roll		*/
 	if (IsFalling() || GetMoveComponent()->IsWalking()) {
 		ResetActorRotationPitchAndRoll(DeltaTime);
 	}
-
 	
 	/*		Jump		*/
 	PostEdge_JumpTimer += DeltaTime;
@@ -380,7 +384,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	if (m_EState == EState::STATE_InAir && m_EAirState == EAirState::AIR_PostScoopJump) {
 		GrappleDynamicGuideCamera(ScoopedActor, DeltaTime);
 	}
-
+	PlaceCameraBoom(DeltaTime);
 	if (bCameraLerpBack_PostPrompt)
 		bCameraLerpBack_PostPrompt = LerpCameraBackToBoom(DeltaTime);
 	GuideCamera(DeltaTime);
@@ -510,6 +514,22 @@ bool ASteikemannCharacter::LerpCameraBackToBoom(float DeltaTime)
 	return true;
 }
 
+void ASteikemannCharacter::PlaceCameraBoom(float DeltaTime)
+{
+	float Alpha{};
+	FHitResult Hit;
+	FCollisionQueryParams Params("", false, this);
+	FVector TraceStart = GetActorLocation();
+	if (GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceStart - (FVector::UpVector * 500.f), ECC_WorldStatic, Params))
+	{
+		float Dist = FMath::Clamp((float)FVector::Dist(TraceStart, Hit.ImpactPoint) - (GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 10.f), 0.f, CameraBoom_LerpHeight);
+		Alpha = -(Dist / CameraBoom_LerpHeight) + 1.f;
+	}
+	Alpha = FMath::Clamp(Alpha, -(CameraBoom_MinHeightFromRoot / CameraBoom_LerpHeight) + 1.f, 1.f);
+	CameraBoom_PlacementAlpha = FMath::FInterpTo(CameraBoom_PlacementAlpha, Alpha, DeltaTime, CameraBoom_LerpSpeed);
+	float Height = FMath::Clamp(CameraBoom_Location.Z * CameraBoom_PlacementAlpha, CameraBoom_MinHeightFromRoot, CameraBoom_Location.Z);
+	CameraBoom->SetWorldLocation(GetActorLocation() + (FVector::UpVector * Height));
+}
 
 void ASteikemannCharacter::GH_GrappleAiming()
 {
@@ -1188,6 +1208,8 @@ void ASteikemannCharacter::AllowActionCancelationWithInput()
 		break;
 	case EMovementInput::Locked:
 		m_EMovementInputState = EMovementInput::Open;
+		BreakMovementInput(InputVectorRaw.X);
+		BreakMovementInput(InputVectorRaw.Y);
 		break;
 	case EMovementInput::PeriodLocked:
 		break;
@@ -1207,12 +1229,11 @@ bool ASteikemannCharacter::BreakMovementInput(float value)
 			StopAnimMontage();
 		}
 		break;
-	case EState::STATE_InAir:
-		break;
+	case EState::STATE_InAir:  break;
 	case EState::STATE_OnWall: return true;
 	case EState::STATE_Attacking:
 	{
-		if (m_EAttackState == EAttackState::Smack && m_EMovementInputState == EMovementInput::Open && value > 0.1f)
+		if (m_EMovementInputState == EMovementInput::Open && (value > 0.1f || value < -0.1f) && m_EAttackState != EAttackState::GroundPound)
 		{
 			ResetState();
 			StopAnimMontage();
@@ -1223,8 +1244,7 @@ bool ASteikemannCharacter::BreakMovementInput(float value)
 		break;
 	}
 	case EState::STATE_Grappling: return true;
-	default:
-		break;
+	default:					  break;
 	}
 	return false;
 }
@@ -1313,8 +1333,6 @@ void ASteikemannCharacter::LockMovementForPeriod(float time, TFunction<void()> l
 
 void ASteikemannCharacter::Landed(const FHitResult& Hit)
 {
-	//CancelAnimation();
-
 	if (bIsDead)
 	{
 		DeathDelegate_Land.Execute();
@@ -1493,6 +1511,7 @@ void ASteikemannCharacter::Jump_DoubleJump()
 
 void ASteikemannCharacter::Jump_Undetermined()
 {
+	m_EMovementInputState = EMovementInput::Open;
 	if (CanDoubleJump()) {
 		Jump_DoubleJump();
 		return;
@@ -2602,7 +2621,7 @@ void ASteikemannCharacter::PostScoopJumpGravity_End()
 }
 void ASteikemannCharacter::Disable_PostScoopJumpGravity()
 {
-	PRINTLONG("DISABLE: PostScoopJumpGravity");
+	//PRINTLONG("DISABLE: PostScoopJumpGravity");
 	TimerManager.SetTimer(TH_ScoopJumpGravityEnable, this, &ASteikemannCharacter::PostScoopJumpGravity_End, ScoopJump_Canceled_Hangtime);
 }
 

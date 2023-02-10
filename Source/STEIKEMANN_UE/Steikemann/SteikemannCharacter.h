@@ -286,8 +286,33 @@ public:
 	FTransform m_CameraTransform;
 	bool LerpCameraBackToBoom(float DeltaTime);
 
+#pragma region CameraBoomPlacement
+	/*	*	The placement of the camera boom will lerp towards the root, making the player the centre on the 
+		*	screen when they are in the air. Making it easier to platform and see objects beneath the player character */
+	// The location of the camera boom, in relation to the character root
+	FVector CameraBoom_Location{};
+	UPROPERTY(EditAnywhere, Category = "Camera|Boom")
+		float CameraBoom_LerpSpeed{ 1.f };
+	UPROPERTY(EditAnywhere, Category = "Camera|Boom")
+		float CameraBoom_LerpHeight{ 200.f };
+	UPROPERTY(EditAnywhere, Category = "Camera|Boom")
+		float CameraBoom_MinHeightFromRoot{ 20.f };
+	float CameraBoom_PlacementAlpha{};
+	void PlaceCameraBoom(float DeltaTime);
 
-#pragma region CameraGuide
+	//ECameraBoomPlacement m_ECameraBoomPlacement;
+	//bool bCameraBoomComponentCanPlay{ true };
+	//void DetermineCameraBoomPlacement();
+	//void PlaceCameraBoom_Ground();
+	//class UTimelineComponent* TlComp_CameraBoomPlacement;
+	//UPROPERTY(EditAnywhere, Category = "Camera|Boom")
+		//UCurveFloat* Curve_CameraBoomPlacement;
+	//UFUNCTION()
+		//void CameraBoomPlacement(float value);
+
+#pragma region //CameraBoomPlacement
+
+	#pragma region CameraGuide
 	
 
 	//UPROPERTY(EditAnywhere, Category = "Camera", meta = (UIMin = "0", UIMax = "1"))
@@ -364,7 +389,7 @@ public:
 
 	void GrappleDynamicGuideCamera(AActor* target, float deltatime);
 
-#pragma endregion //CameraGuide
+	#pragma endregion //CameraGuide
 
 #pragma endregion //Camera
 
