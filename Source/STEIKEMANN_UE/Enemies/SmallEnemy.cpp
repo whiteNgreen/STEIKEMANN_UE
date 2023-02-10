@@ -455,13 +455,14 @@ void ASmallEnemy::Tl_Scooped(float value)
 
 void ASmallEnemy::Tl_ScoopedEnd()
 {
+	EnableCollisions();
 }
 
 void ASmallEnemy::Do_ScoopAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor)
 {
 }
 
-void ASmallEnemy::Receive_ScoopAttack_Pure(const FVector& TargetLocation, const FVector& InstigatorLocation/*, const float& Height*/)
+void ASmallEnemy::Receive_ScoopAttack_Pure(const FVector& TargetLocation, const FVector& InstigatorLocation, const float& time)
 {
 	if (GetCanBeSmackAttacked())
 	{
@@ -469,13 +470,15 @@ void ASmallEnemy::Receive_ScoopAttack_Pure(const FVector& TargetLocation, const 
 		ScoopedLocation = TargetLocation + FVector(0,0, ScoopedZHeightAdjustment);
 		ScoopedLength2D = FVector::DistSquared2D(GetActorLocation(), ScoopedLocation);
 
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndProbe);
+
 		bCanBeSmackAttacked = false;
 		FVector ToInstigator = InstigatorLocation - GetActorLocation();
 		SetActorRotation(FVector(ToInstigator.GetSafeNormal2D() * -1.f).Rotation(), ETeleportType::TeleportPhysics);
 		GetCharacterMovement()->Velocity *= 0.f;
 
 		FVector ScoopDirection = ScoopedLocation - GetActorLocation();
-		FVector Velocity = ((ScoopDirection) / ScoopedTime) + (0.5f * FVector(0, 0, -GravityZ) * ScoopedTime);
+		FVector Velocity = ((ScoopDirection) / time) + (0.5f * FVector(0, 0, -GravityZ) * time);
 		GetCharacterMovement()->AddImpulse(Velocity, true);
 
 		/* Sets a timer before character can be damaged by the same attack */

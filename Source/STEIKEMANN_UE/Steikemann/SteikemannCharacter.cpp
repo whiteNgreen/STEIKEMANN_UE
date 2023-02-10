@@ -264,7 +264,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	}
 	case EState::STATE_InAir:
 	{
-		if (GetActorLocation().Z >= Jump_HeightToReach)	// bool HasReachedPostScoopedJumpHeight() const, ?
+		if (HasReachedPostScoopedJumpHeight())
 		{
 			HeightReachedDelegate.Broadcast();
 			HeightReachedDelegate.Clear();
@@ -1453,8 +1453,7 @@ void ASteikemannCharacter::Jump()
 			break;
 		}
 		case EState::STATE_Attacking:
-			PRINTLONG("Bind JUMP");
-			Delegate_AttackBuffer.BindUObject(this, &ASteikemannCharacter::PostScoopJump);
+			BufferDelegate_Attack(&ASteikemannCharacter::PostScoopJump);
 			break;
 		case EState::STATE_Grappling:
 			break;
@@ -2430,8 +2429,10 @@ void ASteikemannCharacter::Click_Attack()
 	}
 	case EState::STATE_InAir:
 	{
-		if (m_EAirState == EAirState::AIR_PostScoopJump)	// SHOULD BE DELEGATE WHEN CHARACTER REACHES HEIGHT
+		if (m_EAirState == EAirState::AIR_PostScoopJump) {	// SHOULD BE DELEGATE WHEN CHARACTER REACHES HEIGHT
 			AttackSmack_Start_Pure();
+			BufferDelegate_Attack(&ASteikemannCharacter::Disable_PostScoopJumpGravity);
+		}
 		break;
 	}
 	case EState::STATE_OnWall:
@@ -2553,6 +2554,11 @@ void ASteikemannCharacter::UnClick_ScoopAttack()
 	bClickScoopAttack = false;
 }
 
+bool ASteikemannCharacter::HasReachedPostScoopedJumpHeight() const
+{
+	return GetActorLocation().Z >= Jump_HeightToReach && m_EAirState == EAirState::AIR_PostScoopJump;
+}
+
 void ASteikemannCharacter::PostScoopJump()
 {
 	// Regular jump if player did not hit anything with their scoop attack
@@ -2567,7 +2573,9 @@ void ASteikemannCharacter::PostScoopJump()
 	
 	Jump_HeightToReach = GetActorLocation().Z + ScoopHeight;
 
-	GetMoveComponent()->JumpHeight(Jump_HeightToReach, PostScoop_JumpTime);
+	float time = ScoopHeightTimeRatio * (ScoopHeight / 100.f);
+	GetMoveComponent()->JumpHeight(ScoopHeight, time);
+	//GetMoveComponent()->JumpHeight(ScoopHeight, PostScoop_JumpTime);
 	HeightReachedDelegate.AddUObject(GetMoveComponent().Get(), &USteikemannCharMovementComponent::DisableGravity);
 
 	HeightReachedDelegate.AddLambda([this]() {
@@ -2580,6 +2588,18 @@ void ASteikemannCharacter::PostScoopJump()
 		});
 
 	Anim_Activate_Jump();//Anim_Activate_WallJump
+}
+
+void ASteikemannCharacter::Disable_PostScoopJumpGravity()
+{
+	PRINTLONG("DISABLE: PostScoopJumpGravity");
+	TimerManager.SetTimer(TH_ScoopJumpGravityEnable,
+		[this]()
+		{
+			GetMoveComponent()->EnableGravity();
+			m_EAirState = EAirState::AIR_Freefall;
+			HeightReachedDelegate.Clear();
+		}, ScoopJump_Canceled_Hangtime, false);
 }
 
 void ASteikemannCharacter::AttackSmack_Start_Pure()
@@ -2805,9 +2825,11 @@ void ASteikemannCharacter::Do_ScoopAttack_Pure(IAttackInterface* OtherInterface,
 		FVector Direction = OtherActor->GetActorLocation() - GetActorLocation();
 		float length = FVector::Dist(GetActorLocation(), OtherActor->GetActorLocation());
 		float forwardstrength = ScoopForwardLength - length;
+		float height = ScoopHeight - (OtherActor->GetActorLocation().Z - GetActorLocation().Z);
+		float time = ScoopHeightTimeRatio * (height / 100.f);
 
-		FVector ScoopLocation = OtherActor->GetActorLocation() + (GetActorForwardVector() * forwardstrength) + (FVector::UpVector * ScoopHeight);
-		OtherInterface->Receive_ScoopAttack_Pure(ScoopLocation, GetActorLocation());	
+		FVector ScoopLocation = OtherActor->GetActorLocation() + (GetActorForwardVector() * forwardstrength) + (FVector::UpVector * height);
+		OtherInterface->Receive_ScoopAttack_Pure(ScoopLocation, GetActorLocation(), time);	
 	}
 }
 

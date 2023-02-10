@@ -426,8 +426,8 @@ public:
 		float Jump_HeightHoldTimer{ 1.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump")
 		float JumpHeightHold_VelocityInterpSpeed{ 5.f };
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump")
-		float PostScoop_JumpTime{ 0.3f };
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump")
+		//float PostScoop_JumpTime{ 0.3f };
 
 	void Landed(const FHitResult& Hit) override;
 
@@ -1077,11 +1077,15 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
 		float ScoopJump_Hangtime{ 1.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
+		float ScoopJump_Canceled_Hangtime{ 0.2f };
 	FHeightReached HeightReachedDelegate;
 	FTimerHandle TH_ScoopJumpGravityEnable;
 	AActor* ScoopedActor{ nullptr };
 	float Jump_HeightToReach{};
+	bool HasReachedPostScoopedJumpHeight() const;
 	void PostScoopJump();
+	void Disable_PostScoopJumpGravity();
 
 	bool bIsScoopAttacking{};
 	bool bHasbeenScoopLaunched{};
@@ -1102,6 +1106,11 @@ public:
 	/* How far above the player will the scooped target go */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
 		float ScoopHeight{ 200.f };
+	/*	*	How much time per 100 units should the enemy take. 
+		*	Goes into the physics calculation of the Impulse launch on the enemy */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
+		float ScoopHeightTimeRatio{ 0.15f };
+
 	/* Length along the players forward vector the target will be scooped towards */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
 		float ScoopForwardLength{ 100.f };

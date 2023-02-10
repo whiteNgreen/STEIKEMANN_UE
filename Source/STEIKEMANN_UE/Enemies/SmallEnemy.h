@@ -272,9 +272,6 @@ public:
 		UCurveFloat* Curve_ScoopedZForceFloat{ nullptr };
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Scoop|Curve")
 		float ScoopedCurveMultiplier{ 1.f };
-	/* Roughly how long it will take to reach the scooped height */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Scoop")
-		float ScoopedTime{ 2.f };
 	/* When launched target height is set by the player, but this actors Z height will be adjusted by this value */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Scoop")
 		float ScoopedZHeightAdjustment{ -30.f };
@@ -287,7 +284,7 @@ public:
 		void Tl_ScoopedEnd();
 
 	void Do_ScoopAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override;	// Getting Scooped
-	void Receive_ScoopAttack_Pure(const FVector& TargetLocation, const FVector& InstigatorLocation/*, const float& Height*/) override;
+	void Receive_ScoopAttack_Pure(const FVector& TargetLocation, const FVector& InstigatorLocation, const float& time) override;
 
 	void Do_GroundPound_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override {}
 	void Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength) override;
