@@ -275,6 +275,12 @@ public:
 	/* Roughly how long it will take to reach the scooped height */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Scoop")
 		float ScoopedTime{ 2.f };
+	/* When launched target height is set by the player, but this actors Z height will be adjusted by this value */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Scoop")
+		float ScoopedZHeightAdjustment{ -30.f };
+	FVector ScoopedLocation{};
+	float ScoopedLength2D{};
+
 	UFUNCTION()
 		void Tl_Scooped(float value);
 	UFUNCTION()

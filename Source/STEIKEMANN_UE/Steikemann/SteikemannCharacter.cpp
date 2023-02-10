@@ -2557,7 +2557,6 @@ void ASteikemannCharacter::PostScoopJump()
 {
 	// Regular jump if player did not hit anything with their scoop attack
 	if (!ScoopedActor) {
-		PRINTLONG("POST SCOOP: Regular Jump");
 		Jump_Undetermined();
 		return;
 	}
@@ -2803,11 +2802,11 @@ void ASteikemannCharacter::Do_ScoopAttack_Pure(IAttackInterface* OtherInterface,
 		/* Rotates player towards scooped actor */
 		RotateActorYawToVector((OtherActor->GetActorLocation() - GetActorLocation()).GetSafeNormal());
 
-		//FVector Direction{ OtherActor->GetActorLocation() - GetActorLocation() };
-		//Direction = Direction.GetSafeNormal2D();
-		//float angle = FMath::DegreesToRadians(85.f);
-		//Direction = (cosf(angle) * Direction) + (sinf(angle) * FVector::UpVector);
-		FVector ScoopLocation = OtherActor->GetActorLocation() + (FVector::UpVector * ScoopHeight); // Change 'UpVector' to 'Direction'
+		FVector Direction = OtherActor->GetActorLocation() - GetActorLocation();
+		float length = FVector::Dist(GetActorLocation(), OtherActor->GetActorLocation());
+		float forwardstrength = ScoopForwardLength - length;
+
+		FVector ScoopLocation = OtherActor->GetActorLocation() + (GetActorForwardVector() * forwardstrength) + (FVector::UpVector * ScoopHeight);
 		OtherInterface->Receive_ScoopAttack_Pure(ScoopLocation, GetActorLocation());	
 	}
 }

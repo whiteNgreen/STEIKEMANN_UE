@@ -414,6 +414,7 @@ void ASmallEnemy::Receive_SmackAttack_Pure(const FVector& Direction, const float
 	if (GetCanBeSmackAttacked())
 	{
 		EnableGravity();
+		TlComp_Scooped->Stop();
 
 		/* Weaker smack attack if actor on ground than in air */
 		float s;
@@ -441,10 +442,15 @@ void ASmallEnemy::Receive_SmackAttack_Pure(const FVector& Direction, const float
 
 void ASmallEnemy::Tl_Scooped(float value)
 {
-	// Just hardcoding in scoop force	// TODO - CHANGE TO BE BASED ON STATE, to be used on several occations
+	// Add Force in Z direction
 	auto c = GetCharacterMovement();
 	float PositiveGravity = c->GetGravityZ() * -1.f * c->Mass;
 	GetCharacterMovement()->AddForce(FVector(0, 0, PositiveGravity * value * ScoopedCurveMultiplier));
+
+	// Reduce horizontal velocity when getting closer to the scooped target2D
+	float multi2D = (float)FVector::DistSquared2D(GetActorLocation(), ScoopedLocation) / ScoopedLength2D;
+	c->Velocity.X *= multi2D;
+	c->Velocity.Y *= multi2D;
 }
 
 void ASmallEnemy::Tl_ScoopedEnd()
@@ -460,13 +466,15 @@ void ASmallEnemy::Receive_ScoopAttack_Pure(const FVector& TargetLocation, const 
 	if (GetCanBeSmackAttacked())
 	{
 		TlComp_Scooped->PlayFromStart();
+		ScoopedLocation = TargetLocation + FVector(0,0, ScoopedZHeightAdjustment);
+		ScoopedLength2D = FVector::DistSquared2D(GetActorLocation(), ScoopedLocation);
 
 		bCanBeSmackAttacked = false;
 		FVector ToInstigator = InstigatorLocation - GetActorLocation();
 		SetActorRotation(FVector(ToInstigator.GetSafeNormal2D() * -1.f).Rotation(), ETeleportType::TeleportPhysics);
 		GetCharacterMovement()->Velocity *= 0.f;
 
-		FVector ScoopDirection = TargetLocation - GetActorLocation();
+		FVector ScoopDirection = ScoopedLocation - GetActorLocation();
 		FVector Velocity = ((ScoopDirection) / ScoopedTime) + (0.5f * FVector(0, 0, -GravityZ) * ScoopedTime);
 		GetCharacterMovement()->AddImpulse(Velocity, true);
 

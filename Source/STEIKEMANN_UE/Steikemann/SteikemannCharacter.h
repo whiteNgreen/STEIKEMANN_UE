@@ -910,6 +910,7 @@ public:
 
 /* ----------------------------------------- ATTACKS ----------------------------------------------- */
 #pragma region Attacks
+	#pragma region General
 	EAttackState m_EAttackState = EAttackState::None;
 	FTimerHandle TH_BufferAttack;
 	FAttackActionBuffer Delegate_AttackBuffer;
@@ -1001,11 +1002,8 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|ScoopAttack")
 		float ScoopAttack_Reaction_Rate			/*UMETA(DisplayName = "3. Scoop Reaction Rate")*/ { 2.f };
-
-
-
+	#pragma endregion //General
 	
-	/* --------------------------------- SMACK ATTACK ----------------------------- */
 	#pragma region SmackAttack
 	bool bAttackPress{};
 
@@ -1066,7 +1064,6 @@ public:
 
 	#pragma endregion //SmackAttack
 
-	/* ---------------------------- SCOOP ATTACK ---------------------- */
 	#pragma region ScoopAttack
 	bool bClickScoopAttack{};
 
@@ -1102,23 +1099,18 @@ public:
 	UFUNCTION(BlueprintCallable)
 		void Deactivate_ScoopAttack();
 
-	/* Whether or not the player character stay on the ground and only launch the enemy in the air during scoop		(true)  (Checked) 
-	 * OR the player character will be launched in to the air with the enemy when using scoop attack				(false) (Un-checked) */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
-		bool bStayOnGroundDuringScoop{ true }; 
-
-	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
-		//float ScoopStrength{ 5000.f };
 	/* How far above the player will the scooped target go */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
 		float ScoopHeight{ 200.f };
+	/* Length along the players forward vector the target will be scooped towards */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
+		float ScoopForwardLength{ 100.f };
 
 	void Do_ScoopAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override;
 	//void Receive_ScoopAttack_Pure(const FVector& Direction, const float& Strength) override;
 
 	#pragma endregion //ScoopAttack
 
-	/* --------------------------- GROUND POUND -------------------------- */
 	#pragma region GroundPound
 
 	bool bGroundPoundPress{};
