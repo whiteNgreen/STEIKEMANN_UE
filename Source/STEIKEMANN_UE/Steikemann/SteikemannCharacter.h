@@ -22,7 +22,7 @@
 #define GRAPPLE_HOOK ECC_GameTraceChannel1
 #define ECC_PogoCollision ECC_GameTraceChannel2
 
-
+DECLARE_DELEGATE(FAttackActionBuffer)
 
 //class UNiagaraSystem;
 //class UNiagaraComponent;
@@ -70,14 +70,6 @@ enum class EPogoType : int8
 
 	POGO_Leave
 };
-//UENUM()
-//enum class EPogoTickCheck : int8
-//{
-//	PB_Tick_None,
-//	PB_Tick_Passive,
-//	PB_Tick_Active,
-//	PB_Tick_Groundpound
-//};
 
 UENUM()
 enum class EGrappleState : int8
@@ -88,7 +80,6 @@ enum class EGrappleState : int8
 	Post_Launch,
 	Leave
 };
-
 UENUM()
 enum class EGrappleType : int8
 {
@@ -112,25 +103,8 @@ enum class EAttackState : int8
 	GroundPound
 
 	,Post_GroundPound
+	,Post_Buffer
 };
-
-UENUM()
-enum class ESmackAttackState : int8
-{
-	None,
-
-	Attack,
-	Hold,
-	Buffer,
-	Ready,
-
-	PostBuffer_Hold,
-
-	Leave
-};
-
-
-
 
 UENUM()
 enum class EPromptState : int8
@@ -139,11 +113,6 @@ enum class EPromptState : int8
 	WithingArea,
 	InPrompt
 };
-//UENUM()
-//enum class EPromptType : int8
-//{
-//	GilbertsDialogue
-//};
 
 
 UCLASS()
@@ -163,14 +132,6 @@ public:
 		class USpringArmComponent* CameraBoom{ nullptr };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
 		class UCameraComponent* Camera{ nullptr };
-
-
-	/* testing */
-	//FGameplayTag Tag_Enemy;
-	//FGameplayTag Tag_EnemyAubergineDoggo;
-	//FGameplayTag Tag_GrappleTarget;
-	//FGameplayTag Tag_GrappleTarget_Static;
-	//FGameplayTag Tag_GrappleTarget_Dynamic;
 
 
 protected:
@@ -947,7 +908,7 @@ public:
 #pragma region Attacks
 	EAttackState m_EAttackState = EAttackState::None;
 	FTimerHandle TH_BufferAttack;
-
+	FAttackActionBuffer Delegate_AttackBuffer;
 		
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|AttackContact")
 		float AttackContactTimer{ 0.3f };
@@ -974,6 +935,8 @@ public:
 	void ExecuteAttackBuffer() override;
 	void EndAttackBufferPeriod() override;
 
+	void BufferDelegate_Attack(void(ASteikemannCharacter::* func)());
+
 	bool CanBeAttacked() override;
 
 	FVector AttackDirection{};
@@ -988,6 +951,8 @@ public:
 		void AttackSmack_Start();
 	UFUNCTION(BlueprintCallable)
 		void AttackSmack_Start_Pure();
+	void AttackSmack_Start_Ground_Pure();
+
 
 	UFUNCTION(BlueprintCallable)
 		void Stop_Attack();
@@ -1038,10 +1003,7 @@ public:
 	
 	/* --------------------------------- SMACK ATTACK ----------------------------- */
 	#pragma region SmackAttack
-	ESmackAttackState m_ESmackAttackState = ESmackAttackState::None;
-
 	bool bAttackPress{};
-
 
 	/* SMACK DIRECTION 
 	 *  0. None of the below
@@ -1087,8 +1049,6 @@ public:
 	UFUNCTION(BlueprintCallable)
 		void Deactivate_SmackAttack();
 
-	//bool bIsSmackAttacking{};
-
 	bool IsSmackAttacking() const;
 
 	bool bCanBeSmackAttacked{ true };
@@ -1104,13 +1064,13 @@ public:
 
 	/* ---------------------------- SCOOP ATTACK ---------------------- */
 	#pragma region ScoopAttack
-
 	bool bClickScoopAttack{};
 
 	UFUNCTION(BlueprintImplementableEvent)
 		void Start_ScoopAttack();
 	UFUNCTION(BlueprintCallable)
 		void Start_ScoopAttack_Pure();
+	void Start_ScoopAttack_Ground_Pure();
 	void Click_ScoopAttack();
 	void UnClick_ScoopAttack();
 

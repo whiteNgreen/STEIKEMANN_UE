@@ -263,7 +263,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	}
 	case EState::STATE_InAir:
 	{
-		if (GetActorLocation().Z >= Jump_HeightToReach)
+		if (GetActorLocation().Z >= Jump_HeightToReach)	// bool HasReachedPostScoopedJumpHeight() const, ?
 		{
 			HeightReachedDelegate.Broadcast();
 			HeightReachedDelegate.Clear();
@@ -276,7 +276,6 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 			PB_Passive_IMPL(m_PogoTarget);
 			break;
 		case EPogoType::POGO_Active:
-			//PRINTLONG("Tick: POGO ACTIVE");
 			PB_Active_IMPL();
 			break;
 		default:
@@ -412,7 +411,6 @@ void ASteikemannCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 
 		/* Jump */
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ASteikemannCharacter::Jump).bConsumeInput = true;
-	//PlayerInputComponent->BindAction("Jump", IE_Released, this, &ASteikemannCharacter::StopJumping).bConsumeInput = true;
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ASteikemannCharacter::JumpRelease).bConsumeInput = true;
 
 	/* -- SLIDE -- */
@@ -452,21 +450,18 @@ void ASteikemannCharacter::LeavePromptArea()
 
 bool ASteikemannCharacter::ActivatePrompt()
 {
-	//PRINTLONG("Activate Prompt");
 	bool b{};
 	switch (m_PromptState)
 	{
 	case EPromptState::None:			return false;
 
 	case EPromptState::WithingArea:
-		//PRINTLONG("Steikemann: FIRST PROMPT");
 		m_EMovementInputState = EMovementInput::Locked;
 		m_PromptState = EPromptState::InPrompt;
 		// Get first prompt state
 		return m_PromptActor->GetNextPromptState(this, 0);
 
 	case EPromptState::InPrompt:
-		//PRINTLONG("Steikemann: CONTINUE PROMPT");
 		// Get next prompt state
 		b = m_PromptActor->GetNextPromptState(this);
 		if (!b) m_EMovementInputState = EMovementInput::Open;
@@ -479,7 +474,6 @@ bool ASteikemannCharacter::ActivatePrompt()
 
 bool ASteikemannCharacter::ExitPrompt()
 {
-	//PRINTLONG("Exit Prompt");
 	m_EMovementInputState = EMovementInput::Open;
 	m_PromptState = EPromptState::WithingArea;
 	// Notify DialoguePrompt of exiting
@@ -493,7 +487,6 @@ bool ASteikemannCharacter::ExitPrompt()
 
 bool ASteikemannCharacter::LerpCameraBackToBoom(float DeltaTime)
 {
-	//PRINT("Camera lerp back to Camera Boom");
 	m_CameraLerpAlpha_PostPrompt = FMath::Min(m_CameraLerpAlpha_PostPrompt += DeltaTime * CameraLerpSpeed_Prompt, 1.f);
 	FTransform TargetTransform = CameraBoom->GetSocketTransform(USpringArmComponent::SocketName);
 	m_CameraTransform = Camera->GetComponentTransform();
@@ -507,7 +500,6 @@ bool ASteikemannCharacter::LerpCameraBackToBoom(float DeltaTime)
 	// End camera lerp
 	if (m_CameraLerpAlpha_PostPrompt >= 1.f)
 	{
-		//PRINTLONG("POST PROMPT: Stop camera transform lerp");
 		Camera->SetWorldTransform(m_CameraTransform);
 		return false;
 	}
@@ -1468,9 +1460,10 @@ void ASteikemannCharacter::Jump()
 			break;
 		}
 		case EState::STATE_Attacking:
-			if (m_EAttackState != EAttackState::Scoop) break;
-			PostScoopJump();
-
+			//if (m_EAttackState != EAttackState::Scoop) break;
+			//PostScoopJump();
+			PRINTLONG("Bind JUMP");
+			Delegate_AttackBuffer.BindUObject(this, &ASteikemannCharacter::PostScoopJump);
 			break;
 		case EState::STATE_Grappling:
 			break;
@@ -2379,11 +2372,10 @@ void ASteikemannCharacter::Deactivate_ScoopAttack()	// Decrepid
 void ASteikemannCharacter::ComboAttack_Pure()
 {
 	m_EState = EState::STATE_Attacking;
-	m_ESmackAttackState = ESmackAttackState::Attack;
 	m_EMovementInputState = EMovementInput::Locked;
 	Deactivate_AttackCollider();
 	int combo{};
-	(AttackComboCount++ % 2 == 0) ? combo = 1 : combo = 2;
+	(AttackComboCount++ % 2 == 0) ? combo = 2 : combo = 1;
 	ComboAttack(combo);
 }
 
@@ -2413,13 +2405,12 @@ void ASteikemannCharacter::Click_Attack()
 	{
 	case EState::STATE_OnGround:
 	{
-		AttackSmack_Start_Pure();
-		RotateToAttack();
+		AttackSmack_Start_Ground_Pure();
 		break;
 	}
 	case EState::STATE_InAir:
 	{
-		if (m_EAirState == EAirState::AIR_PostScoopJump)
+		if (m_EAirState == EAirState::AIR_PostScoopJump)	// SHOULD BE DELEGATE WHEN CHARACTER REACHES HEIGHT
 			AttackSmack_Start_Pure();
 		break;
 	}
@@ -2430,10 +2421,7 @@ void ASteikemannCharacter::Click_Attack()
 	}
 	case EState::STATE_Attacking:
 	{
-		if (m_ESmackAttackState == ESmackAttackState::Hold) 
-			m_ESmackAttackState = ESmackAttackState::Buffer;
-		if (m_ESmackAttackState == ESmackAttackState::Ready || m_ESmackAttackState == ESmackAttackState::PostBuffer_Hold)
-			ComboAttack_Pure();
+		BufferDelegate_Attack(&ASteikemannCharacter::ComboAttack_Pure);
 		break;
 	}
 	case EState::STATE_Grappling:
@@ -2473,10 +2461,15 @@ void ASteikemannCharacter::Start_ScoopAttack_Pure()
 {
 	m_EState = EState::STATE_Attacking;
 	m_EAttackState = EAttackState::Scoop;
-	m_ESmackAttackState = ESmackAttackState::Attack;
 	m_EMovementInputState = EMovementInput::Locked;
 
 	Start_ScoopAttack();
+}
+
+void ASteikemannCharacter::Start_ScoopAttack_Ground_Pure()
+{
+	Start_ScoopAttack_Pure();
+	RotateToAttack();
 }
 
 void ASteikemannCharacter::Click_ScoopAttack()
@@ -2488,8 +2481,7 @@ void ASteikemannCharacter::Click_ScoopAttack()
 	{
 	case EState::STATE_OnGround:
 	{
-		Start_ScoopAttack_Pure();
-		RotateToAttack();
+		Start_ScoopAttack_Ground_Pure();
 		break;
 	}
 	case EState::STATE_InAir:
@@ -2504,10 +2496,7 @@ void ASteikemannCharacter::Click_ScoopAttack()
 	}
 	case EState::STATE_Attacking:
 	{
-		//if (m_ESmackAttackState == ESmackAttackState::Hold)
-		//	m_ESmackAttackState = ESmackAttackState::Buffer;
-		//if (m_ESmackAttackState == ESmackAttackState::Ready)
-		//	ComboAttack_Pure();
+		BufferDelegate_Attack(&ASteikemannCharacter::Start_ScoopAttack_Ground_Pure);
 		break;
 	}
 	case EState::STATE_Grappling:
@@ -2521,7 +2510,7 @@ void ASteikemannCharacter::Click_ScoopAttack()
 				TimerManager.SetTimer(TH_BufferAttack, [this]()
 					{
 						m_EState = EState::STATE_OnGround;
-				Start_ScoopAttack_Pure();
+						Start_ScoopAttack_Pure();
 					},
 					t, false);
 				return;
@@ -2575,14 +2564,18 @@ void ASteikemannCharacter::AttackSmack_Start_Pure()
 {
 	m_EState = EState::STATE_Attacking;
 	m_EAttackState = EAttackState::Smack;
-	m_ESmackAttackState = ESmackAttackState::Attack;
 	m_EMovementInputState = EMovementInput::Locked;
 	AttackSmack_Start();
 }
 
+void ASteikemannCharacter::AttackSmack_Start_Ground_Pure()
+{
+	AttackSmack_Start_Pure();
+	RotateToAttack();
+}
+
 void ASteikemannCharacter::Stop_Attack()
 {
-	PRINTLONG("STOP ATTACK");
 	AttackComboCount = 0;
 	AttackContactedActors.Empty();
 	m_EAttackState = EAttackState::None;
@@ -2593,23 +2586,31 @@ void ASteikemannCharacter::Stop_Attack()
 
 void ASteikemannCharacter::StartAttackBufferPeriod()
 {
-	m_ESmackAttackState = ESmackAttackState::Hold;
 }
 
 void ASteikemannCharacter::ExecuteAttackBuffer()
 {
-	if (m_ESmackAttackState == ESmackAttackState::Buffer)
-	{
-		ComboAttack_Pure();
-		return;
-	}
-
-	m_ESmackAttackState = ESmackAttackState::PostBuffer_Hold;
+	Delegate_AttackBuffer.ExecuteIfBound();
+	Delegate_AttackBuffer.Unbind();
+	m_EAttackState = EAttackState::Post_Buffer;
 }
 
 void ASteikemannCharacter::EndAttackBufferPeriod()
 {
-	m_ESmackAttackState = ESmackAttackState::Ready;
+	m_EAttackState = EAttackState::None;
+}
+
+void ASteikemannCharacter::BufferDelegate_Attack(void(ASteikemannCharacter::* func)())
+{
+	if (m_EAttackState == EAttackState::Post_Buffer) {
+		PRINTLONG("Post Attack Buffer: Function Call");
+		std::invoke(func, this);
+	}
+	else {
+		PRINTLONG("Attack Buffer: Delegate function");
+		Delegate_AttackBuffer.BindUObject(this, func);
+	}
+
 }
 
 void ASteikemannCharacter::AttackContact(AActor* instigator, AActor* target)
