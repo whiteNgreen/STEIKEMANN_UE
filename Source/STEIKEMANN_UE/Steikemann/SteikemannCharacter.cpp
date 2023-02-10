@@ -375,7 +375,10 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	
 	/* --------------- CAMERA -------------------- */
 	if (m_EState == EState::STATE_Grappling && m_EGrappleType == EGrappleType::Dynamic_Ground) {
-		GrappleDynamicGuideCamera(DeltaTime);
+		GrappleDynamicGuideCamera(GrappledActor.Get(), DeltaTime);
+	}
+	if (m_EState == EState::STATE_InAir && m_EAirState == EAirState::AIR_PostScoopJump) {
+		GrappleDynamicGuideCamera(ScoopedActor, DeltaTime);
 	}
 
 	if (bCameraLerpBack_PostPrompt)
@@ -1099,13 +1102,13 @@ float ASteikemannCharacter::GuideCameraPitchAdjustmentLookAt(FVector LookatLocat
 	return Z;
 }
 
-void ASteikemannCharacter::GrappleDynamicGuideCamera(float deltatime)
+void ASteikemannCharacter::GrappleDynamicGuideCamera(AActor* target, float deltatime)
 {
-	if (!GrappledActor.Get()) return;
+	if (!target) return;
 
 	FVector input = InputVectorRaw;
 
-	FVector grappled = GrappledActor->GetActorLocation();
+	FVector grappled = target->GetActorLocation();
 	grappled.Z = GetActorLocation().Z;
 	//grappled.Z = InitialGrappleDynamicZ;
 	//FVector toGrapple = (grappled - GetActorLocation()) - FVector(0, 0, GuideCameraPitchAdjustmentLookAt(grappled, GrappleDynamic_Pitch_DistanceMIN, GrappleHookRange, GrappleDynamic_Pitch_MIN, GrappleDynamic_Pitch_MAX, GrappleDynamic_ZdiffMultiplier));
@@ -2429,7 +2432,8 @@ void ASteikemannCharacter::Click_Attack()
 	}
 	case EState::STATE_InAir:
 	{
-		if (m_EAirState == EAirState::AIR_PostScoopJump) {	// SHOULD BE DELEGATE WHEN CHARACTER REACHES HEIGHT
+		// Delegate the Disable ScoopJump gravity effect on smack attack buffer execute delegate
+		if (m_EAirState == EAirState::AIR_PostScoopJump) {
 			AttackSmack_Start_Pure();
 			BufferDelegate_Attack(&ASteikemannCharacter::Disable_PostScoopJumpGravity);
 		}
@@ -2570,7 +2574,10 @@ void ASteikemannCharacter::PostScoopJump()
 	JumpCurrentCount++;
 	m_EState = EState::STATE_InAir;
 	m_EAirState = EAirState::AIR_PostScoopJump;
-	
+
+	RotateActorYawToVector(ScoopedActor->GetActorLocation() - GetActorLocation());
+	m_EMovementInputState = EMovementInput::Locked;
+
 	Jump_HeightToReach = GetActorLocation().Z + ScoopHeight;
 
 	float time = ScoopHeightTimeRatio * (ScoopHeight / 100.f);
@@ -2578,28 +2585,25 @@ void ASteikemannCharacter::PostScoopJump()
 	//GetMoveComponent()->JumpHeight(ScoopHeight, PostScoop_JumpTime);
 	HeightReachedDelegate.AddUObject(GetMoveComponent().Get(), &USteikemannCharMovementComponent::DisableGravity);
 
-	HeightReachedDelegate.AddLambda([this]() {
-		TimerManager.SetTimer(TH_ScoopJumpGravityEnable,
-		[this]()
-		{
-			GetMoveComponent()->EnableGravity();
-			m_EAirState = EAirState::AIR_Freefall;
-		}, ScoopJump_Hangtime, false);
+	HeightReachedDelegate.AddLambda([this]() { 
+		TimerManager.SetTimer(TH_ScoopJumpGravityEnable, [this](){ PostScoopJumpGravity_End(); }, ScoopJump_Hangtime, false); 
 		});
 
 	Anim_Activate_Jump();//Anim_Activate_WallJump
 }
 
+void ASteikemannCharacter::PostScoopJumpGravity_End()
+{
+	GetMoveComponent()->EnableGravity();
+	m_EMovementInputState = EMovementInput::Open;
+	m_EAirState = EAirState::AIR_Freefall;
+	HeightReachedDelegate.Clear();
+	ScoopedActor = nullptr;
+}
 void ASteikemannCharacter::Disable_PostScoopJumpGravity()
 {
 	PRINTLONG("DISABLE: PostScoopJumpGravity");
-	TimerManager.SetTimer(TH_ScoopJumpGravityEnable,
-		[this]()
-		{
-			GetMoveComponent()->EnableGravity();
-			m_EAirState = EAirState::AIR_Freefall;
-			HeightReachedDelegate.Clear();
-		}, ScoopJump_Canceled_Hangtime, false);
+	TimerManager.SetTimer(TH_ScoopJumpGravityEnable, this, &ASteikemannCharacter::PostScoopJumpGravity_End, ScoopJump_Canceled_Hangtime);
 }
 
 void ASteikemannCharacter::AttackSmack_Start_Pure()
@@ -2645,11 +2649,9 @@ void ASteikemannCharacter::EndAttackBufferPeriod()
 void ASteikemannCharacter::BufferDelegate_Attack(void(ASteikemannCharacter::* func)())
 {
 	if (m_EAttackState == EAttackState::Post_Buffer) {
-		PRINTLONG("Post Attack Buffer: Function Call");
 		std::invoke(func, this);
 	}
 	else {
-		PRINTLONG("Attack Buffer: Delegate function");
 		Delegate_AttackBuffer.BindUObject(this, func);
 	}
 

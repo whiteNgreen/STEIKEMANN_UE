@@ -362,7 +362,7 @@ public:
 	void GuideCameraPitch(float z, float alpha);
 	float GuideCameraPitchAdjustmentLookAt(FVector LookatLocation, float MinDistance, float MaxDistance, float PitchAtMin, float PitchAtMax, float ZdiffMultiplier);
 
-	void GrappleDynamicGuideCamera(float deltatime);
+	void GrappleDynamicGuideCamera(AActor* target, float deltatime);
 
 #pragma endregion //CameraGuide
 
@@ -1085,6 +1085,7 @@ public:
 	float Jump_HeightToReach{};
 	bool HasReachedPostScoopedJumpHeight() const;
 	void PostScoopJump();
+	void PostScoopJumpGravity_End();
 	void Disable_PostScoopJumpGravity();
 
 	bool bIsScoopAttacking{};
