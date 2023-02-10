@@ -434,6 +434,8 @@ public:
 	void Jump() override;
 	void JumpRelease();
 
+	void Jump_OnGround();
+
 	/* Animation activation */
 	UFUNCTION(BlueprintImplementableEvent)
 		void Anim_Activate_Jump();
@@ -1103,11 +1105,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
 		bool bStayOnGroundDuringScoop{ true }; 
 
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
+		//float ScoopStrength{ 5000.f };
+	/* How far above the player will the scooped target go */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
-		float ScoopStrength{ 5000.f };
+		float ScoopHeight{ 200.f };
 
 	void Do_ScoopAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override;
-	void Receive_ScoopAttack_Pure(const FVector& Direction, const float& Strength) override;
+	//void Receive_ScoopAttack_Pure(const FVector& Direction, const float& Strength) override;
 
 	#pragma endregion //ScoopAttack
 

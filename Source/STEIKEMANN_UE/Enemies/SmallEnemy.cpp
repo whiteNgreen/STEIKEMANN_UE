@@ -455,16 +455,20 @@ void ASmallEnemy::Do_ScoopAttack_Pure(IAttackInterface* OtherInterface, AActor* 
 {
 }
 
-void ASmallEnemy::Receive_ScoopAttack_Pure(const FVector& Direction, const float& Strength)
+void ASmallEnemy::Receive_ScoopAttack_Pure(const FVector& TargetLocation, const FVector& InstigatorLocation/*, const float& Height*/)
 {
 	if (GetCanBeSmackAttacked())
 	{
 		TlComp_Scooped->PlayFromStart();
 
 		bCanBeSmackAttacked = false;
-		SetActorRotation(FVector(Direction.GetSafeNormal2D() * -1.f).Rotation(), ETeleportType::TeleportPhysics);
+		FVector ToInstigator = InstigatorLocation - GetActorLocation();
+		SetActorRotation(FVector(ToInstigator.GetSafeNormal2D() * -1.f).Rotation(), ETeleportType::TeleportPhysics);
 		GetCharacterMovement()->Velocity *= 0.f;
-		GetCharacterMovement()->AddImpulse(Direction * Strength, true);
+
+		FVector ScoopDirection = TargetLocation - GetActorLocation();
+		FVector Velocity = ((ScoopDirection) / ScoopedTime) + (0.5f * FVector(0, 0, -GravityZ) * ScoopedTime);
+		GetCharacterMovement()->AddImpulse(Velocity, true);
 
 		/* Sets a timer before character can be damaged by the same attack */
 		TimerManager.SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, 0.2f, false);

@@ -1385,12 +1385,13 @@ void ASteikemannCharacter::Jump()
 		{
 		case EState::STATE_OnGround:	// Regular Jump
 		{
-			JumpCurrentCount++;
-			GetMoveComponent()->Jump(JumpStrength);
-			Anim_Activate_Jump();
-
-			TimerManager.SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, OnWallActivation_PostJumpingOnGround, false);
-			m_WallState = EOnWallState::WALL_Leave;
+			//JumpCurrentCount++;
+			//GetMoveComponent()->Jump(JumpStrength);
+			//Anim_Activate_Jump();
+			//
+			//TimerManager.SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, OnWallActivation_PostJumpingOnGround, false);
+			//m_WallState = EOnWallState::WALL_Leave;
+			Jump_OnGround();
 			break;
 		}
 		case EState::STATE_InAir:	// Double Jump
@@ -1460,8 +1461,6 @@ void ASteikemannCharacter::Jump()
 			break;
 		}
 		case EState::STATE_Attacking:
-			//if (m_EAttackState != EAttackState::Scoop) break;
-			//PostScoopJump();
 			PRINTLONG("Bind JUMP");
 			Delegate_AttackBuffer.BindUObject(this, &ASteikemannCharacter::PostScoopJump);
 			break;
@@ -1476,6 +1475,17 @@ void ASteikemannCharacter::Jump()
 void ASteikemannCharacter::JumpRelease()
 {
 	bJumpClick = false;
+}
+
+void ASteikemannCharacter::Jump_OnGround()
+{
+	JumpCurrentCount++;
+	GetMoveComponent()->Jump(JumpStrength);
+	Anim_Activate_Jump();
+
+	FTimerHandle h;
+	TimerManager.SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, OnWallActivation_PostJumpingOnGround, false);
+	m_WallState = EOnWallState::WALL_Leave;
 }
 
 bool ASteikemannCharacter::CanDoubleJump() const
@@ -2477,6 +2487,8 @@ void ASteikemannCharacter::Click_ScoopAttack()
 	/* Return conditions */
 	if (bClickScoopAttack) { return; }
 	bClickScoopAttack = true;
+	ScoopedActor = nullptr;
+
 	switch (m_EState)
 	{
 	case EState::STATE_OnGround:
@@ -2533,20 +2545,26 @@ void ASteikemannCharacter::UnClick_ScoopAttack()
 
 void ASteikemannCharacter::PostScoopJump()
 {
-	if (!ScoopedActor)
+	// Regular jump if
+	if (!ScoopedActor) {
+		PRINTLONG("POST SCOOP: Regular Jump");
+		Jump_OnGround();
 		return;
+	}
 
 	m_EState = EState::STATE_InAir;
 	m_EAirState = EAirState::AIR_PostScoopJump;
 	
-	Jump_HeightToReach = ScoopedActor->GetActorLocation().Z;
-	float JumpHeight = Jump_HeightToReach - GetActorLocation().Z;
+	//Jump_HeightToReach = ScoopedActor->GetActorLocation().Z;
+	//float JumpHeight = Jump_HeightToReach - GetActorLocation().Z;
+	Jump_HeightToReach = GetActorLocation().Z + ScoopHeight;
+	//Jump_HeightToReach = JumpHeight;
 
-	GetMoveComponent()->JumpHeight(JumpHeight, PostScoop_JumpTime);
+	GetMoveComponent()->JumpHeight(Jump_HeightToReach, PostScoop_JumpTime);
 	HeightReachedDelegate.AddUObject(GetMoveComponent().Get(), &USteikemannCharMovementComponent::DisableGravity);
 
 	ASmallEnemy* enemy = Cast<ASmallEnemy>(ScoopedActor);
-	enemy->DisableGravity();
+	//enemy->DisableGravity();	// Should only disable gravity if enemy has reached height
 	HeightReachedDelegate.AddLambda([this, enemy]() {
 		TimerManager.SetTimer(TH_ScoopJumpGravityEnable,
 		[this, enemy]()
@@ -2776,27 +2794,19 @@ void ASteikemannCharacter::Do_ScoopAttack_Pure(IAttackInterface* OtherInterface,
 	if (b)
 	{
 		ScoopedActor = OtherActor;
+
 		/* Rotates player towards scooped actor */
 		RotateActorYawToVector((OtherActor->GetActorLocation() - GetActorLocation()).GetSafeNormal());
 
-		FVector Direction{ OtherActor->GetActorLocation() - GetActorLocation() };
-		Direction = Direction.GetSafeNormal2D();
-		float angle = FMath::DegreesToRadians(85.f);
-		Direction = (cosf(angle) * Direction) + (sinf(angle) * FVector::UpVector);
-		OtherInterface->Receive_ScoopAttack_Pure(Direction, ScoopStrength);
-
-		/* Launch player in air together with enemy when doing a Scoop Attack */
-		if (!bStayOnGroundDuringScoop && !bHasbeenScoopLaunched)
-		{
-			GetMoveComponent()->AddImpulse(Direction * ScoopStrength * 0.9f, true);
-			bHasbeenScoopLaunched = true;
-		}
+		//FVector Direction{ OtherActor->GetActorLocation() - GetActorLocation() };
+		//Direction = Direction.GetSafeNormal2D();
+		//float angle = FMath::DegreesToRadians(85.f);
+		//Direction = (cosf(angle) * Direction) + (sinf(angle) * FVector::UpVector);
+		FVector ScoopLocation = OtherActor->GetActorLocation() + (FVector::UpVector * ScoopHeight); // Change 'UpVector' to 'Direction'
+		OtherInterface->Receive_ScoopAttack_Pure(ScoopLocation, GetActorLocation());	
 	}
 }
 
-void ASteikemannCharacter::Receive_ScoopAttack_Pure(const FVector& Direction, const float& Strength)
-{
-}
 
 void ASteikemannCharacter::Click_GroundPound()
 {
