@@ -228,6 +228,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	//PRINTPAR("Smack Attack State :: %i", m_ESmackAttackState);
 	//PRINTPAR("Air State :: %i", m_EAirState);
 	//PRINTPAR("Pogo Type :: %i", m_EPogoType);
+	PRINTPAR("Jump Count = %i", JumpCurrentCount);
 
 	/*		Resets Rotation Pitch and Roll		*/
 	if (IsFalling() || GetMoveComponent()->IsWalking()) {
@@ -1358,19 +1359,19 @@ void ASteikemannCharacter::Jump()
 {
 	if (ActivatePrompt()) return;
 
-	/* Don't Jump if player is Grappling */
+	// Cases where Jump is skipped
 	switch (m_EState)
 	{
-	case EState::STATE_None:
-		break;
-	case EState::STATE_OnGround:
-		break;
+	case EState::STATE_None:		break;
+	case EState::STATE_OnGround:	break;
 	case EState::STATE_InAir:
+		if (m_EAirState == EAirState::AIR_PostScoopJump) {
+			return;
+		}
 		break;
-	case EState::STATE_OnWall:
-		break;
-	case EState::STATE_Attacking: break;
-	case EState::STATE_Grappling: return;
+	case EState::STATE_OnWall:		break;
+	case EState::STATE_Attacking:	break;
+	case EState::STATE_Grappling:	return;
 	default:
 		break;
 	}
@@ -1385,12 +1386,6 @@ void ASteikemannCharacter::Jump()
 		{
 		case EState::STATE_OnGround:	// Regular Jump
 		{
-			//JumpCurrentCount++;
-			//GetMoveComponent()->Jump(JumpStrength);
-			//Anim_Activate_Jump();
-			//
-			//TimerManager.SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, OnWallActivation_PostJumpingOnGround, false);
-			//m_WallState = EOnWallState::WALL_Leave;
 			Jump_OnGround();
 			break;
 		}
@@ -1425,10 +1420,7 @@ void ASteikemannCharacter::Jump()
 			}
 			if (CanDoubleJump())
 			{
-				JumpCurrentCount++;
-				GetMoveComponent()->DoubleJump(m_InputVector.GetSafeNormal(), JumpStrength * DoubleJump_MultiplicationFactor);
-				GetMoveComponent()->StartJumpHeightHold();
-				Anim_Activate_DoubleJump();//Anim DoubleJump
+				Jump_DoubleJump();
 			}
 			break;
 		}
@@ -1482,10 +1474,28 @@ void ASteikemannCharacter::Jump_OnGround()
 	JumpCurrentCount++;
 	GetMoveComponent()->Jump(JumpStrength);
 	Anim_Activate_Jump();
+	m_EState = EState::STATE_InAir;
 
 	FTimerHandle h;
 	TimerManager.SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, OnWallActivation_PostJumpingOnGround, false);
 	m_WallState = EOnWallState::WALL_Leave;
+}
+
+void ASteikemannCharacter::Jump_DoubleJump()
+{
+	JumpCurrentCount++;
+	GetMoveComponent()->DoubleJump(m_InputVector.GetSafeNormal(), JumpStrength * DoubleJump_MultiplicationFactor);
+	GetMoveComponent()->StartJumpHeightHold();
+	Anim_Activate_DoubleJump();//Anim DoubleJump
+}
+
+void ASteikemannCharacter::Jump_Undetermined()
+{
+	if (CanDoubleJump()) {
+		Jump_DoubleJump();
+		return;
+	}
+	Jump_OnGround();
 }
 
 bool ASteikemannCharacter::CanDoubleJump() const
@@ -2545,32 +2555,27 @@ void ASteikemannCharacter::UnClick_ScoopAttack()
 
 void ASteikemannCharacter::PostScoopJump()
 {
-	// Regular jump if
+	// Regular jump if player did not hit anything with their scoop attack
 	if (!ScoopedActor) {
 		PRINTLONG("POST SCOOP: Regular Jump");
-		Jump_OnGround();
+		Jump_Undetermined();
 		return;
 	}
 
+	JumpCurrentCount++;
 	m_EState = EState::STATE_InAir;
 	m_EAirState = EAirState::AIR_PostScoopJump;
 	
-	//Jump_HeightToReach = ScoopedActor->GetActorLocation().Z;
-	//float JumpHeight = Jump_HeightToReach - GetActorLocation().Z;
 	Jump_HeightToReach = GetActorLocation().Z + ScoopHeight;
-	//Jump_HeightToReach = JumpHeight;
 
 	GetMoveComponent()->JumpHeight(Jump_HeightToReach, PostScoop_JumpTime);
 	HeightReachedDelegate.AddUObject(GetMoveComponent().Get(), &USteikemannCharMovementComponent::DisableGravity);
 
-	ASmallEnemy* enemy = Cast<ASmallEnemy>(ScoopedActor);
-	//enemy->DisableGravity();	// Should only disable gravity if enemy has reached height
-	HeightReachedDelegate.AddLambda([this, enemy]() {
+	HeightReachedDelegate.AddLambda([this]() {
 		TimerManager.SetTimer(TH_ScoopJumpGravityEnable,
-		[this, enemy]()
+		[this]()
 		{
 			GetMoveComponent()->EnableGravity();
-			enemy->EnableGravity();
 			m_EAirState = EAirState::AIR_Freefall;
 		}, ScoopJump_Hangtime, false);
 		});

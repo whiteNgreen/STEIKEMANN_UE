@@ -435,6 +435,8 @@ public:
 	void JumpRelease();
 
 	void Jump_OnGround();
+	void Jump_DoubleJump();
+	void Jump_Undetermined();
 
 	/* Animation activation */
 	UFUNCTION(BlueprintImplementableEvent)
