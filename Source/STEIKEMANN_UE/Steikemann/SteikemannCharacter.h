@@ -300,16 +300,6 @@ public:
 	float CameraBoom_PlacementAlpha{};
 	void PlaceCameraBoom(float DeltaTime);
 
-	//ECameraBoomPlacement m_ECameraBoomPlacement;
-	//bool bCameraBoomComponentCanPlay{ true };
-	//void DetermineCameraBoomPlacement();
-	//void PlaceCameraBoom_Ground();
-	//class UTimelineComponent* TlComp_CameraBoomPlacement;
-	//UPROPERTY(EditAnywhere, Category = "Camera|Boom")
-		//UCurveFloat* Curve_CameraBoomPlacement;
-	//UFUNCTION()
-		//void CameraBoomPlacement(float value);
-
 #pragma region //CameraBoomPlacement
 
 	#pragma region CameraGuide
@@ -997,36 +987,45 @@ public:
 
 	void Gen_Attack(IAttackInterface* OtherInterface, AActor* OtherActor, EAttackType& AType) override;
 
+	/* Turning Character during attack 
+		*	When an attack button is clicked, the player will be able to turn the character a certain degree 
+		*	before the movement locks in. Giving them the ability to slightly aim. */
+	class UTimelineComponent* TlComp_AttackTurn;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
+		UCurveFloat* Curve_AttackTurnStrength;
+	UFUNCTION()
+		void TlCurve_AttackTurn(float value);
+
 	/* ---- Moving Character During Shared Basic Attack Anticipation ---- */
 	/* How far the character will move forward during the Shared Basic Attack Anticipation. Before the attack type is decided */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
-		float PreBasicAttackMovementLength{ 50.f };
-	bool bPreBasicAttackMoveCharacter{};
-	void PreBasicAttackMoveCharacter(float DeltaTime);
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
+	//	float PreBasicAttackMovementLength{ 50.f };
+	//bool bPreBasicAttackMoveCharacter{};
+	//void PreBasicAttackMoveCharacter(float DeltaTime);
 
 	/* -------- Animation Variables -------- */
 	/* The speed of the anticipation to the regular attack. Which is shared between SmackAttack and ScoopAttack.
 	 * At the end of this anticipation, 
 	 * If the player still holds the attack button, the character will perform the scoop attack. 
 	 *  Else if the button is not held at this time, the character will perform the regular SmackAttack */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|SmackAttack")
-		float SmackAttack_Anticipation_Rate		/*UMETA(DisplayName = "1. Smack Anticipation Rate")*/ { 4.5f };
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|SmackAttack")
+	//	float SmackAttack_Anticipation_Rate		/*UMETA(DisplayName = "1. Smack Anticipation Rate")*/ { 4.5f };
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|SmackAttack")
-		float SmackAttack_Action_Rate			/*UMETA(DisplayName = "2. Smack Action Rate")*/ { 5.f };
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|SmackAttack")
+	//	float SmackAttack_Action_Rate			/*UMETA(DisplayName = "2. Smack Action Rate")*/ { 5.f };
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|SmackAttack")
-		float SmackAttack_Reaction_Rate			/*UMETA(DisplayName = "3. Smack Reaction Rate")*/ { 2.f };
-	
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|SmackAttack")
+	//	float SmackAttack_Reaction_Rate			/*UMETA(DisplayName = "3. Smack Reaction Rate")*/ { 2.f };
+	//
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|ScoopAttack")
-		float ScoopAttack_Anticipation_Rate		/*UMETA(DisplayName = "1. Scoop Anticipation Rate")*/ { 10.f };
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|ScoopAttack")
+	//	float ScoopAttack_Anticipation_Rate		/*UMETA(DisplayName = "1. Scoop Anticipation Rate")*/ { 10.f };
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|ScoopAttack")
-		float ScoopAttack_Action_Rate			/*UMETA(DisplayName = "2. Scoop Action Rate")*/ { 7.f };
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|ScoopAttack")
+	//	float ScoopAttack_Action_Rate			/*UMETA(DisplayName = "2. Scoop Action Rate")*/ { 7.f };
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|ScoopAttack")
-		float ScoopAttack_Reaction_Rate			/*UMETA(DisplayName = "3. Scoop Reaction Rate")*/ { 2.f };
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|ScoopAttack")
+	//	float ScoopAttack_Reaction_Rate			/*UMETA(DisplayName = "3. Scoop Reaction Rate")*/ { 2.f };
 	#pragma endregion //General
 	
 	#pragma region SmackAttack
