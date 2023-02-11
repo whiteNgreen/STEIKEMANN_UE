@@ -101,6 +101,9 @@ void ASteikemannCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// Root motion tullball
+	SetAnimRootMotionTranslationScale(1.f / 4.5f);
+
 	// Base stuff
 	MovementComponent = Cast<USteikemannCharMovementComponent>(GetCharacterMovement());
 	PlayerController = Cast<APlayerController>(GetController());
