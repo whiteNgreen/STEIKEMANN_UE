@@ -171,18 +171,15 @@ ACharacter* AEnemySpawner::SpawnCharacter()
 	FRotator rot(0.f, yaw, 0.f);
 
 	ASmallEnemy* spawnedCharacter = GetWorld()->SpawnActor<ASmallEnemy>(SpawningActorType, SpawnPoint->GetComponentLocation(), rot);
-	
 
 	// Launch character out
 	FVector LaunchDirection;
 	LaunchDirection = FVector::ForwardVector.RotateAngleAxis(yaw, FVector::UpVector);
-	//DrawDebugLine(GetWorld(), spawnedCharacter->GetActorLocation(), spawnedCharacter->GetActorLocation() + (LaunchDirection * Spawn_LaunchStrength), FColor::Blue, false, 3.f, 0, 6.f);
 	LaunchDirection = (cosf(FMath::DegreesToRadians(pitch)) * LaunchDirection) + (sinf(FMath::DegreesToRadians(pitch)) * FVector::UpVector);
 
 	spawnedCharacter->GetCharacterMovement()->bJustTeleported = false;
 	spawnedCharacter->GetCharacterMovement()->bRunPhysicsWithNoController = true;
 	spawnedCharacter->GetCharacterMovement()->AddImpulse(LaunchDirection.GetSafeNormal() * Spawn_LaunchStrength, true);
-	//DrawDebugLine(GetWorld(), spawnedCharacter->GetActorLocation(), spawnedCharacter->GetActorLocation() + (LaunchDirection * Spawn_LaunchStrength), FColor::Red, false, 3.f, 0, 6.f);
 	
 	return spawnedCharacter;
 }

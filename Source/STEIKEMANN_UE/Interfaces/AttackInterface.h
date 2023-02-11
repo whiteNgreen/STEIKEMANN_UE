@@ -51,7 +51,7 @@ public:
 	UFUNCTION(BlueprintNativeEvent, Category = "Attack|ScoopAttack")
 		void ScoopAttack();
 	virtual void Do_ScoopAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor){}
-	virtual void Receive_ScoopAttack_Pure(const FVector& Direction, const float& Strength){}
+	virtual void Receive_ScoopAttack_Pure(const FVector& TargetLocation, const FVector& InstigatorLocation, const float& time){}
 
 
 	UFUNCTION(BlueprintNativeEvent, Category = "Attack|GroundPound")
