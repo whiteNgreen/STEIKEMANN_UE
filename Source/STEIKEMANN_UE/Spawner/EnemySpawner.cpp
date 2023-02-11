@@ -152,6 +152,8 @@ void AEnemySpawner::Gen_ReceiveAttack(const FVector& Direction, const float& Str
 void AEnemySpawner::SpawnAubergineDog()
 {
 	ASmallEnemy* spawnedDog = (ASmallEnemy*)SpawnCharacter();
+	if (!spawnedDog)
+		return;
 	SpawnedActors.Add(spawnedDog);
 
 	SpawnPointData data;
@@ -171,7 +173,8 @@ ACharacter* AEnemySpawner::SpawnCharacter()
 	FRotator rot(0.f, yaw, 0.f);
 
 	ASmallEnemy* spawnedCharacter = GetWorld()->SpawnActor<ASmallEnemy>(SpawningActorType, SpawnPoint->GetComponentLocation(), rot);
-
+	if (!spawnedCharacter)
+		return nullptr;
 	// Launch character out
 	FVector LaunchDirection;
 	LaunchDirection = FVector::ForwardVector.RotateAngleAxis(yaw, FVector::UpVector);
