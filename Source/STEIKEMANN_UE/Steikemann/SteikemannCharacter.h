@@ -152,25 +152,11 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		FVector m_InputVector;
 
-#pragma region Prompt Area
-	/* Player within prompt area */
+	/* Camera input value for gamepad */
 	UPROPERTY(BlueprintReadOnly)
-		EPromptState m_PromptState = EPromptState::None;
-	FVector m_PromptLocation;
-	class ADialoguePrompt* m_PromptActor{ nullptr };
-
+		FVector m_GamepadCameraInputRAW;
 	UPROPERTY(BlueprintReadOnly)
-		bool bCameraLerpBack_PostPrompt{};
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Camera|Prompt")
-		float CameraLerpSpeed_Prompt{ 2.f };
-	float m_CameraLerpAlpha_PostPrompt{};
-	
-	void EnterPromptArea(ADialoguePrompt* promptActor, FVector promptLocation);
-	void LeavePromptArea();
-
-	bool ActivatePrompt();
-	bool ExitPrompt();
-#pragma endregion // Prompt Area
+		FVector m_GamepadCameraInput;
 
 	EMovementInput m_EMovementInputState = EMovementInput::Open;
 
@@ -186,30 +172,52 @@ public:
 	APlayerController* PlayerController{ nullptr };
 	APlayerController* GetPlayerController() const { return PlayerController; }
 
-	/*
-		GameplayTags
-	*/
-	
+	/* GameplayTags */
 	FGameplayTagContainer GameplayTags;
-	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GameplayTags")
-		//FGameplayTag* Player;
-
 	UFUNCTION(BlueprintCallable, Category = GameplayTags)
 		virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override { TagContainer = GameplayTags; return; }
 
+	/* ----------------------- Actor Rotation Functions ---------------------------------- */
+	void ResetActorRotationPitchAndRoll(float DeltaTime);
+	void RotateActorYawToVector(FVector AimVector, float DeltaTime = 0);
+	void RotateActorPitchToVector(FVector AimVector, float DeltaTime = 0);
+		void RotateActorYawPitchToVector(FVector AimVector, float DeltaTime = 0);	//Old
+	void RollActorTowardsLocation(FVector Point, float DeltaTime = 0);
+
+	UPhysicalMaterial* DetectPhysMaterial();
+
+#pragma region Prompt Area
+	/* Player within prompt area */
+	UPROPERTY(BlueprintReadOnly)
+		EPromptState m_PromptState = EPromptState::None;
+	FVector m_PromptLocation;
+	class ADialoguePrompt* m_PromptActor{ nullptr };
+
+	UPROPERTY(BlueprintReadOnly)
+		bool bCameraLerpBack_PostPrompt{};
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Camera|Prompt")
+		float CameraLerpSpeed_Prompt{ 2.f };
+	float m_CameraLerpAlpha_PostPrompt{};
+
+	void EnterPromptArea(ADialoguePrompt* promptActor, FVector promptLocation);
+	void LeavePromptArea();
+
+	bool ActivatePrompt();
+	bool ExitPrompt();
+#pragma endregion				// Prompt Area
 #pragma region Audio
 	UPROPERTY(EditAnywhere, Category = "Audio")
 		UAudioComponent* Component_Audio{ nullptr };
 
 
-#pragma endregion //Audio
+#pragma endregion					//Audio
 #pragma region Material
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Materialss", meta = (DisplayPriority = "1"))
 		class UMaterialParameterCollection* MPC_Player;
 	void Material_UpdateParameterCollection_Player(float DeltaTime);
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Materialss", meta = (DisplayPriority = "2"))
 		UCurveFloat* Curve_DecalAlpha;
-#pragma endregion //Material
+#pragma endregion				//Material
 #pragma region ParticleEffects
 
 	/* ------------------- Particle Effects ------------------- */
@@ -261,16 +269,7 @@ public:
 
 	#pragma endregion //Crouch
 
-#pragma endregion //ParticleEffects
-
-#pragma region Slipping
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Variables", meta = (AllowPrivateAcces = "true"))
-	bool bSlipping;
-
-	void DetectPhysMaterial();
-
-#pragma endregion //Slipping
+#pragma endregion			//ParticleEffects
 
 #pragma region Camera
 	/* ------------------- Camera Shakes ------------------- */
@@ -286,7 +285,9 @@ public:
 	FTransform m_CameraTransform;
 	bool LerpCameraBackToBoom(float DeltaTime);
 
-#pragma region CameraBoomPlacement
+	void GC_SlerpTowardsVector(const FVector& direction, float alpha, float DeltaTime);
+
+	#pragma region CameraBoomPlacement
 	/*	*	The placement of the camera boom will lerp towards the root, making the player the centre on the 
 		*	screen when they are in the air. Making it easier to platform and see objects beneath the player character */
 	// The location of the camera boom, in relation to the character root
@@ -300,30 +301,26 @@ public:
 	float CameraBoom_PlacementAlpha{};
 	void PlaceCameraBoom(float DeltaTime);
 
-#pragma region //CameraBoomPlacement
-
+	#pragma endregion //CameraBoomPlacement
 	#pragma region CameraGuide
-	
-
-	//UPROPERTY(EditAnywhere, Category = "Camera", meta = (UIMin = "0", UIMax = "1"))
 	float CameraGuide_Pitch{ 0.f };
 
 	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "500"))
-			float CameraGuide_Pitch_MIN		/*UMETA(DisplayName = "Pitch At Min")*/ { 100.f };
+			float CameraGuide_Pitch_MIN{ 100.f };
 
 	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "5000"))
-			float CameraGuide_Pitch_MAX		/*UMETA(DisplayName = "Pitch At Max")*/ { 500.f };
+			float CameraGuide_Pitch_MAX{ 500.f };
 
 	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "2"))
-			float CameraGuide_ZdiffMultiplier		/*UMETA(DisplayName = "Zdiff Multiplier") */{ 1.f };
+			float CameraGuide_ZdiffMultiplier{ 1.f };
 			
 	/* Maximum distance for pitch adjustment */
 	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "10000"))
-			float CameraGuide_Pitch_DistanceMAX		/*UMETA(DisplayName = "Max Distance") */{ 2000.f };
+			float CameraGuide_Pitch_DistanceMAX{ 2000.f };
 
 	/* Minimum distance for pitch adjustment */
 	UPROPERTY(EditAnywhere, Category = "Camera|Volume|Pitch", meta = (UIMin = "0", UIMax = "10000"))
-			float CameraGuide_Pitch_DistanceMIN		/*UMETA(DisplayName = "Min Distance") */{ 100.f };
+			float CameraGuide_Pitch_DistanceMIN{ 100.f };
 
 	EPointType CurrentCameraGuide;
 	EPointType PreviousCameraGuide;
@@ -379,10 +376,41 @@ public:
 
 	void GrappleDynamicGuideCamera(AActor* target, float deltatime);
 
-	#pragma endregion //CameraGuide
+	/* Default camera guide towards movement direction 
+		* Runs the entire time but should not be noticable until the player has started moving a certain amount of time */
+	void GuideCamera_Movement(float DeltaTime);
+	UPROPERTY(EditAnywhere, Category = "Camera|Movement|Default")
+		float GC_Mov_PositiveLerpSpeed{ 1.f };
+	UPROPERTY(EditAnywhere, Category = "Camera|Movement|Default")
+		float GC_Mov_NegativeLerpSpeed{ 2.f };
+	// Without input, how fast will the alpha lerp down to 0
+	UPROPERTY(EditAnywhere, Category = "Camera|Movement|Default")
+		float GC_Mov_BaseNegativeLerpSpeed{ 2.f };
 
-#pragma endregion //Camera
+	// At what speed does the camera guide alpha start adding its max value
+	UPROPERTY(EditAnywhere, Category = "Camera|Movement|Default")
+		float GC_Mov_MaxVelocity{ 600.f };
+	// Once the camera is within this angle of the input/velocity, its starts subtracting from the camera guide alpha value
+	UPROPERTY(EditAnywhere, Category = "Camera|Movement|Default")
+		float GC_Mov_DotproductLimit{ 0.8f };
+	UPROPERTY(EditAnywhere, Category = "Camera|Movement|Default")
+		float GC_Mov_Alpha_MAX{ 0.2f };
+	float GC_Mov_Alpha{};
 
+	/* Camera Guide towards static grapple target */
+	void GuideCamera_StaticGrapple(float DeltaTime);
+	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleStatic")
+		float GC_StaticGrapple_SlerpSpeed{ 2.f };
+	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleStatic")
+		float GC_StaticGrapple_StartSpeed{ 0.2f };
+	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleStatic")
+		float GC_StaticGrapple_PitchMulti{ 0.5f };
+
+	float GC_StaticGrapple_Alpha{};
+
+	#pragma endregion	//CameraGuide
+
+#pragma endregion					//Camera
 #pragma region Basic_Movement
 public:	// States
 	EState GetState() const { return m_EState; }
@@ -494,8 +522,7 @@ public:
 	UFUNCTION(BlueprintImplementableEvent)
 		void CancelAnimation();
 	void CancelAnimationMontageIfMoving(TFunction<void()> lambdaCall);
-#pragma endregion //Basic_Movement
-
+#pragma endregion			//Basic_Movement
 #pragma region Pogo
 private:
 	EPogoType m_EPogoType = EPogoType::POGO_None;
@@ -578,9 +605,10 @@ private:
 public: // Animation
 	UFUNCTION(BlueprintImplementableEvent)
 		void Anim_Pogo_Passive();
+	UFUNCTION(BlueprintImplementableEvent)
+		void Anim_Pogo_Active();
 
-#pragma endregion //Pogo
-	
+#pragma endregion					//Pogo
 #pragma region Crouch		
 public:
 	bool bPressedCrouch{};
@@ -632,8 +660,7 @@ public:
 	bool CanCrouchJump()		const { return IsCrouching() && IsCrouchWalking(); }
 	bool CanCrouchSlideJump()	const { return IsCrouching() && IsCrouchSliding(); }
 
-#pragma endregion //Crouch	
-
+#pragma endregion					//Crouch	
 #pragma region Collectibles & Health
 public:
 	void ReceiveCollectible(ECollectibleType type);
@@ -688,9 +715,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health & Damage", meta = (UIMin = "0.0", UIMax = "4000.0"))
 		float RespawnTimer{ 2.f };
 
-#pragma endregion //Collectibles & Health
-
-/* ---------------------------------- ON WALL ----------------------------------- */
+#pragma endregion	//Collectibles & Health
 #pragma region OnWall
 public:// Capsule
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall")
@@ -776,20 +801,8 @@ private:
 
 	void CancelOnWall();
 
-#pragma endregion //OnWall
-
-	/* ----------------------- Actor Rotation Functions ---------------------------------- */
-	void ResetActorRotationPitchAndRoll(float DeltaTime);
-	void RotateActorYawToVector(FVector AimVector, float DeltaTime = 0);
-	void RotateActorPitchToVector(FVector AimVector, float DeltaTime = 0);
-		void RotateActorYawPitchToVector(FVector AimVector, float DeltaTime = 0);	//Old
-	void RollActorTowardsLocation(FVector Point, float DeltaTime = 0);
-
-	// Other Functions
-
-/* -------------------------------- GRAPPLEHOOK ----------------------------- */
+#pragma endregion					//OnWall
 #pragma region GrappleHook
-	//NEW--------------------------------------------
 public:
 	void RightTriggerClick();
 	void RightTriggerUn_Click();
@@ -799,6 +812,8 @@ public:
 		bool IsGrappling() const { return m_EState == EState::STATE_Grappling; }
 	UFUNCTION(BlueprintCallable)
 		bool Is_GH_PreLaunch() const { return IsGrappling() && m_EGrappleState == EGrappleState::Pre_Launch; }
+	UFUNCTION(BlueprintCallable)
+		bool Is_GH_StaticTarget() const;
 public:	// Launch Functions
 	void GH_PreLaunch();
 	void GH_PreLaunch_Static(void(ASteikemannCharacter::* LaunchFunction)(), IGrappleTargetInterface* IGrapple);
@@ -807,6 +822,7 @@ public:	// Launch Functions
 	void GH_Launch_Static();
 	void GH_Launch_Static_StuckEnemy();
 
+	void GH_Stop(EState newstate);
 	void GH_Stop();
 
 	
@@ -829,6 +845,8 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		FVector Active_GrappledActor_Location{};
 private:
+	bool bGrappleClick{};
+
 	EGrappleState m_EGrappleState = EGrappleState::None;
 	EGrappleType m_EGrappleType = EGrappleType::None;
 	TWeakObjectPtr<AActor> GrappledActor{ nullptr };
@@ -921,9 +939,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag|Camera Rotation")
 		float GrappleDrag_Camera_PitchPoint				/*UMETA(DisplayName = "Pitch Point")	*/			{ 20.f };
 
-#pragma endregion //GrappleHook
-
-/* ----------------------------------------- ATTACKS ----------------------------------------------- */
+#pragma endregion				//GrappleHook
 #pragma region Attacks
 	#pragma region General
 	EAttackState m_EAttackState = EAttackState::None;
@@ -972,6 +988,13 @@ public:
 	UFUNCTION(BlueprintCallable)
 		void AttackSmack_Start_Pure();
 	void AttackSmack_Start_Ground_Pure();
+	void AttackSmack_Grapple_Pure();
+
+	// Combo
+	int AttackComboCount{};
+	UFUNCTION(BlueprintImplementableEvent)
+		void ComboAttack(int combo);
+	void ComboAttack_Pure();
 
 
 	UFUNCTION(BlueprintCallable)
@@ -987,47 +1010,36 @@ public:
 
 	void Gen_Attack(IAttackInterface* OtherInterface, AActor* OtherActor, EAttackType& AType) override;
 
-	/* Turning Character during attack 
+	/***** TIMELINE COMPONENTS *****/
+	/* Turning Character during attack		
 		*	When an attack button is clicked, the player will be able to turn the character a certain degree 
-		*	before the movement locks in. Giving them the ability to slightly aim. */
-	class UTimelineComponent* TlComp_AttackTurn;
+		*	before the movement locks in. To make aiming the attack a bit easier */
+	void TlCurve_AttackTurn_IMPL(float value);
+	void TlCurve_AttackMovement_IMPL(float value);
+
+	/// TIMELINE *** SMACK ATTACK ***
+	class UTimelineComponent* TlComp_Attack_SMACK;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
 		UCurveFloat* Curve_AttackTurnStrength;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
+		UCurveFloat* Curve_AttackMovementStrength;
 	UFUNCTION()
 		void TlCurve_AttackTurn(float value);
+	UFUNCTION()
+		void TlCurve_AttackMovement(float value);
 
-	/* ---- Moving Character During Shared Basic Attack Anticipation ---- */
-	/* How far the character will move forward during the Shared Basic Attack Anticipation. Before the attack type is decided */
-	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
-	//	float PreBasicAttackMovementLength{ 50.f };
-	//bool bPreBasicAttackMoveCharacter{};
-	//void PreBasicAttackMoveCharacter(float DeltaTime);
+	/// TIMELNE *** SCOOP ATTACK ***
+	class UTimelineComponent* TlComp_Attack_SCOOP;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
+		UCurveFloat* Curve_AttackTurnStrength_SCOOP;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
+		UCurveFloat* Curve_AttackMovementStrength_SCOOP;
+	UFUNCTION()
+		void TlCurve_ScoopAttackTurn(float value);
+	UFUNCTION()
+		void TlCurve_ScoopAttackMovement(float value);
 
-	/* -------- Animation Variables -------- */
-	/* The speed of the anticipation to the regular attack. Which is shared between SmackAttack and ScoopAttack.
-	 * At the end of this anticipation, 
-	 * If the player still holds the attack button, the character will perform the scoop attack. 
-	 *  Else if the button is not held at this time, the character will perform the regular SmackAttack */
-	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|SmackAttack")
-	//	float SmackAttack_Anticipation_Rate		/*UMETA(DisplayName = "1. Smack Anticipation Rate")*/ { 4.5f };
-
-	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|SmackAttack")
-	//	float SmackAttack_Action_Rate			/*UMETA(DisplayName = "2. Smack Action Rate")*/ { 5.f };
-
-	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|SmackAttack")
-	//	float SmackAttack_Reaction_Rate			/*UMETA(DisplayName = "3. Smack Reaction Rate")*/ { 2.f };
-	//
-
-	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|ScoopAttack")
-	//	float ScoopAttack_Anticipation_Rate		/*UMETA(DisplayName = "1. Scoop Anticipation Rate")*/ { 10.f };
-
-	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|ScoopAttack")
-	//	float ScoopAttack_Action_Rate			/*UMETA(DisplayName = "2. Scoop Action Rate")*/ { 7.f };
-
-	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|BasicAttacks|ScoopAttack")
-	//	float ScoopAttack_Reaction_Rate			/*UMETA(DisplayName = "3. Scoop Reaction Rate")*/ { 2.f };
-	#pragma endregion //General
-	
+	#pragma endregion		//General
 	#pragma region SmackAttack
 	bool bAttackPress{};
 
@@ -1056,29 +1068,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks", meta = (UIMin = "0", UIMax = "1"))
 		float SmackAttack_InputStrengthMultiplier		/*UMETA(DisplayName = "Input Strength Multiplier")*/ { 0.2 };
 
-	/* ---- Moving Character During SmackAttack ---- */
-	/* How far the character will move forward during Smack Attack. Happens during The Action when the collider is active */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
-		float SmackAttackMovementLength{ 100.f };
-
-	bool bSmackAttackMoveCharacter{};
-	void SmackAttackMoveCharacter(float DeltaTime);
-
-	// Combo
-	int AttackComboCount{};
-	UFUNCTION(BlueprintImplementableEvent)
-		void ComboAttack(int combo);
-	void ComboAttack_Pure();
-
-	UFUNCTION(BlueprintCallable)
-		void Activate_SmackAttack();
-	UFUNCTION(BlueprintCallable)
-		void Deactivate_SmackAttack();
-
 	bool IsSmackAttacking() const;
 
 	bool bCanBeSmackAttacked{ true };
-
 
 	void Do_SmackAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override;
 	void Receive_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength) override;
@@ -1087,7 +1079,6 @@ public:
 	void ResetCanBeSmackAttacked() override { bCanBeSmackAttacked = true; }
 
 	#pragma endregion //SmackAttack
-
 	#pragma region ScoopAttack
 	bool bClickScoopAttack{};
 
@@ -1096,6 +1087,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 		void Start_ScoopAttack_Pure();
 	void Start_ScoopAttack_Ground_Pure();
+	void Start_ScoopAttack_Grapple_Pure();
+
 	void Click_ScoopAttack();
 	void UnClick_ScoopAttack();
 
@@ -1117,16 +1110,11 @@ public:
 
 	/* ---- Moving Character During ScoopAttack ---- */
 	/* How far the character will move forward during Scoop Attack. During Scoop Anticipation and Action */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
-		float ScoopAttackMovementLength{ 75.f };
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
+	//	float ScoopAttackMovementLength{ 75.f };
 
-	bool bScoopAttackMoveCharacter{};
-	void ScoopAttackMoveCharacter(float DeltaTime);
-
-	UFUNCTION(BlueprintCallable)
-		void Activate_ScoopAttack();
-	UFUNCTION(BlueprintCallable)
-		void Deactivate_ScoopAttack();
+	//bool bScoopAttackMoveCharacter{};
+	//void ScoopAttackMoveCharacter(float DeltaTime);
 
 	/* How far above the player will the scooped target go */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
@@ -1144,7 +1132,6 @@ public:
 	//void Receive_ScoopAttack_Pure(const FVector& Direction, const float& Strength) override;
 
 	#pragma endregion //ScoopAttack
-
 	#pragma region GroundPound
 
 	bool bGroundPoundPress{};
@@ -1153,6 +1140,8 @@ public:
 
 	void Click_GroundPound();
 	void UnClick_GroundPound();
+
+	void Do_GroundPound();
 
 	/* Movement */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GroundPound")
@@ -1204,5 +1193,5 @@ public:
 
 	#pragma endregion //GroundPound
 
-#pragma endregion //Attacks
+#pragma endregion					//Attacks
 };

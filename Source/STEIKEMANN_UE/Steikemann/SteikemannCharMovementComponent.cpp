@@ -455,8 +455,10 @@ FVector USteikemannCharMovementComponent::GetInputDirectionToNormal(FVector& inp
 FVector USteikemannCharMovementComponent::GetInputDirectionToNormal(FVector& input, const FVector& normal, FVector& right, FVector& up)
 {
 	FVector Input = input;
-	if (input.SizeSquared() < 0.5f)
+	if (input.SizeSquared() < 0.5f) {
 		Input = normal;
+		return Input;
+	}
 	
 	up = FVector::CrossProduct(normal, FVector::CrossProduct(FVector::UpVector, normal));
 	right = FVector::CrossProduct(up, normal);
@@ -469,15 +471,13 @@ FVector USteikemannCharMovementComponent::GetInputDirectionToNormal(FVector& inp
 FVector USteikemannCharMovementComponent::ClampDirectionToAngleFromVector(const FVector& direction, const FVector& clampVector, const float angle, const FVector& right, const FVector& up)
 {
 	float dot = FVector::DotProduct(clampVector, direction);
-	if (dot > WallJump_SidewaysAngleLimit)
-		return direction;
 	
 	FVector d;
-	float r = FVector::DotProduct(right, direction);
-	float a = FMath::RadiansToDegrees(acosf(angle));
-	if (r < 0) a *= -1.f;
+	float r = FMath::Clamp(FVector::DotProduct(right, direction), -angle, angle);
+	float a = FMath::RadiansToDegrees(asinf(r));
+	PRINTPARLONG("Walljump Dotprod = %f", r);
+	PRINTPARLONG("Walljump Angle = %f", a);
 	d = clampVector.RotateAngleAxis(a, up);
-		DrawDebugLine(GetWorld(), m_WallJumpData.Location, m_WallJumpData.Location + (direction * 100.f), FColor::Black, false, 2.f, 0, 5.f);
 	return d;
 }
 
