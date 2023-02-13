@@ -103,8 +103,7 @@ void ASteikemannCharacter::BeginPlay()
 	Super::BeginPlay();
 
 	// Root motion tullball
-	//SetAnimRootMotionTranslationScale(1.f / 4.5f);
-	SetAnimRootMotionTranslationScale(1.f);
+	SetAnimRootMotionTranslationScale(1.f/4.5f);
 
 	// Base stuff
 	MovementComponent = Cast<USteikemannCharMovementComponent>(GetCharacterMovement());
@@ -699,7 +698,7 @@ void ASteikemannCharacter::RightTriggerClick()
 void ASteikemannCharacter::RightTriggerUn_Click()
 {
 	bGrappleClick = false;
-	// Noe angående slapp grapple knappen ?
+	// Noe angï¿½ende slapp grapple knappen ?
 }
 
 void ASteikemannCharacter::GH_SetGrappleType(IGameplayTagAssetInterface* ITag, IGrappleTargetInterface* IGrapple)
@@ -941,14 +940,14 @@ UPhysicalMaterial* ASteikemannCharacter::DetectPhysMaterial()
 
 void ASteikemannCharacter::PlayCameraShake(TSubclassOf<UCameraShakeBase> shake, float falloff)
 {
-	/* Skal regne ut Velocity.Z også basere falloff på hvor stor den er */
+	/* Skal regne ut Velocity.Z ogsï¿½ basere falloff pï¿½ hvor stor den er */
 	UGameplayStatics::PlayWorldCameraShake(GetWorld(), shake, Camera->GetComponentLocation() + FVector(0, 0, 1), 0.f, 10.f, falloff);
 }
 
 /* ----------------- Read this function from the bottom->up after POINT ----------------- */
 void ASteikemannCharacter::GuideCamera(float DeltaTime)
 {
-	/* Lambda function for SLerp Playercontroller Quaternion to target Quat */	// Kunne bare vært en funksjon som tar inn en enum verdi
+	/* Lambda function for SLerp Playercontroller Quaternion to target Quat */	// Kunne bare vï¿½rt en funksjon som tar inn en enum verdi
 	auto SLerpToQuat = [&](FQuat& Target, float alpha, APlayerController* Con) {
 		FQuat Rot{ Con->GetControlRotation() };
 		FQuat New{ FQuat::Slerp(Rot, Target, alpha) };
@@ -982,7 +981,7 @@ void ASteikemannCharacter::GuideCamera(float DeltaTime)
 	}
 
 	/* This sets the camera directly to the FocusPoint */
-	FocusPoint FP = mFocusPoints[0];	// Hardkoder for første array punkt nå, Så vil ikke håndterer flere volumes og prioriteringene mellom dem
+	FocusPoint FP = mFocusPoints[0];	// Hardkoder for fï¿½rste array punkt nï¿½, Sï¿½ vil ikke hï¿½ndterer flere volumes og prioriteringene mellom dem
 	/* Get location used for */
 	switch (FP.ComponentType)
 	{
@@ -990,7 +989,7 @@ void ASteikemannCharacter::GuideCamera(float DeltaTime)
 		FP.Location = FP.ComponentLocation;
 		break;
 	case EFocusType::FOCUS_Spline:
-		// Bruk Internal_key til å finne lokasjonen
+		// Bruk Internal_key til ï¿½ finne lokasjonen
 		// Finn ny Spline key
 		// Lerp internal_key til ny splinekey
 		FP.Location = FP.FocusSpline->GetLocationAtSplineInputKey(Internal_SplineInputkey, ESplineCoordinateSpace::World);
@@ -1015,7 +1014,7 @@ void ASteikemannCharacter::GuideCamera(float DeltaTime)
 		float N = Distance / DistMax;	// Prosenten
 		Z = (N * ZAtMax) + (1-N)*ZAtMin;
 
-		/* Juster for høyden */
+		/* Juster for hï¿½yden */
 		float Zdiff = FP.Location.Z - GetActorLocation().Z;
 		if (Zdiff < 0){ Zdiff *= -1.f; }
 		Z += Zdiff * CameraGuide_ZdiffMultiplier;
@@ -1027,7 +1026,7 @@ void ASteikemannCharacter::GuideCamera(float DeltaTime)
 
 	auto LA_Absolute = [&](FocusPoint& P, float& alpha, APlayerController* Con) {
 		alpha >= 1.f ? alpha = 1.f : alpha += DeltaTime * P.LerpSpeed;
-		FQuat VToP{ ((P.Location - FVector(0, 0, PitchAdjust(CameraGuide_Pitch, CameraGuide_Pitch_MIN, CameraGuide_Pitch_MAX)/*Pitch Adjustment*/)) - CameraBoom->GetComponentLocation()).Rotation() };	// Juster pitch adjustment basert på z til VToP uten adjustment
+		FQuat VToP{ ((P.Location - FVector(0, 0, PitchAdjust(CameraGuide_Pitch, CameraGuide_Pitch_MIN, CameraGuide_Pitch_MAX)/*Pitch Adjustment*/)) - CameraBoom->GetComponentLocation()).Rotation() };	// Juster pitch adjustment basert pï¿½ z til VToP uten adjustment
 
 		SLerpToQuat(VToP, alpha, Con);
 	};
@@ -1067,7 +1066,7 @@ void ASteikemannCharacter::GuideCamera(float DeltaTime)
 		float length = VtoP_vec.Size();
 
 		// SLerp CameraBoom til quat
-		// Set Target Arm length slik at kamera sitter på target
+		// Set Target Arm length slik at kamera sitter pï¿½ target
 		CAM_LerpToPosition(VtoP_quat, alpha, length, 1.f/P.LerpSpeed, Con);
 	};
 
