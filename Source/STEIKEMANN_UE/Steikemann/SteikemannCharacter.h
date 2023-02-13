@@ -204,7 +204,7 @@ public:
 
 	bool ActivatePrompt();
 	bool ExitPrompt();
-#pragma endregion				// Prompt Area
+#pragma endregion						// Prompt Area
 #pragma region Audio
 	UPROPERTY(EditAnywhere, Category = "Audio")
 		UAudioComponent* Component_Audio{ nullptr };

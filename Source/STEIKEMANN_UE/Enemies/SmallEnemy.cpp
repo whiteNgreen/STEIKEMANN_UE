@@ -91,7 +91,6 @@ void ASmallEnemy::Tick(float DeltaTime)
 	case EEnemyState::STATE_InAir:
 		break;
 	case EEnemyState::STATE_Launched:
-		PRINT("LAUNCHED");
 		RotateActorYawToVector(GetVelocity() * -1.f);
 		break;
 	case EEnemyState::STATE_OnWall:
@@ -261,7 +260,6 @@ void ASmallEnemy::CollisionDelegate()
 
 void ASmallEnemy::Capacitate_Grappled()
 {
-	//PRINTLONG("Delegate Call From GRAPPLED To LANDED");
 	Capacitate(EAIIncapacitatedType::Grappled, 1.f/*Post grappled stun timer*/);
 }
 
@@ -303,7 +301,6 @@ void ASmallEnemy::LeaveWall()
 
 void ASmallEnemy::TargetedPure()
 {
-	//PRINTPAR("I; %s, am grapple targeted", *GetName());
 	Execute_Targeted(this);
 }
 

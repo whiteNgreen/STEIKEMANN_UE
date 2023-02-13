@@ -39,7 +39,6 @@ void AEnemyAIController::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	TM_AI.Tick(DeltaTime);
-	//bIsSensingPawn ? PRINT("bIsSensingPawn = True") : PRINT("bIsSensingPawn = False");
 }
 
 void AEnemyAIController::OnPossess(APawn* InPawn)

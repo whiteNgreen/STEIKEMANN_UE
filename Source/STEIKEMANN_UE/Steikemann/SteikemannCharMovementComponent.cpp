@@ -475,8 +475,6 @@ FVector USteikemannCharMovementComponent::ClampDirectionToAngleFromVector(const 
 	FVector d;
 	float r = FMath::Clamp(FVector::DotProduct(right, direction), -angle, angle);
 	float a = FMath::RadiansToDegrees(asinf(r));
-	PRINTPARLONG("Walljump Dotprod = %f", r);
-	PRINTPARLONG("Walljump Angle = %f", a);
 	d = clampVector.RotateAngleAxis(a, up);
 	return d;
 }

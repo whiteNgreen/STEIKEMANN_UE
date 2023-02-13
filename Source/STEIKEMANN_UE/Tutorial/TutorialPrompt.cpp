@@ -70,12 +70,12 @@ void ATutorialPrompt::ShowPrompt()
 {
 	switch (m_PromptType)
 	{
-	case ETutorialPrompt::Jump:			Prompt_Jump();			break;
-	case ETutorialPrompt::DoubleJump:	Prompt_DoubleJump();	break;
-	case ETutorialPrompt::Smack:		Prompt_Smack();			break;
-	case ETutorialPrompt::Scoop:		Prompt_Scoop();			break;
-	case ETutorialPrompt::GrappleHook:	Prompt_Grapplehook();	break;
-	case ETutorialPrompt::Groundpound:	Prompt_Groundpound();	break;
+	case ETutorialPromptType::Jump:			Prompt_Jump();			break;
+	case ETutorialPromptType::DoubleJump:	Prompt_DoubleJump();	break;
+	case ETutorialPromptType::Smack:		Prompt_Smack();			break;
+	case ETutorialPromptType::Scoop:		Prompt_Scoop();			break;
+	case ETutorialPromptType::GrappleHook:	Prompt_Grapplehook();	break;
+	case ETutorialPromptType::Groundpound:	Prompt_Groundpound();	break;
 	default:													break;
 	}
 }

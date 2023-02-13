@@ -230,33 +230,33 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		if (m_GamepadCameraInput.Length() > 1.f)
 			m_GamepadCameraInput.Normalize();
 	}
-	switch (m_EState)
-	{
-	case EState::STATE_OnGround:
-		PRINT("STATE_OnGround");
-		break;
-	case EState::STATE_InAir:
-		PRINT("STATE_InAir");
-		break;
-	case EState::STATE_OnWall:
-		PRINT("STATE_OnWall");
-		break;
-	case EState::STATE_Attacking:
-		PRINT("STATE_Attacking");
-		break;
-	case EState::STATE_Grappling:
-		PRINT("STATE_Grappling");
-		break;
-	default:
-		break;
-	}
-	PRINTPAR("Attack State :: %i", m_EAttackState);
-	PRINTPAR("Grapple State :: %i", m_EGrappleState);
+	//switch (m_EState)
+	//{
+	//case EState::STATE_OnGround:
+	//	PRINT("STATE_OnGround");
+	//	break;
+	//case EState::STATE_InAir:
+	//	PRINT("STATE_InAir");
+	//	break;
+	//case EState::STATE_OnWall:
+	//	PRINT("STATE_OnWall");
+	//	break;
+	//case EState::STATE_Attacking:
+	//	PRINT("STATE_Attacking");
+	//	break;
+	//case EState::STATE_Grappling:
+	//	PRINT("STATE_Grappling");
+	//	break;
+	//default:
+	//	break;
+	//}
+	//PRINTPAR("Attack State :: %i", m_EAttackState);
+	//PRINTPAR("Grapple State :: %i", m_EGrappleState);
 	//PRINTPAR("Smack Attack State :: %i", m_ESmackAttackState);
 	//PRINTPAR("Air State :: %i", m_EAirState);
 	//PRINTPAR("Pogo Type :: %i", m_EPogoType);
 	//PRINTPAR("Jump Count = %i", JumpCurrentCount);
-	PRINTPAR("MovementInputState = %i", m_EMovementInputState);
+	//PRINTPAR("MovementInputState = %i", m_EMovementInputState);
 
 	/*		Resets Rotation Pitch and Roll		*/
 	if (IsFalling() || GetMoveComponent()->IsWalking()) {
@@ -390,7 +390,6 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		{
 			if (TempNiagaraComponents[i]->IsComplete())
 			{
-				//PRINTLONG("Removing completed TempNiagaraComponent");
 				TempNiagaraComponents[i]->DestroyComponent();
 				TempNiagaraComponents.RemoveAt(i);
 				i--;
@@ -1125,9 +1124,6 @@ void ASteikemannCharacter::GuideCamera(float DeltaTime)
 	default:
 		break;
 	}
-
-	//PRINTPAR("Alpha : %f", CameraGuideAlpha);
-	//PRINTPAR("Fokuspoints: %i", mFocusPoints.Num());
 }
 
 void ASteikemannCharacter::GuideCameraTowardsVector(FVector vector, float alpha)
@@ -1237,7 +1233,6 @@ void ASteikemannCharacter::GuideCamera_StaticGrapple(float DeltaTime)
 {
 	if (!Active_GrappledActor.Get()) 
 		return;
-	PRINTPAR("Camera Alpha = %f", GC_StaticGrapple_Alpha);
 
 	GC_StaticGrapple_Alpha = FMath::Max(GC_StaticGrapple_Alpha - (GC_StaticGrapple_SlerpSpeed * DeltaTime), 0.f);
 	FVector dir = Active_GrappledActor->GetActorLocation() - GetActorLocation();
@@ -1319,7 +1314,6 @@ bool ASteikemannCharacter::BreakMovementInput(float value)
 	{
 		if (m_EMovementInputState == EMovementInput::Open && (value > 0.1f || value < -0.1f) && m_EAttackState != EAttackState::GroundPound)
 		{
-			PRINTLONG("BREAK MOVEMENT INPUT: ATTACK");
 			ResetState();
 			StopAnimMontage();
 			Deactivate_AttackCollider();
@@ -1558,7 +1552,7 @@ void ASteikemannCharacter::Jump()
 		}
 		case EState::STATE_Attacking:
 		{
-			BufferDelegate_Attack(&ASteikemannCharacter::PostScoopJump);
+			BufferDelegate_Attack(&ASteikemannCharacter::PostScoopJump);// TRENGER ENUM for attack buffer state, og beholde Enum Attack type for å identifisere typen attack
 			break;
 		}
 		case EState::STATE_Grappling:
@@ -1777,10 +1771,10 @@ bool ASteikemannCharacter::PB_Groundpound_Predeterminehit()
 	FCollisionQueryParams Params("", false, this);
 	// Ground
 	FHitResult GroundHit;
-	bool ground = GetWorld()->LineTraceSingleByChannel(GroundHit, GetActorLocation(), GetActorLocation() - FVector(0, 0, 1000.f), ECC_WorldStatic, Params);
+	bool ground = GetWorld()->LineTraceSingleByChannel(GroundHit, GetActorLocation() + FVector(0,0, 150.f), GetActorLocation() - FVector(0, 0, 1000.f), ECC_WorldStatic, Params);
 	if (!ground)
 	{
-		ground = GetWorld()->LineTraceSingleByChannel(GroundHit, GetActorLocation(), GetActorLocation() - FVector(0, 0, 1000.f), ECC_PogoCollision, Params);
+		ground = GetWorld()->LineTraceSingleByChannel(GroundHit, GetActorLocation() + FVector(0, 0, 150.f), GetActorLocation() - FVector(0, 0, 1000.f), ECC_PogoCollision, Params);
 		if (!ground)
 			return false;
 	}
@@ -1839,7 +1833,6 @@ bool ASteikemannCharacter::ValidLengthToCapsule(FVector HitLocation, FVector cap
 void ASteikemannCharacter::PB_Pogo()
 {
 	if (m_EAttackState == EAttackState::GroundPound) {
-		//PRINTLONG("Collision: ENTER POGO GROUNDPOUND");
 		m_EPogoType = EPogoType::POGO_Groundpound;
 		return;
 	}
@@ -2492,7 +2485,7 @@ void ASteikemannCharacter::Click_Attack()
 			BufferDelegate_Attack(&ASteikemannCharacter::Disable_PostScoopJumpGravity);
 			return;
 		}
-		AttackSmack_Start_Ground_Pure();
+		//AttackSmack_Start_Ground_Pure();	// TRENGER ENUM for attack buffer state, og beholde Enum Attack type for å identifisere typen attack
 		break;
 	}
 	case EState::STATE_OnWall:
@@ -2864,7 +2857,6 @@ void ASteikemannCharacter::Gen_Attack(IAttackInterface* OtherInterface, AActor* 
 
 void ASteikemannCharacter::TlCurve_AttackTurn_IMPL(float value)
 {
-	PRINTPAR("Turn Value = %f", value);
 	FVector proj = m_InputVector.ProjectOnTo(GetActorRightVector());
 	FVector Dir = FVector(GetActorForwardVector() + (proj * value)).GetSafeNormal2D();
 	SetActorRotation(Dir.Rotation(), ETeleportType::TeleportPhysics);
@@ -2872,7 +2864,6 @@ void ASteikemannCharacter::TlCurve_AttackTurn_IMPL(float value)
 
 void ASteikemannCharacter::TlCurve_AttackMovement_IMPL(float value)
 {
-	PRINTPAR("Movement Value = %f", value);
 	float dot = FMath::Clamp(FVector::DotProduct(GetActorForwardVector(), m_InputVector), 0.f, 1.f);
 	float strength = value * dot * m_InputVector.Length() * GetWorld()->GetDeltaSeconds();
 	AddActorWorldOffset(GetActorForwardVector() * strength, false, nullptr, ETeleportType::None);

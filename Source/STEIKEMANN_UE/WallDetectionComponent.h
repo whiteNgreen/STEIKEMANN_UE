@@ -41,7 +41,7 @@ enum class EOnWallState : int8
 	WALL_Leave
 };
 
-UCLASS(BlueprintType)
+UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class STEIKEMANN_UE_API UWallDetectionComponent : public UActorComponent
 {
 	GENERATED_UCLASS_BODY()
