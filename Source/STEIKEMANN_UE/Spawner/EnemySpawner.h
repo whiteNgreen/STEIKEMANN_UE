@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "../GameplayTags.h"
 #include "../Interfaces/AttackInterface.h"
+#include "../Enemies/SmallEnemy.h"
 #include "GameFramework/Actor.h"
 #include "EnemySpawner.generated.h"
 
@@ -16,6 +17,12 @@ enum EEnemySpawnType
 	Other
 };
 
+struct EDogPack
+{
+	ASmallEnemy* Red{ nullptr };
+	ASmallEnemy* Pink{ nullptr };
+	ASmallEnemy* Teal{ nullptr };
+};
 
 UCLASS()
 class STEIKEMANN_UE_API AEnemySpawner : public AActor,
@@ -106,4 +113,6 @@ public: // Functions - Called by SpawnedActor
 private: // PRIVATE Functions
 	void SpawnAubergineDog();
 	ACharacter* SpawnCharacter();
+
+	void SpawnAuberginePack();
 };

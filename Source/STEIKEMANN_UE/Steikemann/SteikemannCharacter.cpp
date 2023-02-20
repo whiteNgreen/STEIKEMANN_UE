@@ -216,6 +216,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Red, FString::Printf(TEXT("CorruptionCore : %i"), CollectibleCorruptionCore), true, FVector2D(1.5f));
 	GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Red, FString::Printf(TEXT("Health : %i"), Health), true, FVector2D(4));
 
+
 	if (bIsDead) { return; }
 	/* Rotate Inputvector to match the playercontroller */
 	{

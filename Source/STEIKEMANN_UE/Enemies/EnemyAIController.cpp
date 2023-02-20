@@ -8,6 +8,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "SmallEnemy.h"
 #include "../Steikemann/SteikemannCharacter.h"
+#include "../StaticVariables.h"
 
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BehaviorTreeComponent.h"
@@ -16,8 +17,8 @@
 
 AEnemyAIController::AEnemyAIController()
 {
-	BTComponent = CreateDefaultSubobject<UBehaviorTreeComponent>("BehaviorTree Component");
-	BBComponent = CreateDefaultSubobject<UBlackboardComponent>("Blackboard Component");
+	//BTComponent = CreateDefaultSubobject<UBehaviorTreeComponent>("BehaviorTree Component");
+	//BBComponent = CreateDefaultSubobject<UBlackboardComponent>("Blackboard Component");
 	PSComponent = CreateDefaultSubobject<UPawnSensingComponent>("Pawn Sensing Component");
 }
 
@@ -28,17 +29,42 @@ void AEnemyAIController::BeginPlay()
 	PSComponent->OnSeePawn.AddDynamic(this, &AEnemyAIController::AIOnSeePawn);
 	PSComponent->OnHearNoise.AddDynamic(this, &AEnemyAIController::AIHearNoise);
 
-	Async(EAsyncExecution::TaskGraphMainThread, [this]() {
-		SetState(ESmallEnemyAIState::RecentlySpawned);
-		FTimerHandle h;
-		GetWorldTimerManager().SetTimer(h, [this]() { SetState(ESmallEnemyAIState::Idle); }, TimeSpentRecentlySpawned, false);
-		});
+	/* When spawned or respawned. Activate enemy after a timer */
+	//Async(EAsyncExecution::TaskGraphMainThread, [this]() {
+	//	SetState(ESmallEnemyAIState::RecentlySpawned);
+	//	FTimerHandle h;
+	//	GetWorldTimerManager().SetTimer(h, [this]() { SetState(ESmallEnemyAIState::Idle); }, TimeSpentRecentlySpawned, false);
+	//	});
+
+	AActor* player = UGameplayStatics::GetActorOfClass(GetWorld(), ASteikemannCharacter::StaticClass());
+	InitiateChase(player);
 }
 
 void AEnemyAIController::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	TM_AI.Tick(DeltaTime);
+	
+	switch (m_AIState)
+	{
+	case ESmallEnemyAIState::RecentlySpawned:
+		break;
+	case ESmallEnemyAIState::Idle:
+		break;
+	case ESmallEnemyAIState::Alerted:
+		break;
+	case ESmallEnemyAIState::ChasingTarget:
+		ChaseUpdate(DeltaTime);
+		break;
+	case ESmallEnemyAIState::Attack:
+		break;
+	case ESmallEnemyAIState::Incapacitated:
+		break;
+	case ESmallEnemyAIState::None:
+		break;
+	default:
+		break;
+	}
 }
 
 void AEnemyAIController::OnPossess(APawn* InPawn)
@@ -47,12 +73,10 @@ void AEnemyAIController::OnPossess(APawn* InPawn)
 
 	m_PawnOwner = Cast<ASmallEnemy>(InPawn);
 
-	InitializeBlackboard(*BBComponent, *BB);
-	BTComponent->StartTree(*BT);
-
 	SetState(ESmallEnemyAIState::Idle);
-	
-	BBComponent->SetValueAsObject("Player", UGameplayStatics::GetActorOfClass(GetWorld(), ASteikemannCharacter::StaticClass()));
+
+	AActor* player = UGameplayStatics::GetActorOfClass(GetWorld(), ASteikemannCharacter::StaticClass());
+	InitiateChase(player);
 }
 
 void AEnemyAIController::AIOnSeePawn(APawn* pawn)
@@ -81,12 +105,6 @@ void AEnemyAIController::AIOnSeePawn(APawn* pawn)
 
 void AEnemyAIController::AIHearNoise(APawn* InstigatorPawn, const FVector& Location, float Volume)
 {
-	//PRINTPARLONG("%s HEARING pawn %s", *GetName(), *InstigatorPawn->GetName());
-
-	// SetState(Alerted)
-	//
-	// Hear player, if they are then spotted, instantly become hostile
-		// Set SensedState on pawn to Previously Heard
 }
 
 void AEnemyAIController::SensePawn(APawn* pawn, FGameplayTag& tag)
@@ -103,7 +121,6 @@ void AEnemyAIController::SensePawn_Player()
 		if (!bIsSensingPawn) {
 			TM_AI.ClearTimer(TH_SpotPlayer);
 			ReDetermineState();
-			//GEngine->AddOnScreenDebugMessage(0, 2.f, FColor::Purple, TEXT("No Longer sensing player"));
 			SensedPawnsDelegate.Clear();
 		}
 	}
@@ -115,30 +132,21 @@ void AEnemyAIController::SensePawn_Player()
 
 void AEnemyAIController::SpotPlayer()
 {
-	//GEngine->AddOnScreenDebugMessage(0, 2.f, FColor::Purple, TEXT("SPOTTING PLAYER"));
 	SetState(ESmallEnemyAIState::ChasingTarget);
-	BBComponent->SetValueAsObject("APlayer", m_PawnOwner->m_SensedPawn);
 }
 
 void AEnemyAIController::Attack()
 {
-	//PRINTLONG("Attacking");
 	auto player = Cast<ASteikemannCharacter>(m_PawnOwner->m_SensedPawn);
 	if (!player) return;
 	player->PTakeDamage(1, m_PawnOwner);
 }
 
-void AEnemyAIController::ResetTree()
-{
-	BTComponent->RestartTree();
-}
 
 void AEnemyAIController::SetState(const ESmallEnemyAIState& state)
 {
 	if (m_AIState == state) return;
 	m_AIState = state;
-	BBComponent->SetValueAsEnum("Enum_State", (int8)state);
-	ResetTree();
 }
 
 void AEnemyAIController::IncapacitateAI(const EAIIncapacitatedType& IncapacitateType, float Time, const ESmallEnemyAIState& NextState)
@@ -147,14 +155,12 @@ void AEnemyAIController::IncapacitateAI(const EAIIncapacitatedType& Incapacitate
 	SetState(ESmallEnemyAIState::Incapacitated);
 	m_AIIncapacitatedType = IncapacitateType;
 
-	//PSComponent->SetSensingUpdatesEnabled(false);
 	// AI Incapacitated for an undetermined amount of time
 	if (Time < 0.f)
 	{
 		return;
 	}
 	GetWorldTimerManager().SetTimer(TH_IncapacitateTimer, [this, NextState]() { 
-		//PSComponent->SetSensingUpdatesEnabled(true);
 		ReDetermineState();
 	}, Time, false);
 }
@@ -185,23 +191,116 @@ void AEnemyAIController::CapacitateAI(float Time, const ESmallEnemyAIState& Next
 	GetWorldTimerManager().SetTimer(TH_IncapacitateTimer, [this, NextState]() { ReDetermineState(NextState); }, Time, false);
 }
 
-void AEnemyAIController::SetNewTargetPoints()
+void AEnemyAIController::InitiateChase(AActor* Player)
 {
-	BBComponent->SetValueAsVector("VTarget_A", m_PawnOwner->GetActorLocation());
+	m_Player = Player;
+	m_AIState = ESmallEnemyAIState::ChasingTarget;
 
-	// Get location near spawner 
-	FVector NearSpawnLocation = m_PawnOwner->GetRandomLocationNearSpawn();
-	BBComponent->SetValueAsVector("VTarget_B", NearSpawnLocation);
-	UpdateTargetPosition();
-
-	//DrawDebugPoint(GetWorld(), NearSpawnLocation, 30.f, FColor::Black, false, 3.f, -1);
+	if (!Player) return;
+	switch (m_DogType)
+	{
+	case EDogType::Red:
+		ChasePlayer_Red_Update();
+		break;
+	case EDogType::Pink:
+		ChasePlayer_Pink_Update();
+		break;
+	case EDogType::Teal:
+		break;
+	default:
+		break;
+	}
 }
 
-void AEnemyAIController::UpdateTargetPosition()
+void AEnemyAIController::ChaseUpdate(float DeltaTime)
 {
-	FVector targetlocation = BBComponent->GetValueAsVector("VTarget_B");
+	switch (m_DogType)
+	{
+	case EDogType::Red:
+		ChasePlayer_Red();
+		break;
+	case EDogType::Pink:
+		ChasePlayer_Pink();
+		break;
+	case EDogType::Teal:
+		break;
+	default:
+		break;
+	}
 
-	BBComponent->SetValueAsVector("VTargetLocation", targetlocation);
+	// Updating pink chaselocation
+	Pink_ChaseLocation.X = FMath::FInterpTo(Pink_ChaseLocation.X, Pink_ChaseLocation_Target.X, DeltaTime, Pink_SideLength_LerpSpeed);
+	Pink_ChaseLocation.Y = FMath::FInterpTo(Pink_ChaseLocation.Y, Pink_ChaseLocation_Target.Y, DeltaTime, Pink_SideLength_LerpSpeed);
+	Pink_ChaseLocation.Z = FMath::FInterpTo(Pink_ChaseLocation.Z, Pink_ChaseLocation_Target.Z, DeltaTime, Pink_SideLength_LerpSpeed);
 }
+
+void AEnemyAIController::ChasePlayer_Red()
+{
+	if (!m_Player) return;
+
+	PRINT("Chasing Player :: RED");
+	MoveToLocation(m_Player->GetActorLocation());
+}
+
+void AEnemyAIController::ChasePlayer_Red_Update()
+{
+}
+
+void AEnemyAIController::ChasePlayer_Pink()
+{
+	if (!m_Player) return;
+
+	ChasePlayer_Pink_Update();
+	
+	//if (bPinkCloseToPlayer) {
+		//PRINT("Direct to player");
+		//MoveToLocation(m_Player->GetActorLocation());
+	//}
+	//else {
+
+		MoveToLocation(Pink_ChaseLocation);
+	//}
+	PRINT("Chasing Player :: PINK");
+}
+
+void AEnemyAIController::ChasePlayer_Pink_Update()
+{
+	//TM_AI.SetTimer(TH_ChaseUpdate, this, &AEnemyAIController::ChasePlayer_Pink_Update, 0.2f);
+	
+	FVector playerLoc = m_Player->GetActorLocation();
+	FVector forward = m_Player->GetActorForwardVector();
+
+	bPinkCloseToPlayer = FVector::Dist(playerLoc, GetPawn()->GetActorLocation()) <= Pink_ActivationRange ||
+		FVector::Dist(Pink_ChaseLocation, GetPawn()->GetActorLocation()) <= Pink_ActivationRange;
+	//if (bPinkCloseToPlayer)	// If close to the player, and PackAttack is available, CHOMP!
+	//return;
+
+	FVector forwardLength = forward * Pink_ForwardChaseLength;
+
+	FHitResult Hit;
+	FCollisionQueryParams Params("", false, m_Player);
+	Params.AddIgnoredActor(GetPawn());
+	if (GetWorld()->LineTraceSingleByChannel(Hit, playerLoc, playerLoc + forwardLength, ECC_WorldStatic/* CHANGE TO ECC_WALLS OR SOMETHING */, Params))
+	{
+		forwardLength = forward * FVector::Dist(playerLoc, Hit.ImpactPoint);
+	}
+
+
+	// Make the dog run a slight cirle around the player by adding to the players right vector and the dogs target location
+	FVector right = m_Player->GetActorRightVector();
+	FVector FromPlayerToPawn = GetPawn()->GetActorLocation() - playerLoc;
+	float Dot = FVector::DotProduct(FromPlayerToPawn.GetSafeNormal2D(), forward);
+	FVector rightProj = FromPlayerToPawn.ProjectOnTo(right).GetSafeNormal();
+
+	Pink_ChaseLocation_Target = playerLoc + (forwardLength * DotGuassian(Dot, 0.5f, -0.5f));
+	Pink_ChaseLocation_Target += (rightProj * DotGuassian(Dot, 0.5f, -1.f) * Pink_SideLength);
+
+	PRINTPAR("Dot Inverted = %f", DotGuassian(Dot, 0.5f, -1.f));
+	PRINTPAR("Dot Guassian = %f", DotGuassian(Dot, 0.5f, -0.5f));
+
+	DrawDebugPoint(GetWorld(), Pink_ChaseLocation_Target, 20.f, FColor::Red, false, 0, -2);
+	DrawDebugPoint(GetWorld(), Pink_ChaseLocation, 30.f, FColor::Purple, false, 0, -1);
+}
+
 
 

@@ -185,4 +185,9 @@ ACharacter* AEnemySpawner::SpawnCharacter()
 	return spawnedCharacter;
 }
 
+void AEnemySpawner::SpawnAuberginePack()
+{
+	EDogPack pack;
+
+}
 

@@ -20,6 +20,8 @@ DECLARE_DELEGATE(FIncapacitatedLandDelegation)
 DECLARE_DELEGATE(FIncapacitatedCollision)
 
 /************************ ENUMS *****************************/
+
+
 UENUM()
 enum class EGravityState : int8
 {
