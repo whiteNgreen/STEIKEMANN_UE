@@ -59,6 +59,7 @@ enum class EWall : int8
 struct SpawnPointData
 {
 	FVector Location;
+	FVector IdleLocation;
 	float Radius_Min;
 	float Radius_Max;
 };
@@ -99,11 +100,12 @@ public:	// Components
 		UNiagaraSystem* NS_Trail{ nullptr };
 	UNiagaraComponent* NComp_AirTrailing;
 
+	AEnemyAIController* m_AI{ nullptr };
 #pragma endregion //Base
 
 #pragma region Animation
 public:	// Variables
-	class UEnemyAnimInstance* AnimInstance{ nullptr };
+	class UEnemyAnimInstance* m_Anim{ nullptr };
 
 public: // Functions
 	UFUNCTION(BlueprintImplementableEvent)
@@ -112,7 +114,8 @@ public: // Functions
 #pragma endregion // Animation
 
 #pragma region SpawnRespawn
-	SpawnPointData m_SpawnPointData;
+	TSharedPtr<SpawnPointData> m_SpawnPointData;
+	void SetSpawnPointData(TSharedPtr<SpawnPointData> spawn);
 	FVector GetRandomLocationNearSpawn();
 #pragma endregion // SpawnRespawn
 
@@ -131,15 +134,17 @@ public: // Variables
 		APawn* m_SensedPawn{ nullptr };
 	UPROPERTY(BlueprintReadOnly)
 		bool bSensingPawn{};
-/// <summary>
-/// DELEGATE:
-/// 	Funksjoner kalt at AI legger til i delegate.
-/// 	Delegate kalles på BTService
-/// </summary>
+
+	enum EDogType m_DogType;
+	void SetDogType(enum EDogType type);
+	TSharedPtr<struct EDogPack> m_DogPack;
+
 public: // Functions
 	/* Returns true if the player is spotted, false if it spots something else */
 	FGameplayTag SensingPawn(APawn* pawn);
 
+	void SleepingBegin();
+	void SleepingEnd();
 #pragma endregion // AI
 
 #pragma region States
@@ -157,10 +162,13 @@ public: // Variables for calling AI
 	FIncapacitatedCollision IncapacitatedCollisionDelegate;
 	FIncapacitatedLandDelegation IncapacitatedLandDelegation;
 
-public: // Functinos calling AI controller
+public: // Functinos calling AI controller or Functions AI controller calling 
 	void Incapacitate(const EAIIncapacitatedType& IncapacitateType, float Time = -1.f, const ESmallEnemyAIState& NextState = ESmallEnemyAIState::None);
 	void IncapacitateUndeterminedTime(const EAIIncapacitatedType& IncapacitateType, void (ASmallEnemy::* landingfunction)() = nullptr);
 	void Capacitate(const EAIIncapacitatedType& IncapacitateType, float Time = -1.f, const ESmallEnemyAIState& NextState = ESmallEnemyAIState::None);
+
+	bool IsIncapacitated() const;
+	bool IsTargetWithinSpawn(const FVector& target, const float& radiusmulti = 1.f) const;
 
 private: // Functions Capacitate - Used for IncapacitatedLandingDelegate
 	void IncapacitatedLand();

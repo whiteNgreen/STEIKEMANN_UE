@@ -13,13 +13,21 @@
 AEnemySpawner::AEnemySpawner()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 
 	Root = CreateDefaultSubobject<USceneComponent>("Root");
 	RootComponent = Root;
 
 	SpawnPoint = CreateDefaultSubobject<USceneComponent>("Spawn Point");
 	SpawnPoint->SetupAttachment(Root);
+	IdlePoint = CreateDefaultSubobject<USceneComponent>("Idle Point");
+	IdlePoint->SetupAttachment(Root);
+
+#ifdef WITH_EDITOR 
+	IdlePointSprite = CreateDefaultSubobject<UBillboardComponent>("Sprite");
+	IdlePointSprite->SetupAttachment(IdlePoint);
+	IdlePointSprite->SetWorldScale3D(FVector(0.5f));
+#endif // WITHEDITOR
 }
 
 // Called when the game starts or when spawned
@@ -29,6 +37,15 @@ void AEnemySpawner::BeginPlay()
 
 	m_SpawnLocation = SpawnPoint->GetComponentLocation();
 	GameplayTags.AddTag(Tag::EnemySpawner());
+	m_AuberginePack = MakeShared<EDogPack>();
+
+	{
+		SpawnData = MakeShared<SpawnPointData>();
+		SpawnData->Location = GetActorLocation();
+		SpawnData->Radius_Max = SpawnerActiveRadius;
+		SpawnData->Radius_Min = SpawnerMinRadius;
+		SpawnData->IdleLocation = IdlePoint->GetComponentLocation();
+	}
 
 	Async(EAsyncExecution::TaskGraphMainThread, [this]() { BeginActorSpawn(&AEnemySpawner::SpawnActor); });
 }
@@ -37,7 +54,7 @@ void AEnemySpawner::BeginPlay()
 void AEnemySpawner::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
+	DrawDebugSphere(GetWorld(), GetActorLocation(), SpawnerActiveRadius, 30, FColor::Red, false, 0.f, 0, 5.f);
 }
 
 void AEnemySpawner::BeginActorSpawn(void(AEnemySpawner::* spawnFunction)())
@@ -48,9 +65,8 @@ void AEnemySpawner::BeginActorSpawn(void(AEnemySpawner::* spawnFunction)())
 void AEnemySpawner::BeginActorRespawn()
 {
 	DrawDebugSphere(GetWorld(), GetActorLocation(), SpawnerActiveRadius, 30, FColor::Red, false, 1.f, 0, 5.f);
-	TArray<ASmallEnemy*> actorsToRespawn;
-	DetermineActorsToRespawn(actorsToRespawn);
-	RespawnActors(actorsToRespawn);
+	DetermineActorsToRespawn(m_ActorsToRespawn);
+	RespawnActors(m_ActorsToRespawn);
 }
 
 void AEnemySpawner::CheckSpawningActorClass()
@@ -73,27 +89,11 @@ void AEnemySpawner::CheckSpawningActorClass()
 
 void AEnemySpawner::SpawnActor()
 {
-	//switch (m_EENemySpawnType)
-	//{
-	//case EEnemySpawnType::AubergineDog:
-	//	break;
-	//case EEnemySpawnType::Character:
-	//	SpawnCharacter();
-	//	break;
-	//case EEnemySpawnType::Other:
-	//	break;
-	//default:
-	//	break;
-	//}
 	static TFuture<void> asyncSpawn;
-	//if (asyncSpawn.WaitFor(FTimespan::FromSeconds(0.2))) {
-	//	UE_LOG(LogTemp, Error, TEXT("%s, Spawner failed Async WaitFor"), *GetName());
-	//	return;
-	//}
-	
+	if (TypeIndex >= 3) TypeIndex = 0;
 	m_SpawnIndex++;
 	asyncSpawn = Async(EAsyncExecution::TaskGraphMainThread, [this]() {
-		SpawnAubergineDog();
+		SpawnAubergineDog(TypeIndex);
 		if (m_SpawnIndex < m_SpawnAmount)
 			GetWorldTimerManager().SetTimer(TH_SpawnTimer, this, &AEnemySpawner::SpawnActor, Timer_SpawnIterator);
 		});
@@ -118,9 +118,7 @@ void AEnemySpawner::RespawnActors(TArray<ASmallEnemy*>& actorsToRespawn)
 {
 	m_SpawnIndex = 0;
 	m_SpawnAmount = actorsToRespawn.Num();
-
-	for (auto& it : actorsToRespawn)
-		it->Destroy();
+	m_ActorsToDestroy = actorsToRespawn;
 
 	if (actorsToRespawn.Num() == 0) {
 		GetWorldTimerManager().SetTimer(FTHCanBeDamaged, [this]() { bAICanBeDamaged = true; }, CanBeAttackedTimer, false);
@@ -131,12 +129,23 @@ void AEnemySpawner::RespawnActors(TArray<ASmallEnemy*>& actorsToRespawn)
 
 void AEnemySpawner::RespawnActor()
 {
-	SpawnAubergineDog();
+	int type = (int)m_ActorsToRespawn[m_ActorsToRespawn.Num() - 1]->m_DogType;
+	m_ActorsToRespawn.RemoveAt(m_ActorsToRespawn.Num() - 1);
+
+	SpawnAubergineDog(type);
 	m_SpawnIndex++;
-	if (m_SpawnIndex < m_SpawnAmount)
+	if (m_SpawnIndex < m_SpawnAmount) {
 		GetWorldTimerManager().SetTimer(TH_SpawnTimer, this, &AEnemySpawner::RespawnActor, Timer_SpawnIterator);
-	if (m_SpawnIndex >= m_SpawnAmount)
+	}
+
+	if (m_SpawnIndex >= m_SpawnAmount) {
 		GetWorldTimerManager().SetTimer(FTHCanBeDamaged, [this]() { bAICanBeDamaged = true; }, CanBeAttackedTimer, false);
+
+		for (auto& it : m_ActorsToDestroy) {
+			it->Destroy();
+		}
+		m_ActorsToDestroy.Empty();
+	}
 }
 
 void AEnemySpawner::Gen_ReceiveAttack(const FVector& Direction, const float& Strength, EAttackType& AType)
@@ -147,18 +156,38 @@ void AEnemySpawner::Gen_ReceiveAttack(const FVector& Direction, const float& Str
 	BeginActorSpawn(&AEnemySpawner::BeginActorRespawn);
 }
 
-void AEnemySpawner::SpawnAubergineDog()
+void AEnemySpawner::SpawnAubergineDog(int& index)
 {
-	ASmallEnemy* spawnedDog = (ASmallEnemy*)SpawnCharacter();
+	ASmallEnemy* spawnedDog = Cast<ASmallEnemy>(SpawnCharacter());
 	if (!spawnedDog)
 		return;
+	spawnedDog->m_DogPack = m_AuberginePack;
+
+	switch (index++)
+	{
+	case 0:
+		PRINTLONG("Spawning : RED");
+		spawnedDog->SetDogType(EDogType::Red);
+		m_AuberginePack->Red = spawnedDog;
+		break;
+	case 1:
+		PRINTLONG("Spawning : PINK");
+		spawnedDog->SetDogType(EDogType::Pink);
+		m_AuberginePack->Pink = spawnedDog;
+		break;
+	case 2:
+		PRINTLONG("Spawning : TEAL");
+		spawnedDog->SetDogType(EDogType::Teal);
+		m_AuberginePack->Teal = spawnedDog;
+		index = 0;
+		break;
+	default:
+		break;
+	}
+
 	SpawnedActors.Add(spawnedDog);
 
-	SpawnPointData data;
-	data.Location = GetActorLocation();
-	data.Radius_Max = SpawnerActiveRadius;
-	data.Radius_Min = SpawnerMinRadius;
-	spawnedDog->m_SpawnPointData = data;
+	spawnedDog->SetSpawnPointData(SpawnData);
 
 	// Initiate dog specific animations
 		// Should be called at ASmallEnemy::BeginPlay() or ASmallEnemy::Respawn() ??
@@ -183,11 +212,5 @@ ACharacter* AEnemySpawner::SpawnCharacter()
 	spawnedCharacter->GetCharacterMovement()->AddImpulse(LaunchDirection.GetSafeNormal() * Spawn_LaunchStrength, true);
 	
 	return spawnedCharacter;
-}
-
-void AEnemySpawner::SpawnAuberginePack()
-{
-	EDogPack pack;
-
 }
 

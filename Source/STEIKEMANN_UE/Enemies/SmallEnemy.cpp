@@ -3,6 +3,8 @@
 
 #include "../Enemies/SmallEnemy.h"
 #include "EnemyAIController.h"
+#include "EnemyAnimInstance.h"
+#include "../Spawner/EnemySpawner.h"
 #include "../CommonFunctions.h"
 #include "EnemyAnimInstance.h"
 #include "DrawDebugHelpers.h"
@@ -135,15 +137,21 @@ void ASmallEnemy::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 void ASmallEnemy::Anim_Attacked_Pure(FVector direction)
 {
 	Anim_Attacked();
-	AnimInstance->SetLaunchedInAir(direction);
+	m_Anim->SetLaunchedInAir(direction);
+}
+
+void ASmallEnemy::SetSpawnPointData(TSharedPtr<SpawnPointData> spawn)
+{
+	m_SpawnPointData = spawn;
+	m_AI->m_SpawnPointData = spawn;
 }
 
 FVector ASmallEnemy::GetRandomLocationNearSpawn()
 {
-	FVector location = m_SpawnPointData.Location;
+	FVector location = m_SpawnPointData->Location;
 	FVector direction = FVector::ForwardVector.RotateAngleAxis(RandomFloat(0.f, 360.f), FVector::UpVector);
 
-	location += direction * RandomFloat(m_SpawnPointData.Radius_Min, m_SpawnPointData.Radius_Max);
+	location += direction * RandomFloat(m_SpawnPointData->Radius_Min, m_SpawnPointData->Radius_Max);
 
 	return location;
 }
@@ -155,6 +163,17 @@ void ASmallEnemy::DisableCollisions()
 void ASmallEnemy::EnableCollisions()
 {
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+}
+
+void ASmallEnemy::SetDogType(enum EDogType type)
+{
+	m_DogType = type;
+
+	AEnemyAIController* con = Cast<AEnemyAIController>(GetController());
+	if (con) {
+		con->m_DogType = type;
+		con->m_DogPack = m_DogPack.Get();
+	}
 }
 
 FGameplayTag ASmallEnemy::SensingPawn(APawn* pawn)
@@ -174,6 +193,16 @@ FGameplayTag ASmallEnemy::SensingPawn(APawn* pawn)
 		return Tag::AubergineDoggo();
 	}
 	return FGameplayTag();
+}
+
+void ASmallEnemy::SleepingBegin()
+{
+	m_Anim->bIsSleeping = true;
+}
+
+void ASmallEnemy::SleepingEnd()
+{
+	m_Anim->bIsSleeping = false;
 }
 
 void ASmallEnemy::SetDefaultState()
@@ -213,7 +242,7 @@ void ASmallEnemy::Landed(const FHitResult& Hit)
 		IncapacitatedCollisionDelegate.Unbind();
 
 	m_State = EEnemyState::STATE_OnGround;
-	AnimInstance->bIsLaunchedInAir = false;
+	m_Anim->bIsLaunchedInAir = false;
 	NS_Stop_Trail();
 }
 
@@ -229,8 +258,7 @@ void ASmallEnemy::DisableGravity()
 
 void ASmallEnemy::Incapacitate(const EAIIncapacitatedType& IncapacitateType, float Time, const ESmallEnemyAIState& NextState)
 {
-	AEnemyAIController* AI = Cast<AEnemyAIController>(GetController());
-	AI->IncapacitateAI(IncapacitateType, Time, NextState);
+	m_AI->IncapacitateAI(IncapacitateType, Time, NextState);
 }
 
 void ASmallEnemy::IncapacitateUndeterminedTime(const EAIIncapacitatedType& IncapacitateType, void(ASmallEnemy::* function)())
@@ -253,9 +281,20 @@ void ASmallEnemy::IncapacitatedLand()
 	Capacitate(EAIIncapacitatedType::None, 1.f/* Post land stun */);
 }
 
+bool ASmallEnemy::IsIncapacitated() const
+{
+	AEnemyAIController* AI = Cast<AEnemyAIController>(GetController());
+	return AI->m_AIState == ESmallEnemyAIState::Incapacitated;
+}
+
 void ASmallEnemy::CollisionDelegate()
 {
 
+}
+
+bool ASmallEnemy::IsTargetWithinSpawn(const FVector& target, const float& radiusmulti) const
+{
+	return FVector::Dist(m_SpawnPointData->Location, target) < m_SpawnPointData->Radius_Max * radiusmulti;
 }
 
 void ASmallEnemy::Capacitate_Grappled()

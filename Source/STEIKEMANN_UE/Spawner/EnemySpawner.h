@@ -7,6 +7,11 @@
 #include "../Interfaces/AttackInterface.h"
 #include "../Enemies/SmallEnemy.h"
 #include "GameFramework/Actor.h"
+
+#ifdef WITH_EDITOR
+#include "Components/BillboardComponent.h"
+#endif
+
 #include "EnemySpawner.generated.h"
 
 UENUM()
@@ -48,9 +53,21 @@ public: // Components
 		USceneComponent* Root;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 		USceneComponent* SpawnPoint;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		USceneComponent* IdlePoint;
+
+//#ifdef WITH_EDITOR
+	UPROPERTY(EditAnywhere)
+		UBillboardComponent* IdlePointSprite;
+//#endif // WITH_EDITOR
+
 
 public: // Variables
 	FGameplayTagContainer GameplayTags;
+	int TypeIndex{};
+	TSharedPtr<EDogPack> m_AuberginePack;
+	TSharedPtr<SpawnPointData> SpawnData;
+
 
 	/* Time between getting attacked */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
@@ -90,6 +107,8 @@ public: // Variables
 		TSubclassOf<class ASmallEnemy> SpawningActorType;
 
 	TArray<ASmallEnemy*> SpawnedActors;
+	TArray<ASmallEnemy*> m_ActorsToRespawn;
+	TArray<ASmallEnemy*> m_ActorsToDestroy;
 
 public: // Functions
 	void BeginActorSpawn(void(AEnemySpawner::* spawnFunction)());
@@ -111,8 +130,8 @@ public: // Functions
 public: // Functions - Called by SpawnedActor
 
 private: // PRIVATE Functions
-	void SpawnAubergineDog();
+	void SpawnAubergineDog(int& index);
 	ACharacter* SpawnCharacter();
 
-	void SpawnAuberginePack();
+	//void SpawnAuberginePack();
 };

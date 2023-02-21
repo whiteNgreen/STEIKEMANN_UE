@@ -25,12 +25,23 @@ enum class ESmallEnemyAIState : uint8
 	Idle,
 	Alerted,
 	ChasingTarget,
+	GuardSpawn,
 	Attack,
 
 	Incapacitated,
 	
 	None
 };
+UENUM(BlueprintType)
+enum class EIdleState : uint8
+{
+	MoveTo_GuardLocation,
+	Guard,
+
+	Sleeping,
+	MovingTo_SleepLocation
+};
+
 UENUM(BlueprintType)
 enum class EAIIncapacitatedType : uint8
 {
@@ -70,6 +81,23 @@ public:	// Functions
 	virtual void Tick(float DeltaTime) override;
 	virtual void OnPossess(APawn* InPawn) override;
 
+
+	// Idle
+	EIdleState m_EIdleState;
+	FVector IdleLocation{};
+	TSharedPtr<struct SpawnPointData> m_SpawnPointData;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+		float Idle_SleepingLocationRandRadius{ 200.f };
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+		float Idle_SleepingLocationAcceptanceRadius{ 100.f };
+
+	void IdleBegin();
+	void IdleUpdate(float DeltaTime);
+	
+	void IdleUpdate_Red(float DeltaTime);
+	void IdleUpdate_PinkTeal(float DeltaTime);
+
 	// Pawn sensing
 	UFUNCTION()
 		void AIOnSeePawn(APawn* pawn);
@@ -93,35 +121,49 @@ public:	// Functions
 	void CapacitateAI(float Time, const ESmallEnemyAIState& NextState = ESmallEnemyAIState::None);
 
 	
-	//
-	void InitiateChase(AActor* Player);
+	// Chase Target
+	void ChaseBegin();
+	void ChaseTimedUpdate();
 	void ChaseUpdate(float DeltaTime);
+	void LerpPinkTeal_ChaseLocation(float DeltaTime);
 	AActor* m_Player{ nullptr };
 	FTimerHandle TH_ChaseUpdate;
+
+	struct EDogPack* m_DogPack{ nullptr };
 
 	void ChasePlayer_Red();
 	void ChasePlayer_Red_Update();
 
 	void ChasePlayer_Pink();
-	void ChasePlayer_Pink_Update();
+
+	void ChasePlayer_Teal();
+
+	void ChasePlayer_CircleAround_Update(const FVector& forward);
+
 	/* How far forward of the player, will Pink pursue player */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-		float Pink_ForwardChaseLength{ 400.f };
+		float PinkTeal_ForwardChaseLength{ 400.f };
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-		float Pink_ActivationRange{ 300.f };
+		float PinkTeal_AttackActivationRange{ 300.f };
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-		float Pink_SideLength{ 500.f };
+		float PinkTeal_SideLength{ 500.f };
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-		float Pink_SideLength_LerpSpeed{ 2.f };
-	FVector Pink_ChaseLocation;
-	FVector Pink_ChaseLocation_Target;
-	bool bPinkCloseToPlayer{};
+		float PinkTeal_SideLength_LerpSpeed{ 2.f };
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+		float PinkTeal_UpdateTime{ 0.2f };
+	FVector PinkTeal_ChaseLocation;
+	FVector PinkTeal_ChaseLocation_Target;
+	bool bPinkTealCloseToPlayer{};
+
+	// Guard spawn
+	void GuardSpawnUpdate(float DeltaTime);
+	FVector m_GuardLocation{};
 
 public: // Variables
 	UPROPERTY(BlueprintReadOnly)
 		class ASmallEnemy* m_PawnOwner{ nullptr };
 
-	ESmallEnemyAIState m_AIState = ESmallEnemyAIState::RecentlySpawned;
+	ESmallEnemyAIState m_AIState = ESmallEnemyAIState::None;
 	EAIIncapacitatedType m_AIIncapacitatedType = EAIIncapacitatedType::None;
 
 	FTimerManager TM_AI;	// ha en egen timer manager istedenfor å bruke World Timer Manager?
@@ -139,6 +181,6 @@ public: // Variables
 	/* Time AI is spent as recently spawned, where it does nothing */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 		float TimeSpentRecentlySpawned{ 1.f };
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-		EDogType m_DogType;
+	//UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	EDogType m_DogType;
 };

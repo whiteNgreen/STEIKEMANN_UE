@@ -8,7 +8,7 @@ void UEnemyAnimInstance::NativeBeginPlay()
 {
 	Super::NativeBeginPlay();
 	Owner = Cast<ASmallEnemy>(TryGetPawnOwner());
-	Owner->AnimInstance = this;
+	Owner->m_Anim = this;
 }
 
 void UEnemyAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
