@@ -61,19 +61,10 @@ class STEIKEMANN_UE_API AEnemyAIController : public AAIController
 	GENERATED_BODY()
 
 public:	// Components
-	//UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	//	class UBehaviorTreeComponent* BTComponent{ nullptr };
-	//UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	//	class UBlackboardComponent* BBComponent{ nullptr };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		class UPawnSensingComponent* PSComponent{ nullptr };
 
 public: // Assets
-	//UPROPERTY(EditAnywhere)
-	//	class UBehaviorTree* BT{ nullptr };
-
-	//UPROPERTY(EditAnywhere)
-	//	class UBlackboardData* BB{ nullptr };
 
 public:	// Functions
 	AEnemyAIController();
@@ -103,16 +94,19 @@ public:	// Functions
 		void AIOnSeePawn(APawn* pawn);
 	UFUNCTION()
 		void AIHearNoise(APawn* InstigatorPawn, const FVector& Location, float Volume);
-	void SensePawn(APawn* pawn, FGameplayTag& tag);
-	void SensePawn_Player();
+	//void SensePawn(APawn* pawn, FGameplayTag& tag);
+	//void SensePawn_Player();
 	void SpotPlayer();
+
+	void AlertedTimeCheck();
+	void StopSensingPlayer();
 
 	// Attacking 
 	void Attack();
 
 	// Setting State
 	void SetState(const ESmallEnemyAIState& state);
-	
+	void LeaveState(const ESmallEnemyAIState& state);
 	
 	// Incapacitating Owner
 	void IncapacitateAI(const EAIIncapacitatedType& IncapacitateType, float Time, const ESmallEnemyAIState& NextState = ESmallEnemyAIState::None);
@@ -123,6 +117,7 @@ public:	// Functions
 	
 	// Chase Target
 	void ChaseBegin();
+	void ChaseStop();
 	void ChaseTimedUpdate();
 	void ChaseUpdate(float DeltaTime);
 	void LerpPinkTeal_ChaseLocation(float DeltaTime);
@@ -168,16 +163,21 @@ public: // Variables
 
 	FTimerManager TM_AI;	// ha en egen timer manager istedenfor å bruke World Timer Manager?
 	FTimerHandle TH_IncapacitateTimer;
-	FTimerHandle TH_SensedPlayer;
+
+	FTimerHandle TH_StopSensingPlayer;
 	FTimerHandle TH_SpotPlayer;
 
 
 	bool bIsSensingPawn{};
 	FSensedPawnsDelegate SensedPawnsDelegate;
-	FDelegateHandle DH_SensedPlayer;
+	//FDelegateHandle DH_SensedPlayer;
 
-	UPROPERTY(BlueprintReadWrite)
-		bool bFollowPlayer{};
+	/* Time taken to spot the player */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+		float TimeToSpotPlayer{ 2.f };
+
+	//UPROPERTY(BlueprintReadWrite)
+		//bool bFollowPlayer{};
 	/* Time AI is spent as recently spawned, where it does nothing */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 		float TimeSpentRecentlySpawned{ 1.f };

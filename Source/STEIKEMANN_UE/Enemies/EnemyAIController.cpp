@@ -18,8 +18,6 @@
 
 AEnemyAIController::AEnemyAIController()
 {
-	//BTComponent = CreateDefaultSubobject<UBehaviorTreeComponent>("BehaviorTree Component");
-	//BBComponent = CreateDefaultSubobject<UBlackboardComponent>("Blackboard Component");
 	PSComponent = CreateDefaultSubobject<UPawnSensingComponent>("Pawn Sensing Component");
 }
 
@@ -29,16 +27,6 @@ void AEnemyAIController::BeginPlay()
 
 	PSComponent->OnSeePawn.AddDynamic(this, &AEnemyAIController::AIOnSeePawn);
 	PSComponent->OnHearNoise.AddDynamic(this, &AEnemyAIController::AIHearNoise);
-
-	/* When spawned or respawned. Activate enemy after a timer */
-	//Async(EAsyncExecution::TaskGraphMainThread, [this]() {
-	//	SetState(ESmallEnemyAIState::RecentlySpawned);
-	//	FTimerHandle h;
-	//	GetWorldTimerManager().SetTimer(h, [this]() { SetState(ESmallEnemyAIState::Idle); }, TimeSpentRecentlySpawned, false);
-	//	});
-
-	//AActor* player = UGameplayStatics::GetActorOfClass(GetWorld(), ASteikemannCharacter::StaticClass());
-	//InitiateChase(player);
 }
 
 void AEnemyAIController::Tick(float DeltaTime)
@@ -172,60 +160,112 @@ void AEnemyAIController::IdleUpdate_PinkTeal(float DeltaTime)
 
 void AEnemyAIController::AIOnSeePawn(APawn* pawn)
 {
-	return;	// TMP -- no pawn sensing
-
-
 	// If player was previously heard behind the AI, instantly become hostile
-
 	// Else do a spot check
-	FGameplayTag PawnTag;
-	SensePawn(pawn, PawnTag);
-	if (PawnTag == Tag::Player())
-	{
-		// Spot player, wait 't' seconds before chasing them - BTServiceChecking if player is still spotted 
-		bIsSensingPawn = true;
+	FGameplayTag PawnTag = m_PawnOwner->SensingPawn(pawn);
+	if (PawnTag == Tag::Player())	// If Seen pawn is player
+	{	
+		switch (m_AIState)
+		{
+		case ESmallEnemyAIState::RecentlySpawned:
+			break;
+		case ESmallEnemyAIState::Idle:
+		{
+			PRINTLONG("Sees Player : IDLE");
 
-		DH_SensedPlayer = SensedPawnsDelegate.AddUObject(this, &AEnemyAIController::SensePawn_Player);
-		SensePawn_Player();
+			SetState(ESmallEnemyAIState::Alerted);
+			AlertedTimeCheck();
+			TM_AI.SetTimer(TH_SpotPlayer, this, &AEnemyAIController::SpotPlayer, TimeToSpotPlayer);
+			break;
+		}
+		case ESmallEnemyAIState::Alerted:
+		{
+			PRINTLONG("Sees Player : ALERTED");
+			AlertedTimeCheck();
+
+			break;
+		}
+		case ESmallEnemyAIState::ChasingTarget:
+			break;
+		case ESmallEnemyAIState::GuardSpawn:
+			break;
+		case ESmallEnemyAIState::Attack:
+			break;
+		case ESmallEnemyAIState::Incapacitated:
+			break;
+		case ESmallEnemyAIState::None:
+			break;
+		default:
+			break;
+		}
 	}
+	//PSComponent->SensingInterval
+	
 	// else if sensing other pawns (like fellow dogs)
 		// be annoyed
 
-	TM_AI.SetTimer(TH_SensedPlayer, [&]() {
-		ReDetermineState();
-		bIsSensingPawn = false; }, 0.6f/*Sensing timer + margin*/, false);
+	//TM_AI.SetTimer(TH_SensedPlayer, [&]() {
+	//	ReDetermineState();
+	//	bIsSensingPawn = false; }, 0.6f/*Sensing timer + margin*/, false);
 }
 
 void AEnemyAIController::AIHearNoise(APawn* InstigatorPawn, const FVector& Location, float Volume)
 {
 }
 
-void AEnemyAIController::SensePawn(APawn* pawn, FGameplayTag& tag)
-{
-	if (m_AIState == ESmallEnemyAIState::Idle)
-		SetState(ESmallEnemyAIState::Alerted);
-	tag = m_PawnOwner->SensingPawn(pawn);
-}
-
-void AEnemyAIController::SensePawn_Player()
-{
-	if (TM_AI.IsTimerActive(TH_SpotPlayer))
-	{
-		if (!bIsSensingPawn) {
-			TM_AI.ClearTimer(TH_SpotPlayer);
-			ReDetermineState();
-			SensedPawnsDelegate.Clear();
-		}
-	}
-	else
-	{
-		TM_AI.SetTimer(TH_SpotPlayer, this, &AEnemyAIController::SpotPlayer, 2.f/*Time To Spot Player*/);
-	}
-}
+//void AEnemyAIController::SensePawn(APawn* pawn, FGameplayTag& tag)
+//{
+//	if (m_AIState == ESmallEnemyAIState::Idle)
+//		SetState(ESmallEnemyAIState::Alerted);
+//	tag = m_PawnOwner->SensingPawn(pawn);
+//}
+//
+//void AEnemyAIController::SensePawn_Player()
+//{
+//	if (TM_AI.IsTimerActive(TH_SpotPlayer))
+//	{
+//		if (!bIsSensingPawn) {
+//			TM_AI.ClearTimer(TH_SpotPlayer);
+//			ReDetermineState();
+//			SensedPawnsDelegate.Clear();
+//		}
+//	}
+//	else
+//	{
+//		TM_AI.SetTimer(TH_SpotPlayer, this, &AEnemyAIController::SpotPlayer, 2.f/*Time To Spot Player*/);
+//	}
+//}
 
 void AEnemyAIController::SpotPlayer()
 {
+	TM_AI.ClearTimer(TH_StopSensingPlayer);
+	TM_AI.ClearTimer(TH_SpotPlayer);
+
 	SetState(ESmallEnemyAIState::ChasingTarget);
+
+	DrawDebugPoint(GetWorld(), GetPawn()->GetActorLocation() + FVector::UpVector * 100.f, 40.f, FColor::Red, false, 2.f, -2);
+}
+
+void AEnemyAIController::AlertedTimeCheck()
+{
+	TM_AI.SetTimer(TH_StopSensingPlayer, this, &AEnemyAIController::StopSensingPlayer, PSComponent->SensingInterval + 0.4f);
+
+	DrawDebugPoint(GetWorld(), GetPawn()->GetActorLocation() + FVector::UpVector * 100.f, 40.f, FColor::Orange, false, PSComponent->SensingInterval);
+}
+
+void AEnemyAIController::StopSensingPlayer()
+{
+	PRINTLONG("STOP SENSING PLAYER");
+	PRINTPARLONG("Time == %f", PSComponent->SensingInterval);
+	DrawDebugPoint(GetWorld(), GetPawn()->GetActorLocation() + FVector::UpVector * 100.f, 40.f, FColor::Blue, false, 1.f, -1);
+
+	TM_AI.ClearTimer(TH_StopSensingPlayer);
+	TM_AI.ClearTimer(TH_SpotPlayer);
+
+	SetState(ESmallEnemyAIState::Idle);
+
+	if (m_AIState != ESmallEnemyAIState::Alerted || m_AIState != ESmallEnemyAIState::Idle)
+		return;
 }
 
 void AEnemyAIController::Attack()
@@ -238,6 +278,7 @@ void AEnemyAIController::Attack()
 void AEnemyAIController::SetState(const ESmallEnemyAIState& state)
 {
 	if (m_AIState == state) return;
+	LeaveState(m_AIState);
 	m_AIState = state;
 
 	FTimerHandle h;
@@ -263,6 +304,35 @@ void AEnemyAIController::SetState(const ESmallEnemyAIState& state)
 		break;
 	}
 	case ESmallEnemyAIState::GuardSpawn:
+		// Begin Guard -- Enter Idle after TIMER
+			// Timer is cleared when leaving Guard
+		break;
+	case ESmallEnemyAIState::Attack:
+		break;
+	case ESmallEnemyAIState::Incapacitated:
+		break;
+	case ESmallEnemyAIState::None:
+		break;
+	default:
+		break;
+	}
+}
+
+void AEnemyAIController::LeaveState(const ESmallEnemyAIState& state)
+{
+	switch (state)
+	{
+	case ESmallEnemyAIState::RecentlySpawned:
+		break;
+	case ESmallEnemyAIState::Idle:
+		break;
+	case ESmallEnemyAIState::Alerted:
+		break;
+	case ESmallEnemyAIState::ChasingTarget:
+		ChaseStop();
+		break;
+	case ESmallEnemyAIState::GuardSpawn:
+		// Clear EnterIdle_TIMER when leaving GuardSpawn
 		break;
 	case ESmallEnemyAIState::Attack:
 		break;
@@ -319,6 +389,12 @@ void AEnemyAIController::CapacitateAI(float Time, const ESmallEnemyAIState& Next
 
 void AEnemyAIController::ChaseBegin()
 {
+	TM_AI.SetTimer(TH_ChaseUpdate, this, &AEnemyAIController::ChaseTimedUpdate, PinkTeal_UpdateTime, false);
+}
+
+void AEnemyAIController::ChaseStop()
+{
+	TM_AI.ClearTimer(TH_ChaseUpdate);
 }
 
 void AEnemyAIController::ChaseTimedUpdate()
@@ -378,6 +454,7 @@ void AEnemyAIController::ChaseUpdate(float DeltaTime)
 	{
 	case EDogType::Red:
 	{
+		ChasePlayer_Red_Update();
 		ChasePlayer_Red();
 
 		DrawDebugPoint(GetWorld(), PinkTeal_ChaseLocation, 30.f, FColor::Red, false, 0.f, -1);
