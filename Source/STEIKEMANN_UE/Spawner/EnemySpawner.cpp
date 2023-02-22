@@ -214,3 +214,12 @@ ACharacter* AEnemySpawner::SpawnCharacter()
 	return spawnedCharacter;
 }
 
+void EDogPack::AlertPack(ASmallEnemy* Instigator)
+{
+	if (Red != Instigator)
+		Red->Alert(*Instigator);
+	if (Pink != Instigator)
+		Pink->Alert(*Instigator);
+	if (Teal != Instigator)
+		Teal->Alert(*Instigator);
+}

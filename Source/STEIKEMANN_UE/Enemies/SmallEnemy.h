@@ -143,6 +143,7 @@ public: // Functions
 	/* Returns true if the player is spotted, false if it spots something else */
 	FGameplayTag SensingPawn(APawn* pawn);
 
+	void Alert(const APawn& instigator);
 	void SleepingBegin();
 	void SleepingEnd();
 #pragma endregion // AI
@@ -158,14 +159,17 @@ public:	// STATES
 	void EnableGravity();
 	void DisableGravity();
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "States|Incapacitated")
+		float Incapacitated_LandedStunTime{ 2.f };
+
 public: // Variables for calling AI
 	FIncapacitatedCollision IncapacitatedCollisionDelegate;
 	FIncapacitatedLandDelegation IncapacitatedLandDelegation;
 
 public: // Functinos calling AI controller or Functions AI controller calling 
-	void Incapacitate(const EAIIncapacitatedType& IncapacitateType, float Time = -1.f, const ESmallEnemyAIState& NextState = ESmallEnemyAIState::None);
+	void Incapacitate(const EAIIncapacitatedType& IncapacitateType, float Time = -1.f/*, const ESmallEnemyAIState& NextState = ESmallEnemyAIState::None*/);
 	void IncapacitateUndeterminedTime(const EAIIncapacitatedType& IncapacitateType, void (ASmallEnemy::* landingfunction)() = nullptr);
-	void Capacitate(const EAIIncapacitatedType& IncapacitateType, float Time = -1.f, const ESmallEnemyAIState& NextState = ESmallEnemyAIState::None);
+	//void Capacitate(const EAIIncapacitatedType& IncapacitateType, float Time = -1.f, const ESmallEnemyAIState& NextState = ESmallEnemyAIState::None);
 
 	bool IsIncapacitated() const;
 	bool IsTargetWithinSpawn(const FVector& target, const float& radiusmulti = 1.f) const;
@@ -180,7 +184,8 @@ private: // Gravity
 	float GravityZ;
 
 #pragma endregion //States
-	void RotateActorYawToVector(FVector AimVector, float DeltaTime = 0);
+public:
+	void RotateActorYawToVector(FVector AimVector, float DeltaTime = -1.f);
 
 #pragma region Wall Mechanics
 public:
@@ -209,9 +214,7 @@ private:
 	Wall::WallData m_WallData;
 	//Wall::WallData m_WallJumpData;
 
-#pragma endregion //Wall Mechanics
-
-
+#pragma endregion	//Wall Mechanics
 #pragma region GrappleHooked
 public: 
 	bool bCanBeGrappleHooked{ true };
@@ -253,8 +256,7 @@ public:
 	virtual void PullFree_Pure(const FVector InstigatorLocation);
 
 	//virtual FGameplayTag GetGrappledGameplayTag_Pure() const override { return Enemy; }
-#pragma endregion //GrappleHooked
-
+#pragma endregion	//GrappleHooked
 #pragma region GettingSmacked
 public:
 	bool bCanBeSmackAttacked{ true };
@@ -319,7 +321,7 @@ public: // Particles for getting smacked
 	UFUNCTION()
 		void Tl_Smacked(float value);
 
-#pragma endregion //GettingSmacked
+#pragma endregion	//GettingSmacked
 #pragma region Pogo
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Pogo|Collision")
@@ -332,5 +334,5 @@ public:
 		float PB_Groundpound_LaunchStrength{ 1200.f };
 public:
 	void Receive_Pogo_GroundPound_Pure() override;
-#pragma endregion //Pogo
+#pragma endregion			//Pogo
 };

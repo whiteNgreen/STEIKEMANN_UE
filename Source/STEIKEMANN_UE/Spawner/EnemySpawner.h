@@ -27,6 +27,8 @@ struct EDogPack
 	ASmallEnemy* Red{ nullptr };
 	ASmallEnemy* Pink{ nullptr };
 	ASmallEnemy* Teal{ nullptr };
+
+	void AlertPack(ASmallEnemy* Instigator);
 };
 
 UCLASS()

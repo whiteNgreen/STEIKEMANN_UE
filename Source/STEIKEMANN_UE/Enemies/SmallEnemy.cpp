@@ -195,6 +195,13 @@ FGameplayTag ASmallEnemy::SensingPawn(APawn* pawn)
 	return FGameplayTag();
 }
 
+void ASmallEnemy::Alert(const APawn& instigator)
+{
+	SleepingEnd();
+	//m_AI->AlertedInit(instigator);
+	m_AI->SetState(ESmallEnemyAIState::ChasingTarget);
+}
+
 void ASmallEnemy::SleepingBegin()
 {
 	m_Anim->bIsSleeping = true;
@@ -238,7 +245,7 @@ void ASmallEnemy::Landed(const FHitResult& Hit)
 	if (IncapacitatedLandDelegation.ExecuteIfBound())
 		IncapacitatedLandDelegation.Unbind();
 
-	if (IncapacitatedCollisionDelegate.ExecuteIfBound())
+	if (IncapacitatedCollisionDelegate.ExecuteIfBound())	// HA CAPSULE_HIT DELEGATION FOR DENNE
 		IncapacitatedCollisionDelegate.Unbind();
 
 	m_State = EEnemyState::STATE_OnGround;
@@ -256,9 +263,9 @@ void ASmallEnemy::DisableGravity()
 	m_Gravity = EGravityState::ForcedNone;
 }
 
-void ASmallEnemy::Incapacitate(const EAIIncapacitatedType& IncapacitateType, float Time, const ESmallEnemyAIState& NextState)
+void ASmallEnemy::Incapacitate(const EAIIncapacitatedType& IncapacitateType, float Time/*, const ESmallEnemyAIState& NextState*/)
 {
-	m_AI->IncapacitateAI(IncapacitateType, Time, NextState);
+	m_AI->IncapacitateAI(IncapacitateType, Time/*, NextState*/);
 }
 
 void ASmallEnemy::IncapacitateUndeterminedTime(const EAIIncapacitatedType& IncapacitateType, void(ASmallEnemy::* function)())
@@ -270,15 +277,16 @@ void ASmallEnemy::IncapacitateUndeterminedTime(const EAIIncapacitatedType& Incap
 	IncapacitatedLandDelegation.BindUObject(this, &ASmallEnemy::IncapacitatedLand);
 }
 
-void ASmallEnemy::Capacitate(const EAIIncapacitatedType& IncapacitateType, float Time, const ESmallEnemyAIState& NextState)
-{
-	AEnemyAIController* AI = Cast<AEnemyAIController>(GetController());
-	AI->CapacitateAI(Time, NextState);
-}
+//void ASmallEnemy::Capacitate(const EAIIncapacitatedType& IncapacitateType, float Time, const ESmallEnemyAIState& NextState)
+//{
+//	AEnemyAIController* AI = Cast<AEnemyAIController>(GetController());
+//	AI->CapacitateAI(Time, NextState);
+//}
 
 void ASmallEnemy::IncapacitatedLand()
 {
-	Capacitate(EAIIncapacitatedType::None, 1.f/* Post land stun */);
+	PRINTLONG("Incapacitated Land");
+	Incapacitate(EAIIncapacitatedType::Stunned, Incapacitated_LandedStunTime);
 }
 
 bool ASmallEnemy::IsIncapacitated() const
@@ -299,26 +307,35 @@ bool ASmallEnemy::IsTargetWithinSpawn(const FVector& target, const float& radius
 
 void ASmallEnemy::Capacitate_Grappled()
 {
-	Capacitate(EAIIncapacitatedType::Grappled, 1.f/*Post grappled stun timer*/);
+	//Capacitate(EAIIncapacitatedType::Grappled, 1.f/*Post grappled stun timer*/);
+	Incapacitate(EAIIncapacitatedType::Grappled, 1.f/*Post grappled stun timer*/);
 }
 
 void ASmallEnemy::RotateActorYawToVector(FVector AimVector, float DeltaTime)
 {
-	FVector Aim = AimVector;
-	Aim.Normalize();
-
-	FVector AimXY = Aim;
+	FVector AimXY = AimVector;
 	AimXY.Z = 0.f;
 	AimXY.Normalize();
 
-	float YawDotProduct = FVector::DotProduct(AimXY, FVector::ForwardVector);
+	//float YawDotProduct = FVector::DotProduct(AimXY, FVector::ForwardVector);
+	float YawDotProduct = FVector::DotProduct(AimXY, GetActorForwardVector());
 	float Yaw = FMath::RadiansToDegrees(acosf(YawDotProduct));
 
 	/*		Check if yaw is to the right or left		*/
-	float RightDotProduct = FVector::DotProduct(AimXY, FVector::RightVector);
+	//float RightDotProduct = FVector::DotProduct(AimXY, FVector::RightVector);
+	float RightDotProduct = FVector::DotProduct(AimXY, GetActorRightVector());
 	if (RightDotProduct < 0.f) { Yaw *= -1.f; }
 
-	SetActorRotation(FRotator(GetActorRotation().Pitch, Yaw, 0.f), ETeleportType::TeleportPhysics);
+	if (DeltaTime > 0.f) {
+		PRINTPAR("Yaw == %f", Yaw);
+		Yaw *= DeltaTime;
+		PRINTPAR("Yaw *= DeltaTime == %f", Yaw);
+	}
+
+	//SetActorRotation(FRotator(GetActorRotation().Pitch, Yaw, 0.f), ETeleportType::TeleportPhysics);
+	AddActorWorldRotation(FRotator(0.f, Yaw, 0.f), false, nullptr, ETeleportType::TeleportPhysics);
+	DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + GetActorForwardVector() * 100.f, FColor::Red);
+
 }
 
 void ASmallEnemy::StickToWall()

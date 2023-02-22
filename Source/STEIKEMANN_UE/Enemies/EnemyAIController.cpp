@@ -39,17 +39,15 @@ void AEnemyAIController::Tick(float DeltaTime)
 	case ESmallEnemyAIState::RecentlySpawned:
 		break;
 	case ESmallEnemyAIState::Idle:
-		PRINT("IDLE");
 		IdleUpdate(DeltaTime);
 		break;
 	case ESmallEnemyAIState::Alerted:
+		AlertedUpdate(DeltaTime);
 		break;
 	case ESmallEnemyAIState::ChasingTarget:
-		PRINT("CHASE");
 		ChaseUpdate(DeltaTime);
 		break;
 	case ESmallEnemyAIState::GuardSpawn:
-		PRINT("GUARD");
 		GuardSpawnUpdate(DeltaTime);
 		break;
 	case ESmallEnemyAIState::Attack:
@@ -61,6 +59,7 @@ void AEnemyAIController::Tick(float DeltaTime)
 	default:
 		break;
 	}
+	PrintState();
 }
 
 void AEnemyAIController::OnPossess(APawn* InPawn)
@@ -99,9 +98,12 @@ void AEnemyAIController::IdleBegin()
 	// Others are simply sleeping next to the guard dog
 	m_EIdleState = EIdleState::MovingTo_SleepLocation;
 	IdleLocation = GetRandomLocationAroundPoint2D(m_SpawnPointData->IdleLocation, Idle_SleepingLocationRandRadius, Idle_SleepingLocationRandRadius / 3.f);
+}
 
-	DrawDebugLine(GetWorld(), m_SpawnPointData->IdleLocation, IdleLocation, FColor::Red, true, 2.f, -2, 5.f);
-
+void AEnemyAIController::IdleEnd()
+{
+	StopMovement();
+	m_EIdleState = EIdleState::None;
 }
 
 void AEnemyAIController::IdleUpdate(float DeltaTime)
@@ -171,18 +173,18 @@ void AEnemyAIController::AIOnSeePawn(APawn* pawn)
 			break;
 		case ESmallEnemyAIState::Idle:
 		{
-			PRINTLONG("Sees Player : IDLE");
+			if (m_EIdleState == EIdleState::Sleeping) break;
 
-			SetState(ESmallEnemyAIState::Alerted);
+			AlertedInit(*pawn);
 			AlertedTimeCheck();
 			TM_AI.SetTimer(TH_SpotPlayer, this, &AEnemyAIController::SpotPlayer, TimeToSpotPlayer);
 			break;
 		}
 		case ESmallEnemyAIState::Alerted:
 		{
-			PRINTLONG("Sees Player : ALERTED");
 			AlertedTimeCheck();
-
+			AlertedInit(*pawn);
+			
 			break;
 		}
 		case ESmallEnemyAIState::ChasingTarget:
@@ -198,43 +200,15 @@ void AEnemyAIController::AIOnSeePawn(APawn* pawn)
 		default:
 			break;
 		}
-	}
-	//PSComponent->SensingInterval
-	
+	}	
 	// else if sensing other pawns (like fellow dogs)
 		// be annoyed
-
-	//TM_AI.SetTimer(TH_SensedPlayer, [&]() {
-	//	ReDetermineState();
-	//	bIsSensingPawn = false; }, 0.6f/*Sensing timer + margin*/, false);
 }
 
 void AEnemyAIController::AIHearNoise(APawn* InstigatorPawn, const FVector& Location, float Volume)
 {
 }
 
-//void AEnemyAIController::SensePawn(APawn* pawn, FGameplayTag& tag)
-//{
-//	if (m_AIState == ESmallEnemyAIState::Idle)
-//		SetState(ESmallEnemyAIState::Alerted);
-//	tag = m_PawnOwner->SensingPawn(pawn);
-//}
-//
-//void AEnemyAIController::SensePawn_Player()
-//{
-//	if (TM_AI.IsTimerActive(TH_SpotPlayer))
-//	{
-//		if (!bIsSensingPawn) {
-//			TM_AI.ClearTimer(TH_SpotPlayer);
-//			ReDetermineState();
-//			SensedPawnsDelegate.Clear();
-//		}
-//	}
-//	else
-//	{
-//		TM_AI.SetTimer(TH_SpotPlayer, this, &AEnemyAIController::SpotPlayer, 2.f/*Time To Spot Player*/);
-//	}
-//}
 
 void AEnemyAIController::SpotPlayer()
 {
@@ -243,12 +217,40 @@ void AEnemyAIController::SpotPlayer()
 
 	SetState(ESmallEnemyAIState::ChasingTarget);
 
+	m_DogPack->AlertPack(m_PawnOwner);
+
 	DrawDebugPoint(GetWorld(), GetPawn()->GetActorLocation() + FVector::UpVector * 100.f, 40.f, FColor::Red, false, 2.f, -2);
+}
+
+void AEnemyAIController::AlertedInit(const APawn& instigator)
+{
+	SetState(ESmallEnemyAIState::Alerted);
+	SuspiciousLocation = instigator.GetActorLocation();
+	
+	DrawDebugPoint(GetWorld(), SuspiciousLocation, 40.f, FColor::Orange, false, PSComponent->SensingInterval, -2);
+}
+
+void AEnemyAIController::AlertedBegin()
+{
+	TM_AI.SetTimer(TH_StopSensingPlayer, this, &AEnemyAIController::StopSensingPlayer, PSComponent->SensingInterval + 0.4f);
+	m_EIdleState = EIdleState::None;
+}
+
+void AEnemyAIController::AlertedEnd()
+{
+	TM_AI.ClearTimer(TH_StopSensingPlayer);
+}
+
+void AEnemyAIController::AlertedUpdate(float DeltaTime)
+{
+	m_PawnOwner->RotateActorYawToVector(FVector(SuspiciousLocation - GetPawn()->GetActorLocation()), DeltaTime);
+	DrawDebugLine(GetWorld(), GetPawn()->GetActorLocation(), GetPawn()->GetActorLocation() + FVector(SuspiciousLocation - GetPawn()->GetActorLocation()), FColor::Orange);
 }
 
 void AEnemyAIController::AlertedTimeCheck()
 {
 	TM_AI.SetTimer(TH_StopSensingPlayer, this, &AEnemyAIController::StopSensingPlayer, PSComponent->SensingInterval + 0.4f);
+	bIsSensingPawn = true;
 
 	DrawDebugPoint(GetWorld(), GetPawn()->GetActorLocation() + FVector::UpVector * 100.f, 40.f, FColor::Orange, false, PSComponent->SensingInterval);
 }
@@ -262,6 +264,7 @@ void AEnemyAIController::StopSensingPlayer()
 	TM_AI.ClearTimer(TH_StopSensingPlayer);
 	TM_AI.ClearTimer(TH_SpotPlayer);
 
+	bIsSensingPawn = false;
 	SetState(ESmallEnemyAIState::Idle);
 
 	if (m_AIState != ESmallEnemyAIState::Alerted || m_AIState != ESmallEnemyAIState::Idle)
@@ -277,8 +280,9 @@ void AEnemyAIController::Attack()
 
 void AEnemyAIController::SetState(const ESmallEnemyAIState& state)
 {
+	AlwaysBeginStates(state);
 	if (m_AIState == state) return;
-	LeaveState(m_AIState);
+	LeaveState(m_AIState, state);
 	m_AIState = state;
 
 	FTimerHandle h;
@@ -286,8 +290,7 @@ void AEnemyAIController::SetState(const ESmallEnemyAIState& state)
 	{
 	case ESmallEnemyAIState::RecentlySpawned:
 	{
-		m_AIState = ESmallEnemyAIState::None;
-		GetWorldTimerManager().SetTimer(h, [this]() { SetState(ESmallEnemyAIState::Idle); }, 0.5f, false);
+		TM_AI.SetTimer(h, [this]() { SetState(ESmallEnemyAIState::Idle); }, 0.5f, false);
 		
 		break;
 	}
@@ -297,43 +300,97 @@ void AEnemyAIController::SetState(const ESmallEnemyAIState& state)
 		break;
 	}
 	case ESmallEnemyAIState::Alerted:
+	{
+		AlertedBegin();
 		break;
+	}
 	case ESmallEnemyAIState::ChasingTarget:
 	{
 		ChaseBegin();
 		break;
 	}
 	case ESmallEnemyAIState::GuardSpawn:
-		// Begin Guard -- Enter Idle after TIMER
-			// Timer is cleared when leaving Guard
+	{
+		GuardSpawnBegin();
 		break;
+	}
 	case ESmallEnemyAIState::Attack:
+	{
+
 		break;
+	}
 	case ESmallEnemyAIState::Incapacitated:
+	{
+
 		break;
+	}
 	case ESmallEnemyAIState::None:
+	{
+
 		break;
+	}
 	default:
 		break;
 	}
 }
 
-void AEnemyAIController::LeaveState(const ESmallEnemyAIState& state)
+void AEnemyAIController::AlwaysBeginStates(const ESmallEnemyAIState& incommingState)
 {
-	switch (state)
+	switch (incommingState)
 	{
 	case ESmallEnemyAIState::RecentlySpawned:
 		break;
 	case ESmallEnemyAIState::Idle:
 		break;
 	case ESmallEnemyAIState::Alerted:
+	{
+		AlertedBegin();
 		break;
+	}
 	case ESmallEnemyAIState::ChasingTarget:
-		ChaseStop();
 		break;
 	case ESmallEnemyAIState::GuardSpawn:
-		// Clear EnterIdle_TIMER when leaving GuardSpawn
 		break;
+	case ESmallEnemyAIState::Attack:
+		break;
+	case ESmallEnemyAIState::Incapacitated:
+	{
+		IncapacitateBegin();
+		break;
+	}
+	case ESmallEnemyAIState::None:
+		break;
+	default:
+		break;
+	}
+}
+
+void AEnemyAIController::LeaveState(const ESmallEnemyAIState& currentState, const ESmallEnemyAIState& incommingState)
+{
+	switch (currentState)
+	{
+	case ESmallEnemyAIState::RecentlySpawned:
+		break;
+	case ESmallEnemyAIState::Idle:
+	{
+		IdleEnd();
+		break;
+	}
+	case ESmallEnemyAIState::Alerted:
+	{
+		AlertedEnd();
+		break;
+	}
+	case ESmallEnemyAIState::ChasingTarget:
+	{
+		ChaseEnd();
+		break;
+	}
+	case ESmallEnemyAIState::GuardSpawn:
+	{
+		GuardSpawnEnd();
+		break;
+	}
 	case ESmallEnemyAIState::Attack:
 		break;
 	case ESmallEnemyAIState::Incapacitated:
@@ -345,9 +402,21 @@ void AEnemyAIController::LeaveState(const ESmallEnemyAIState& state)
 	}
 }
 
-void AEnemyAIController::IncapacitateAI(const EAIIncapacitatedType& IncapacitateType, float Time, const ESmallEnemyAIState& NextState)
+void AEnemyAIController::IncapacitateBegin()
 {
-	GetWorldTimerManager().ClearTimer(TH_IncapacitateTimer);
+	AlertedEnd();
+	ChaseEnd();
+	GuardSpawnEnd();
+	StopMovement();
+}
+
+void AEnemyAIController::IncapacitateEnd()
+{
+}
+
+void AEnemyAIController::IncapacitateAI(const EAIIncapacitatedType& IncapacitateType, float Time/*, const ESmallEnemyAIState& NextState*/)
+{
+	TM_AI.ClearTimer(TH_IncapacitateTimer);
 	SetState(ESmallEnemyAIState::Incapacitated);
 	m_AIIncapacitatedType = IncapacitateType;
 
@@ -356,8 +425,8 @@ void AEnemyAIController::IncapacitateAI(const EAIIncapacitatedType& Incapacitate
 	{
 		return;
 	}
-	GetWorldTimerManager().SetTimer(TH_IncapacitateTimer, [this, NextState]() { 
-		ReDetermineState();
+	TM_AI.SetTimer(TH_IncapacitateTimer, [this]() {
+		SetState(ESmallEnemyAIState::Alerted);
 	}, Time, false);
 }
 
@@ -376,23 +445,23 @@ void AEnemyAIController::ReDetermineState(const ESmallEnemyAIState& StateOverrid
 		SetState(ESmallEnemyAIState::Idle);
 }
 
-void AEnemyAIController::CapacitateAI(float Time, const ESmallEnemyAIState& NextState)
-{
-	// AI Incapacitated for an undetermined amount of time
-	if (Time < 0.f)
-	{
-		ReDetermineState(NextState);
-		return;
-	}
-	GetWorldTimerManager().SetTimer(TH_IncapacitateTimer, [this, NextState]() { ReDetermineState(NextState); }, Time, false);
-}
+//void AEnemyAIController::CapacitateAI(float Time, const ESmallEnemyAIState& NextState)
+//{
+//	// AI Incapacitated for an undetermined amount of time
+//	if (Time < 0.f)
+//	{
+//		ReDetermineState(NextState);
+//		return;
+//	}
+//	GetWorldTimerManager().SetTimer(TH_IncapacitateTimer, [this, NextState]() { ReDetermineState(NextState); }, Time, false);
+//}
 
 void AEnemyAIController::ChaseBegin()
 {
 	TM_AI.SetTimer(TH_ChaseUpdate, this, &AEnemyAIController::ChaseTimedUpdate, PinkTeal_UpdateTime, false);
 }
 
-void AEnemyAIController::ChaseStop()
+void AEnemyAIController::ChaseEnd()
 {
 	TM_AI.ClearTimer(TH_ChaseUpdate);
 }
@@ -565,6 +634,70 @@ void AEnemyAIController::GuardSpawnUpdate(float DeltaTime)
 	}
 
 	DrawDebugPoint(GetWorld(), m_GuardLocation, 30.f, FColor::Blue, false, 0.f, -2);
+}
+
+void AEnemyAIController::GuardSpawnBegin()
+{
+	ChaseBegin();
+	TM_AI.SetTimer(TH_GuardSpawn, [this]() { SetState(ESmallEnemyAIState::Idle); }, GuardSpawn_Time, false);
+}
+
+void AEnemyAIController::GuardSpawnEnd()
+{
+	ChaseEnd();
+	TM_AI.ClearTimer(TH_GuardSpawn);
+}
+
+void AEnemyAIController::PrintState()
+{
+	FString s;
+	FString t;
+	switch (m_AIState)
+	{
+	case ESmallEnemyAIState::RecentlySpawned:
+		s += "RECENTLY SPAWNED";
+		break;
+	case ESmallEnemyAIState::Idle:
+		s += "IDLE";
+		break;
+	case ESmallEnemyAIState::Alerted:
+		s += "ALERTED";
+		break;
+	case ESmallEnemyAIState::ChasingTarget:
+		s += "CHASE";
+		break;
+	case ESmallEnemyAIState::GuardSpawn:
+		s += "GUARD";
+		break;
+	case ESmallEnemyAIState::Attack:
+		s += "ATTACKING";
+		break;
+	case ESmallEnemyAIState::Incapacitated:
+		s += "INCAPACITATED";
+		break;
+	case ESmallEnemyAIState::None:
+		s += "NONE";
+		break;
+	default:
+		break;
+	}
+
+	switch (m_DogType)
+	{
+	case EDogType::Red:
+		t += "Red";
+		break;
+	case EDogType::Pink:
+		t += "Pink";
+		break;
+	case EDogType::Teal:
+		t += "Teal";
+		break;
+	default:
+		break;
+	}
+
+	PRINTPAR("%s - State :: %s", *t, *s);
 }
 
 

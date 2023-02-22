@@ -39,7 +39,9 @@ enum class EIdleState : uint8
 	Guard,
 
 	Sleeping,
-	MovingTo_SleepLocation
+	MovingTo_SleepLocation,
+
+	None
 };
 
 UENUM(BlueprintType)
@@ -84,6 +86,7 @@ public:	// Functions
 		float Idle_SleepingLocationAcceptanceRadius{ 100.f };
 
 	void IdleBegin();
+	void IdleEnd();
 	void IdleUpdate(float DeltaTime);
 	
 	void IdleUpdate_Red(float DeltaTime);
@@ -98,26 +101,38 @@ public:	// Functions
 	//void SensePawn_Player();
 	void SpotPlayer();
 
+	void AlertedInit(const APawn& instigator);
+
+	void AlertedBegin();
+	void AlertedEnd();
+	void AlertedUpdate(float DeltaTime);
 	void AlertedTimeCheck();
 	void StopSensingPlayer();
+
+	FVector SuspiciousLocation{};
+	bool bIsSensingPawn{};
+
 
 	// Attacking 
 	void Attack();
 
 	// Setting State
 	void SetState(const ESmallEnemyAIState& state);
-	void LeaveState(const ESmallEnemyAIState& state);
+	void AlwaysBeginStates(const ESmallEnemyAIState& incommingState);
+	void LeaveState(const ESmallEnemyAIState& currentState, const ESmallEnemyAIState& incommingState);
 	
 	// Incapacitating Owner
-	void IncapacitateAI(const EAIIncapacitatedType& IncapacitateType, float Time, const ESmallEnemyAIState& NextState = ESmallEnemyAIState::None);
+	void IncapacitateBegin();
+	void IncapacitateEnd();
+	void IncapacitateAI(const EAIIncapacitatedType& IncapacitateType, float Time/*, const ESmallEnemyAIState& NextState = ESmallEnemyAIState::None*/);
 	void ReDetermineState(const ESmallEnemyAIState& StateOverride = ESmallEnemyAIState::None);
 
-	void CapacitateAI(float Time, const ESmallEnemyAIState& NextState = ESmallEnemyAIState::None);
+	//void CapacitateAI(float Time, const ESmallEnemyAIState& NextState = ESmallEnemyAIState::None);
 
 	
 	// Chase Target
 	void ChaseBegin();
-	void ChaseStop();
+	void ChaseEnd();
 	void ChaseTimedUpdate();
 	void ChaseUpdate(float DeltaTime);
 	void LerpPinkTeal_ChaseLocation(float DeltaTime);
@@ -152,7 +167,13 @@ public:	// Functions
 
 	// Guard spawn
 	void GuardSpawnUpdate(float DeltaTime);
+	void GuardSpawnBegin();
+	void GuardSpawnEnd();
 	FVector m_GuardLocation{};
+	FTimerHandle TH_GuardSpawn;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+		float GuardSpawn_Time{ 2.f };
 
 public: // Variables
 	UPROPERTY(BlueprintReadOnly)
@@ -168,8 +189,7 @@ public: // Variables
 	FTimerHandle TH_SpotPlayer;
 
 
-	bool bIsSensingPawn{};
-	FSensedPawnsDelegate SensedPawnsDelegate;
+	//FSensedPawnsDelegate SensedPawnsDelegate;
 	//FDelegateHandle DH_SensedPlayer;
 
 	/* Time taken to spot the player */
@@ -183,4 +203,7 @@ public: // Variables
 		float TimeSpentRecentlySpawned{ 1.f };
 	//UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	EDogType m_DogType;
+
+public: // Debugging
+	void PrintState();
 };
