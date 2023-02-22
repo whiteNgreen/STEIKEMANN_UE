@@ -318,6 +318,7 @@ void ASmallEnemy::Chomp_DisableCollision()
 void ASmallEnemy::Incapacitate(const EAIIncapacitatedType& IncapacitateType, float Time/*, const ESmallEnemyAIState& NextState*/)
 {
 	m_AI->IncapacitateAI(IncapacitateType, Time/*, NextState*/);
+	Chomp_DisableCollision();
 }
 
 void ASmallEnemy::IncapacitateUndeterminedTime(const EAIIncapacitatedType& IncapacitateType, void(ASmallEnemy::* function)())

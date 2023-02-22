@@ -74,6 +74,8 @@ public:	// Functions
 	virtual void Tick(float DeltaTime) override;
 	virtual void OnPossess(APawn* InPawn) override;
 
+	// Recently Spawned
+	void RecentlySpawnedBegin();
 
 	// Idle
 	EIdleState m_EIdleState;
@@ -114,6 +116,11 @@ public:	// Functions
 
 
 	// Attacking 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+		float AttackStateTime{ 1.5f };
+	FTimerHandle TH_Attack;
+	void AttackBegin();
+	void AttackEnd();
 	void Attack();
 
 	// Setting State

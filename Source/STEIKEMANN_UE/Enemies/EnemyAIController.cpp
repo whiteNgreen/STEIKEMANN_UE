@@ -79,6 +79,12 @@ void AEnemyAIController::OnPossess(APawn* InPawn)
 	//m_AIState = ESmallEnemyAIState::ChasingTarget;	// Tmp method of testing ChasingTarget
 }
 
+void AEnemyAIController::RecentlySpawnedBegin()
+{
+	FTimerHandle h;
+	TM_AI.SetTimer(h, [this]() { SetState(ESmallEnemyAIState::Idle); }, 0.5f, false);
+}
+
 void AEnemyAIController::IdleBegin()
 {
 	if (!m_SpawnPointData.IsValid()) {
@@ -271,11 +277,19 @@ void AEnemyAIController::StopSensingPlayer()
 		return;
 }
 
+void AEnemyAIController::AttackBegin()
+{
+	Attack();
+	m_PawnOwner->RotateActorYawToVector(m_Player->GetActorLocation() - m_PawnOwner->GetActorLocation());
+	TM_AI.SetTimer(TH_Attack, [this]() { SetState(ESmallEnemyAIState::ChasingTarget); } , AttackStateTime, false);
+}
+
+void AEnemyAIController::AttackEnd()
+{
+}
+
 void AEnemyAIController::Attack()	/// HUSK Å AKTIVERE ATTACK
 {
-	//auto player = Cast<ASteikemannCharacter>(m_PawnOwner->m_SensedPawn);
-	//if (!player) return;
-	//player->PTakeDamage(1, m_PawnOwner);
 	StopMovement();
 	m_PawnOwner->CHOMP_Pure();
 }
@@ -287,50 +301,16 @@ void AEnemyAIController::SetState(const ESmallEnemyAIState& state)
 	LeaveState(m_AIState, state);
 	m_AIState = state;
 
-	FTimerHandle h;
 	switch (state)
 	{
-	case ESmallEnemyAIState::RecentlySpawned:
-	{
-		TM_AI.SetTimer(h, [this]() { SetState(ESmallEnemyAIState::Idle); }, 0.5f, false);
-		
-		break;
-	}
-	case ESmallEnemyAIState::Idle:
-	{
-		IdleBegin();
-		break;
-	}
-	case ESmallEnemyAIState::Alerted:
-	{
-		AlertedBegin();
-		break;
-	}
-	case ESmallEnemyAIState::ChasingTarget:
-	{
-		ChaseBegin();
-		break;
-	}
-	case ESmallEnemyAIState::GuardSpawn:
-	{
-		GuardSpawnBegin();
-		break;
-	}
-	case ESmallEnemyAIState::Attack:
-	{
-
-		break;
-	}
-	case ESmallEnemyAIState::Incapacitated:
-	{
-
-		break;
-	}
-	case ESmallEnemyAIState::None:
-	{
-
-		break;
-	}
+	case ESmallEnemyAIState::RecentlySpawned:	RecentlySpawnedBegin();		break;
+	case ESmallEnemyAIState::Idle:				IdleBegin();				break;
+	case ESmallEnemyAIState::Alerted:			AlertedBegin();				break;
+	case ESmallEnemyAIState::ChasingTarget:		ChaseBegin();				break;
+	case ESmallEnemyAIState::GuardSpawn:		GuardSpawnBegin();			break;
+	case ESmallEnemyAIState::Attack:			AttackBegin();				break;
+	case ESmallEnemyAIState::Incapacitated:									break;
+	case ESmallEnemyAIState::None:											break;
 	default:
 		break;
 	}
@@ -394,7 +374,10 @@ void AEnemyAIController::LeaveState(const ESmallEnemyAIState& currentState, cons
 		break;
 	}
 	case ESmallEnemyAIState::Attack:
+	{
+		AttackEnd();
 		break;
+	}
 	case ESmallEnemyAIState::Incapacitated:
 		break;
 	case ESmallEnemyAIState::None:
@@ -551,6 +534,8 @@ void AEnemyAIController::ChaseUpdate(float DeltaTime)
 		break;
 	}
 
+	if (FVector::Dist(GetPawn()->GetActorLocation(), m_Player->GetActorLocation()) < 200.f)
+		SetState(ESmallEnemyAIState::Attack);
 }
 
 void AEnemyAIController::LerpPinkTeal_ChaseLocation(float DeltaTime)
