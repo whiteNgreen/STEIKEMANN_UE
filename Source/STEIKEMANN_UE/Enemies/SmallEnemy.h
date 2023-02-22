@@ -88,6 +88,8 @@ public:	// Components
 	// Collision
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
 		USphereComponent* PlayerPogoDetection{ nullptr };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
+		UBoxComponent* BoxComp_Chomp;
 
 	// Timelines
 	UPROPERTY(BlueprintReadOnly)
@@ -111,6 +113,9 @@ public: // Functions
 	UFUNCTION(BlueprintImplementableEvent)
 		void Anim_Attacked();
 	void Anim_Attacked_Pure(FVector direction);
+
+	UFUNCTION(BlueprintImplementableEvent)
+		void Anim_CHOMP();
 #pragma endregion // Animation
 
 #pragma region SpawnRespawn
@@ -146,6 +151,20 @@ public: // Functions
 	void Alert(const APawn& instigator);
 	void SleepingBegin();
 	void SleepingEnd();
+
+	//UFUNCTION(BlueprintImplementableEvent)
+		//void CHOMP();
+	void CHOMP_Pure();
+	UFUNCTION()
+		void ChompCollisionOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	virtual void Activate_AttackCollider() override;
+	virtual void Deactivate_AttackCollider() override;
+
+	FVector ChompColliderScale{};
+	void Chomp_EnableCollision();
+	void Chomp_DisableCollision();
+
 #pragma endregion // AI
 
 #pragma region States

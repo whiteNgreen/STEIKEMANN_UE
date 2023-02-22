@@ -11,6 +11,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Gameframework/CharacterMovementComponent.h"
 #include "../GameplayTags.h"
+#include "../Steikemann/SteikemannCharacter.h"
 
 // Sets default values
 ASmallEnemy::ASmallEnemy()
@@ -24,6 +25,9 @@ ASmallEnemy::ASmallEnemy()
 
 	TlComp_Scooped = CreateDefaultSubobject<UTimelineComponent>("Timeline_Scooped");
 	TlComp_Smacked = CreateDefaultSubobject<UTimelineComponent>("Timeline_Smacked");
+
+	BoxComp_Chomp = CreateDefaultSubobject<UBoxComponent>("Attack Collider");
+	BoxComp_Chomp->SetupAttachment(GetMesh(), FName("SOCKET_Head"));
 }
 
 // Called when the game starts or when spawned
@@ -34,6 +38,9 @@ void ASmallEnemy::BeginPlay()
 	WallDetector->SetCapsuleSize(WDC_Capsule_Radius, WDC_Capsule_Halfheight);
 	WallDetector->SetHeight(WDC_MinHeight, GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
 	WallDetector->SetDebugStatus(bWDC_Debug);
+
+	ChompColliderScale = BoxComp_Chomp->GetRelativeScale3D();
+	Chomp_DisableCollision();
 
 	// Adding gameplay tags
 	GameplayTags.AddTag(Tag::AubergineDoggo());
@@ -51,6 +58,9 @@ void ASmallEnemy::BeginPlay()
 	NComp_AirTrailing->SetAsset(NS_Trail);
 	NComp_AirTrailing->Deactivate();
 	Delegate_ParticleUpdate.AddUObject(this, &ASmallEnemy::NS_Update_Trail);
+
+	// Delegates
+	BoxComp_Chomp->OnComponentBeginOverlap.AddDynamic(this, &ASmallEnemy::ChompCollisionOverlap);
 
 	// Timeline Components
 	FOnTimelineFloatStatic FloatBind;
@@ -212,6 +222,13 @@ void ASmallEnemy::SleepingEnd()
 	m_Anim->bIsSleeping = false;
 }
 
+void ASmallEnemy::CHOMP_Pure()
+{
+
+
+	Anim_CHOMP();
+}
+
 void ASmallEnemy::SetDefaultState()
 {
 	switch (m_State)
@@ -261,6 +278,41 @@ void ASmallEnemy::EnableGravity()
 void ASmallEnemy::DisableGravity()
 {
 	m_Gravity = EGravityState::ForcedNone;
+}
+
+void ASmallEnemy::ChompCollisionOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (OtherActor == this) return;
+
+	auto iTag = Cast<IGameplayTagAssetInterface>(OtherActor);
+	if (!iTag) return;
+
+	if (iTag->HasMatchingGameplayTag(Tag::Player()) && OtherComp->IsA(UCapsuleComponent::StaticClass()))
+	{
+		auto IAttack = Cast<IAttackInterface>(OtherActor);
+		IAttack->Receive_SmackAttack_Pure(FVector(OtherActor->GetActorLocation() - GetActorLocation()).GetSafeNormal(), 1000.f);
+	}
+}
+
+void ASmallEnemy::Activate_AttackCollider()
+{
+	Chomp_EnableCollision();
+}
+void ASmallEnemy::Deactivate_AttackCollider()
+{
+	Chomp_DisableCollision();
+}
+
+void ASmallEnemy::Chomp_EnableCollision()
+{
+	BoxComp_Chomp->SetGenerateOverlapEvents(true);
+	BoxComp_Chomp->SetRelativeScale3D(ChompColliderScale);
+}
+
+void ASmallEnemy::Chomp_DisableCollision()
+{
+	BoxComp_Chomp->SetGenerateOverlapEvents(true);
+	BoxComp_Chomp->SetRelativeScale3D(FVector(0,0,0));
 }
 
 void ASmallEnemy::Incapacitate(const EAIIncapacitatedType& IncapacitateType, float Time/*, const ESmallEnemyAIState& NextState*/)

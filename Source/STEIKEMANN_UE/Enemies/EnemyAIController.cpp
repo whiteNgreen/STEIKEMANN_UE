@@ -271,11 +271,13 @@ void AEnemyAIController::StopSensingPlayer()
 		return;
 }
 
-void AEnemyAIController::Attack()
+void AEnemyAIController::Attack()	/// HUSK Å AKTIVERE ATTACK
 {
-	auto player = Cast<ASteikemannCharacter>(m_PawnOwner->m_SensedPawn);
-	if (!player) return;
-	player->PTakeDamage(1, m_PawnOwner);
+	//auto player = Cast<ASteikemannCharacter>(m_PawnOwner->m_SensedPawn);
+	//if (!player) return;
+	//player->PTakeDamage(1, m_PawnOwner);
+	StopMovement();
+	m_PawnOwner->CHOMP_Pure();
 }
 
 void AEnemyAIController::SetState(const ESmallEnemyAIState& state)

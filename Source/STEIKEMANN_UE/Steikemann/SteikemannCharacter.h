@@ -695,6 +695,7 @@ public:
 	void GainHealth(int amount);
 	//void PTakeDamage(int damage, FVector launchdirection);
 	void PTakeDamage(int damage, AActor* otheractor, int i = 0);
+	void PTakeDamage(int damage, const FVector& Direction, int i = 0);
 
 	UFUNCTION(BlueprintImplementableEvent)
 		void Anim_TakeDamage();

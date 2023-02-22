@@ -2012,7 +2012,7 @@ void ASteikemannCharacter::GainHealth(int amount)
 
 void ASteikemannCharacter::PTakeDamage(int damage, AActor* otheractor, int i/* = 0*/)
 {
-	if (bIsDead) { return; }
+	if (bIsDead || !bPlayerCanTakeDamage) { return; }
 
 	bPlayerCanTakeDamage = false;
 	Health = FMath::Clamp(Health -= damage, 0, MaxHealth);
@@ -2035,9 +2035,9 @@ void ASteikemannCharacter::PTakeDamage(int damage, AActor* otheractor, int i/* =
 	TimerManager.SetTimer(TH, 
 		[this, otheractor, i]()
 		{ 
-		for (auto& it : CloseHazards) {
-			PTakeDamage(1, otheractor, i+1);
-			return;
+			for (auto& it : CloseHazards) {
+				PTakeDamage(1, otheractor, i+1);
+				return;
 		}
 		bPlayerCanTakeDamage = true; 
 		}, 
@@ -2046,6 +2046,26 @@ void ASteikemannCharacter::PTakeDamage(int damage, AActor* otheractor, int i/* =
 	/* Damage launch */
 	GetMoveComponent()->Velocity *= 0.f;
 	GetMoveComponent()->AddImpulse(direction * SelfDamageLaunchStrength, true);
+
+	// Animation
+	Anim_TakeDamage();
+}
+
+void ASteikemannCharacter::PTakeDamage(int damage, const FVector& Direction, int i)
+{
+	if (bIsDead || !bPlayerCanTakeDamage) { return; }
+
+	bPlayerCanTakeDamage = false;
+	Health = FMath::Clamp(Health -= damage, 0, MaxHealth);
+	if (Health == 0) { Death(); }
+
+	FTimerHandle TH;
+	TimerManager.SetTimer(TH, [this]() { bPlayerCanTakeDamage = true; }, DamageInvincibilityTime, false);
+	
+	/* Damage launch */
+	GetMoveComponent()->Velocity *= 0.f;
+	GetMoveComponent()->AddImpulse(FVector(Direction + FVector::UpVector).GetSafeNormal() * SelfDamageLaunchStrength, true);
+	SetActorRotation(FRotator(0, (-Direction).Rotation().Yaw, 0));
 
 	// Animation
 	Anim_TakeDamage();
@@ -2920,6 +2940,7 @@ void ASteikemannCharacter::Do_SmackAttack_Pure(IAttackInterface* OtherInterface,
 
 void ASteikemannCharacter::Receive_SmackAttack_Pure(const FVector& Direction, const float& Strength)
 {
+	PTakeDamage(1, Direction);
 }
 
 
