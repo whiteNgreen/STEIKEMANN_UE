@@ -58,13 +58,11 @@ void AEnemySpawner::CheckSpawningActorClass()
 	if (SpawningActorType->IsChildOf(ASmallEnemy::StaticClass()))
 	{
 		m_EENemySpawnType = EEnemySpawnType::AubergineDog;
-		PRINTLONG("Spawning AubergineDoggo Enemy");
 		return;
 	}
 	else if (SpawningActorType->IsChildOf(ACharacter::StaticClass()))
 	{
 		m_EENemySpawnType = EEnemySpawnType::Character;
-		PRINTLONG("Spawning AubergineDoggo Enemy");
 		return;
 	}
 	else

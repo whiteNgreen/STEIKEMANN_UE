@@ -7,7 +7,7 @@
 #include "TutorialPrompt.generated.h"
 
 UENUM(BlueprintType)
-enum class ETutorialPrompt : uint8
+enum class ETutorialPromptType : uint8
 {
 	Jump,
 	DoubleJump,
@@ -44,7 +44,7 @@ public:
 public:
 	AActor* m_Player{ nullptr };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		ETutorialPrompt m_PromptType;
+		ETutorialPromptType m_PromptType;
 public:
 	UFUNCTION()
 		void OnVolumeBeginOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);

@@ -111,7 +111,9 @@ bool UWallDetectionComponent::DetectStickyWall(const AActor* actor, const FVecto
 	if (b)
 	{
 		DrawDebugLine(GetWorld(), Location, Location + (Direction * 1.1f), FColor::Purple, false, 0, 1, 5.f);
+		return true;
 
+		// Do I really need to check the tag?
 		IGameplayTagAssetInterface* tag = Cast<IGameplayTagAssetInterface>(Hit.GetActor());
 		if (!tag) return false;
 

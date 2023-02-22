@@ -12,16 +12,7 @@
  * 
  */
 
-//UENUM(BlueprintType)
-//enum ECustomMovementMode
-//{
-//	MOVECustom_None				UMETA(DisplayName = "None"),
-//	MOVECustom_Slide			UMETA(DisplayName = "Slide"),
-//	MOVECustom_WallSticking		UMETA(DisplayName = "Wallsticking"),
-//	MOVECustom_Grappling		UMETA(DisplayName = "Grappling"),
-//};
 
-// TODO: GRAVITY OVERRIDE ENUM
 UENUM(BlueprintType)
 enum class EGravityMode : uint8
 {
