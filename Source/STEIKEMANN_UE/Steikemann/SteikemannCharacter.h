@@ -15,8 +15,6 @@
 #include "../StaticActors/Collectible.h"
 #include "../WallDetectionComponent.h"
 
-#include "../Delegates_Shared.h"
-
 #include "SteikemannCharacter.generated.h"
 
 #define GRAPPLE_HOOK ECC_GameTraceChannel1
@@ -947,15 +945,15 @@ public:
 	FTimerHandle TH_BufferAttack;
 	FAttackActionBuffer Delegate_AttackBuffer;
 		
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|AttackContact")
-		float AttackContactTimer{ 0.3f };
-	FAttackContactDelegate AttackContactDelegate;
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|AttackContact")
+	//	float AttackContactTimer{ 0.3f };
+	//FAttackContactDelegate AttackContactDelegate;
 
-	/*	*	When attacking with the staff keep a list of actors hit during the attack
-		*	The 'void Attack Contact Function' will only be called once per actor	
-		*	This array is cleaned in 'void StopAttack'								*/
-	TArray<AActor*> AttackContactedActors;
-	void AttackContact(AActor* instigator, AActor* target);
+	///*	*	When attacking with the staff keep a list of actors hit during the attack
+	//	*	The 'void Attack Contact Function' will only be called once per actor	
+	//	*	This array is cleaned in 'void StopAttack'								*/
+	//TArray<AActor*> AttackContactedActors;
+	virtual void AttackContact(AActor* target) override;
 	void AttackContact_Particles(FVector location, FQuat direction);
 
 	// Time removed from

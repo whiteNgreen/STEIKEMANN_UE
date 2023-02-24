@@ -9,6 +9,8 @@
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraComponent.h"
 
+#include "../Delegates_Shared.h"
+
 #include "AbstractCharacter.generated.h"
 
 UCLASS(Abstract)
@@ -17,21 +19,21 @@ class STEIKEMANN_UE_API AAbstractCharacter : public ACharacter
 	GENERATED_BODY()
 
 public:
-	virtual void AllowActionCancelationWithInput(){}
+	virtual void AllowActionCancelationWithInput()	PURE_VIRTUAL(AAbstractCharacter::AllowActionCancelationWithInput);
 
-	virtual void Activate_AttackCollider	(){}
-	virtual void Deactivate_AttackCollider	(){}
+	virtual void Activate_AttackCollider()			PURE_VIRTUAL(AAbstractCharacter::Activate_AttackCollider);
+	virtual void Deactivate_AttackCollider()		PURE_VIRTUAL(AAbstractCharacter::Deactivate_AttackCollider);
 
-	virtual void StartAttackBufferPeriod	(){}
-	virtual void ExecuteAttackBuffer		(){}
-	virtual void EndAttackBufferPeriod		(){}
+	virtual void StartAttackBufferPeriod()			PURE_VIRTUAL(AAbstractCharacter::StartAttackBufferPeriod);
+	virtual void ExecuteAttackBuffer()				PURE_VIRTUAL(AAbstractCharacter::ExecuteAttackBuffer);
+	virtual void EndAttackBufferPeriod()			PURE_VIRTUAL(AAbstractCharacter::EndAttackBufferPeriod);
 
-	virtual void StartAnimLerp_ControlRig	(){}
+	virtual void StartAnimLerp_ControlRig()			PURE_VIRTUAL(AAbstractCharacter::StartAnimLerp_ControlRig);
 };
 
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FParticleUpdate, float /* DeltaTime */)
-DECLARE_MULTICAST_DELEGATE_OneParam(FMaterialUpdate, float /* DeltaTime */)
+DECLARE_MULTICAST_DELEGATE_OneParam(FParticleUpdate, float DeltaTime)
+DECLARE_MULTICAST_DELEGATE_OneParam(FMaterialUpdate, float DeltaTime)
 class UNiagaraSystem;
 class UNiagaraComponent;
 
@@ -43,6 +45,7 @@ class STEIKEMANN_UE_API ABaseCharacter : public AAbstractCharacter
 public:
 	ABaseCharacter();
 	ABaseCharacter(const FObjectInitializer& ObjectInitializer);
+	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 	virtual void EndTick(float DeltaTime);
 
@@ -54,5 +57,20 @@ public:
 	TArray<UNiagaraComponent*> TempNiagaraComponents;
 	/* Create tmp niagara component */
 	UNiagaraComponent* CreateNiagaraComponent(FName Name, USceneComponent* Parent = nullptr, FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules::SnapToTargetIncludingScale, bool bTemp = false);
+
+
+	// Attack Contact
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|AttackContact")
+		float AttackContactTimer{ 0.3f };
+	FAttackContact_Other_Delegate AttackContactDelegate;
+	//FAttackContact_Instigator_Delegate AttackContactDelegate_Instigator;
+	FTimerHandle TH_AttackContact_Instigator;
+
+	/*	*	When attacking with the staff keep a list of actors hit during the attack
+		*	The 'void Attack Contact Function' will only be called once per actor
+		*	This array is cleaned in 'void StopAttack'								*/
+	TArray<AActor*> AttackContactedActors;
+	virtual void AttackContact(AActor* target);
+	//virtual void AttackContact_Instigator();
 
 };

@@ -158,7 +158,7 @@ void AEnemySpawner::Gen_ReceiveAttack(const FVector& Direction, const float& Str
 
 void AEnemySpawner::SpawnAubergineDog(int& index)
 {
-	ASmallEnemy* spawnedDog = Cast<ASmallEnemy>(SpawnCharacter());
+	ASmallEnemy* spawnedDog = SpawnCharacter();
 	if (!spawnedDog)
 		return;
 	spawnedDog->m_DogPack = m_AuberginePack;
@@ -193,33 +193,34 @@ void AEnemySpawner::SpawnAubergineDog(int& index)
 		// Should be called at ASmallEnemy::BeginPlay() or ASmallEnemy::Respawn() ??
 }
 
-ACharacter* AEnemySpawner::SpawnCharacter()
+ASmallEnemy* AEnemySpawner::SpawnCharacter()
 {
 	float yaw = RandomFloat(0, 360.f);
 	float pitch = RandomFloat(PitchRange.X, PitchRange.Y);
 	FRotator rot(0.f, yaw, 0.f);
 
-	ASmallEnemy* spawnedCharacter = GetWorld()->SpawnActor<ASmallEnemy>(SpawningActorType, SpawnPoint->GetComponentLocation(), rot);
-	if (!spawnedCharacter)
+	ASmallEnemy* spawnedDog = GetWorld()->SpawnActor<ASmallEnemy>(SpawningActorType, SpawnPoint->GetComponentLocation(), rot);
+	if (!spawnedDog)
 		return nullptr;
 	// Launch character out
 	FVector LaunchDirection;
 	LaunchDirection = FVector::ForwardVector.RotateAngleAxis(yaw, FVector::UpVector);
 	LaunchDirection = (cosf(FMath::DegreesToRadians(pitch)) * LaunchDirection) + (sinf(FMath::DegreesToRadians(pitch)) * FVector::UpVector);
 
-	spawnedCharacter->GetCharacterMovement()->bJustTeleported = false;
-	spawnedCharacter->GetCharacterMovement()->bRunPhysicsWithNoController = true;
-	spawnedCharacter->GetCharacterMovement()->AddImpulse(LaunchDirection.GetSafeNormal() * Spawn_LaunchStrength, true);
+	spawnedDog->Launched(LaunchDirection);
+	spawnedDog->GetCharacterMovement()->bJustTeleported = false;
+	spawnedDog->GetCharacterMovement()->bRunPhysicsWithNoController = true;
+	spawnedDog->GetCharacterMovement()->AddImpulse(LaunchDirection.GetSafeNormal() * Spawn_LaunchStrength, true);
 	
-	return spawnedCharacter;
+	return spawnedDog;
 }
 
 void EDogPack::AlertPack(ASmallEnemy* Instigator)
 {
-	if (Red != Instigator)
+	if (Red && Red != Instigator)
 		Red->Alert(*Instigator);
-	if (Pink != Instigator)
+	if (Pink && Pink != Instigator)
 		Pink->Alert(*Instigator);
-	if (Teal != Instigator)
+	if (Teal && Teal != Instigator)
 		Teal->Alert(*Instigator);
 }

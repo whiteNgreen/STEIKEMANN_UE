@@ -116,6 +116,8 @@ public: // Functions
 
 	UFUNCTION(BlueprintImplementableEvent)
 		void Anim_CHOMP();
+	UFUNCTION(BlueprintImplementableEvent)
+		void Anim_Startled();
 #pragma endregion // Animation
 
 #pragma region SpawnRespawn
@@ -340,6 +342,8 @@ public: // Particles for getting smacked
 	UFUNCTION()
 		void Tl_Smacked(float value);
 
+	void Launched();
+	void Launched(FVector direction);
 #pragma endregion	//GettingSmacked
 #pragma region Pogo
 public:

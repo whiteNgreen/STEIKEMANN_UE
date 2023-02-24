@@ -210,6 +210,7 @@ void ASmallEnemy::Alert(const APawn& instigator)
 	SleepingEnd();
 	//m_AI->AlertedInit(instigator);
 	m_AI->SetState(ESmallEnemyAIState::ChasingTarget);
+	Anim_Startled();
 }
 
 void ASmallEnemy::SleepingBegin()
@@ -291,6 +292,9 @@ void ASmallEnemy::ChompCollisionOverlap(UPrimitiveComponent* OverlappedComponent
 	{
 		auto IAttack = Cast<IAttackInterface>(OtherActor);
 		IAttack->Receive_SmackAttack_Pure(FVector(OtherActor->GetActorLocation() - GetActorLocation()).GetSafeNormal(), 1000.f);
+
+		//AttackContactDelegate_Instigator.Broadcast();
+		AttackContactDelegate.Broadcast(OtherActor);
 	}
 }
 
@@ -519,6 +523,9 @@ void ASmallEnemy::Receive_SmackAttack_Pure(const FVector& Direction, const float
 {
 	if (GetCanBeSmackAttacked())
 	{
+		/* Sets a timer before character can be damaged by the same attack */
+		TimerManager.SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, SmackAttack_InternalTimer, false);
+
 		EnableGravity();
 		TlComp_Scooped->Stop();
 
@@ -533,16 +540,13 @@ void ASmallEnemy::Receive_SmackAttack_Pure(const FVector& Direction, const float
 
 		Incapacitate(EAIIncapacitatedType::Stunned, 1.5f/* Stun timer */);
 
-		/* Sets a timer before character can be damaged by the same attack */
-		TimerManager.SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, SmackAttack_InternalTimer, false);
-
 			/// PUTTE DETTE I EN EGEN DELEGATION? Delegate_Launched.Execute()?
-		m_State = EEnemyState::STATE_Launched;
-		RotateActorYawToVector(Direction * -1.f);
-		// Animation
-		Anim_Attacked_Pure(Direction * -1.f);
-		// Particles
-		NS_Start_Trail(Direction);
+		Launched(Direction);
+		//m_State = EEnemyState::STATE_Launched;
+		//// Animation
+		//Anim_Attacked_Pure(Direction * -1.f);
+		//// Particles
+		//NS_Start_Trail(Direction);
 	}
 }
 
@@ -601,8 +605,9 @@ void ASmallEnemy::Receive_GroundPound_Pure(const FVector& PoundDirection, const 
 	/* Sets a timer before character can be damaged by the same attack */
 	//TimerManager.SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, 0.5f, false);
 	
+	Launched(PoundDirection);
 	// Particles
-	NS_Start_Trail(PoundDirection);
+	//NS_Start_Trail(PoundDirection);
 }
 
 void ASmallEnemy::NS_Start_Trail(FVector direction)
@@ -649,4 +654,19 @@ void ASmallEnemy::Receive_Pogo_GroundPound_Pure()
 
 	// Particles
 	//UNiagaraFunctionLibrary::SpawnSystemAtLocation()
+}
+
+void ASmallEnemy::Launched()
+{
+	Launched(GetVelocity().GetSafeNormal());
+}
+
+void ASmallEnemy::Launched(FVector direction)
+{
+	m_State = EEnemyState::STATE_Launched;
+	// Animation
+	Anim_Attacked_Pure(direction * -1.f);
+	RotateActorYawToVector(direction * -1.f);
+	// Particles
+	NS_Start_Trail(direction);
 }

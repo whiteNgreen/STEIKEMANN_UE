@@ -288,7 +288,7 @@ void AEnemyAIController::AttackEnd()
 {
 }
 
-void AEnemyAIController::Attack()	/// HUSK Å AKTIVERE ATTACK
+void AEnemyAIController::Attack()
 {
 	StopMovement();
 	m_PawnOwner->CHOMP_Pure();

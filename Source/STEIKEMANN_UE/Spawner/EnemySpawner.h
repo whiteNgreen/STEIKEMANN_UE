@@ -133,7 +133,7 @@ public: // Functions - Called by SpawnedActor
 
 private: // PRIVATE Functions
 	void SpawnAubergineDog(int& index);
-	ACharacter* SpawnCharacter();
+	ASmallEnemy* SpawnCharacter();
 
 	//void SpawnAuberginePack();
 };

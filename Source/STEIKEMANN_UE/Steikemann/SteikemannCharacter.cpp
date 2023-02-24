@@ -134,7 +134,7 @@ void ASteikemannCharacter::BeginPlay()
 		TimerManager.SetTimer(h, this, &ASteikemannCharacter::Respawn, RespawnTimer);
 		Anim_Death();	// Do IsFalling check to determine which animation to play
 		});
-	AttackContactDelegate.BindUObject(this, &ASteikemannCharacter::AttackContact);
+	//AttackContactDelegate.BindUObject(this, &ASteikemannCharacter::AttackContact);
 	Delegate_MaterialUpdate.AddUObject(this, &ASteikemannCharacter::Material_UpdateParameterCollection_Player);
 
 	// TimelineComponents
@@ -2751,24 +2751,9 @@ void ASteikemannCharacter::BufferDelegate_Attack(void(ASteikemannCharacter::* fu
 
 }
 
-void ASteikemannCharacter::AttackContact(AActor* instigator, AActor* target)
+void ASteikemannCharacter::AttackContact(AActor* target)
 {
-	// Cancel function if target has already been hit
-	if (!AttackContactedActors.Find(target)) {
-		return;	
-	}
-	AttackContactedActors.Add(target);
-
-	instigator->CustomTimeDilation = Statics::AttackContactTimeDilation;
-	// Do Whatever needs to be done to the actor here	// Like f.ex starting an animation before starting the time dilation
-	target->CustomTimeDilation = Statics::AttackContactTimeDilation;
-
-	FTimerHandle h;
-	GetWorldTimerManager().SetTimer(h, [instigator, target]() {		// Using world timer manager for timers meant to run in realtime
-		instigator->CustomTimeDilation = 1.f;
-		target->CustomTimeDilation = 1.f;
-		}, AttackContactTimer, false);
-	
+	Super::AttackContact(target);
 	// Particles
 	AttackContact_Particles(AttackCollider->GetComponentLocation(), AttackCollider->GetComponentQuat());
 }
@@ -2826,6 +2811,10 @@ void ASteikemannCharacter::OnAttackColliderBeginOverlap(UPrimitiveComponent* Ove
 		EAttackType AType;
 		if (OverlappedComp == AttackCollider) { AType = EAttackType::SmackAttack; }
 		if (OverlappedComp == GroundPoundCollider) { AType = EAttackType::GroundPound; }
+
+		//AttackContactDelegate_Instigator.Broadcast();
+		AttackContactDelegate.Broadcast(OtherActor);
+		
 		/* Attacking a corruption core */
 		if (TCon.HasTag(Tag::CorruptionCore()))
 		{
@@ -2841,7 +2830,6 @@ void ASteikemannCharacter::OnAttackColliderBeginOverlap(UPrimitiveComponent* Ove
 		/* Smack attack collider */
 		if (OverlappedComp == AttackCollider && OtherComp->GetClass() == UCapsuleComponent::StaticClass())
 		{
-			AttackContactDelegate.Execute(this, OtherActor);
 			switch (m_EAttackState)
 			{
 			case EAttackState::None:
