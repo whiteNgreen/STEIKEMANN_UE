@@ -240,11 +240,15 @@ void AEnemyAIController::AlertedBegin()
 {
 	TM_AI.SetTimer(TH_StopSensingPlayer, this, &AEnemyAIController::StopSensingPlayer, PSComponent->SensingInterval + 0.4f);
 	m_EIdleState = EIdleState::None;
+	if (m_DogType == EDogType::Red)
+		m_PawnOwner->SpottingPlayer_Begin();
 }
 
 void AEnemyAIController::AlertedEnd()
 {
 	TM_AI.ClearTimer(TH_StopSensingPlayer);
+	if (m_DogType == EDogType::Red)
+		m_PawnOwner->SpottingPlayer_End();
 }
 
 void AEnemyAIController::AlertedUpdate(float DeltaTime)

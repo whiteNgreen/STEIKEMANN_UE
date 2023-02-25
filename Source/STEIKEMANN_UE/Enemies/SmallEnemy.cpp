@@ -412,6 +412,15 @@ void ASmallEnemy::LeaveWall()
 	IncapacitateUndeterminedTime(EAIIncapacitatedType::Grappled, &ASmallEnemy::CollisionDelegate);
 }
 
+void ASmallEnemy::SpottingPlayer_Begin()
+{
+	m_Anim->bSpottingPlayer = true;
+}
+void ASmallEnemy::SpottingPlayer_End()
+{
+	m_Anim->bSpottingPlayer = false;
+}
+
 void ASmallEnemy::TargetedPure()
 {
 	Execute_Targeted(this);

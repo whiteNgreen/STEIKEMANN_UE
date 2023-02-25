@@ -37,4 +37,6 @@ public:	// Variables
 		bool bIsLaunchedInAir{};
 	UPROPERTY(BlueprintReadOnly)
 		bool bIsSleeping{};
+	UPROPERTY(BlueprintReadOnly)
+		bool bSpottingPlayer{};
 };

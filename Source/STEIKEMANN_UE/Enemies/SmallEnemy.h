@@ -93,9 +93,9 @@ public:	// Components
 
 	// Timelines
 	UPROPERTY(BlueprintReadOnly)
-		UTimelineComponent* TlComp_Scooped { nullptr };
+		UTimelineComponent* TlComp_Scooped{ nullptr };
 	UPROPERTY(BlueprintReadOnly)
-		UTimelineComponent* TlComp_Smacked { nullptr };
+		UTimelineComponent* TlComp_Smacked{ nullptr };
 
 	// Particles
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Particles")
@@ -194,6 +194,9 @@ public: // Functinos calling AI controller or Functions AI controller calling
 
 	bool IsIncapacitated() const;
 	bool IsTargetWithinSpawn(const FVector& target, const float& radiusmulti = 1.f) const;
+
+	void SpottingPlayer_Begin();
+	void SpottingPlayer_End();
 
 private: // Functions Capacitate - Used for IncapacitatedLandingDelegate
 	void IncapacitatedLand();
