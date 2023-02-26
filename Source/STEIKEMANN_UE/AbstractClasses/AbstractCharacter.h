@@ -63,14 +63,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|AttackContact")
 		float AttackContactTimer{ 0.3f };
 	FAttackContact_Other_Delegate AttackContactDelegate;
-	//FAttackContact_Instigator_Delegate AttackContactDelegate_Instigator;
 	FTimerHandle TH_AttackContact_Instigator;
 
 	/*	*	When attacking with the staff keep a list of actors hit during the attack
 		*	The 'void Attack Contact Function' will only be called once per actor
 		*	This array is cleaned in 'void StopAttack'								*/
+
 	TArray<AActor*> AttackContactedActors;
 	virtual void AttackContact(AActor* target);
-	//virtual void AttackContact_Instigator();
 
 };

@@ -92,8 +92,8 @@ public:	// Components
 		UBoxComponent* BoxComp_Chomp;
 
 	// Timelines
-	UPROPERTY(BlueprintReadOnly)
-		UTimelineComponent* TlComp_Scooped{ nullptr };
+	//UPROPERTY(BlueprintReadOnly)
+	//	UTimelineComponent* TlComp_Scooped{ nullptr };
 	UPROPERTY(BlueprintReadOnly)
 		UTimelineComponent* TlComp_Smacked{ nullptr };
 
@@ -154,8 +154,6 @@ public: // Functions
 	void SleepingBegin();
 	void SleepingEnd();
 
-	//UFUNCTION(BlueprintImplementableEvent)
-		//void CHOMP();
 	void CHOMP_Pure();
 	UFUNCTION()
 		void ChompCollisionOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
@@ -303,24 +301,6 @@ public:
 	void Receive_SmackAttack_Pure(const FVector& Direction, const float& Strength) override;
 	bool GetCanBeSmackAttacked() const override { return bCanBeSmackAttacked; }
 	void ResetCanBeSmackAttacked() override { bCanBeSmackAttacked = true; }
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Scoop|Curve")
-		UCurveFloat* Curve_ScoopedZForceFloat{ nullptr };
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Scoop|Curve")
-		float ScoopedCurveMultiplier{ 1.f };
-	/* When launched target height is set by the player, but this actors Z height will be adjusted by this value */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Scoop")
-		float ScoopedZHeightAdjustment{ -30.f };
-	FVector ScoopedLocation{};
-	float ScoopedLength2D{};
-
-	UFUNCTION()
-		void Tl_Scooped(float value);
-	UFUNCTION()
-		void Tl_ScoopedEnd();
-
-	void Do_ScoopAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override;	// Getting Scooped
-	void Receive_ScoopAttack_Pure(const FVector& TargetLocation, const FVector& InstigatorLocation, const float& time) override;
 
 	void Do_GroundPound_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override {}
 	void Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength) override;

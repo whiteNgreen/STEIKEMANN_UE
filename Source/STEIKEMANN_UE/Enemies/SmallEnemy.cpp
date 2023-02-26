@@ -23,7 +23,6 @@ ASmallEnemy::ASmallEnemy()
 	PlayerPogoDetection = CreateDefaultSubobject<USphereComponent>(TEXT("PlayerPogoDetection"));
 	PlayerPogoDetection->SetupAttachment(RootComponent);
 
-	TlComp_Scooped = CreateDefaultSubobject<UTimelineComponent>("Timeline_Scooped");
 	TlComp_Smacked = CreateDefaultSubobject<UTimelineComponent>("Timeline_Smacked");
 
 	BoxComp_Chomp = CreateDefaultSubobject<UBoxComponent>("Attack Collider");
@@ -64,13 +63,6 @@ void ASmallEnemy::BeginPlay()
 
 	// Timeline Components
 	FOnTimelineFloatStatic FloatBind;
-	FloatBind.BindUObject(this, &ASmallEnemy::Tl_Scooped);
-	TlComp_Scooped->AddInterpFloat(Curve_ScoopedZForceFloat, FloatBind);
-
-	FOnTimelineEventStatic EventStatic;
-	EventStatic.BindUObject(this, &ASmallEnemy::Tl_ScoopedEnd);
-	TlComp_Scooped->SetTimelineFinishedFunc(EventStatic);
-
 	FloatBind.BindUObject(this, &ASmallEnemy::Tl_Smacked);
 	TlComp_Smacked->AddInterpFloat(Curve_NSTrail, FloatBind);
 }
@@ -208,7 +200,6 @@ FGameplayTag ASmallEnemy::SensingPawn(APawn* pawn)
 void ASmallEnemy::Alert(const APawn& instigator)
 {
 	SleepingEnd();
-	//m_AI->AlertedInit(instigator);
 	m_AI->SetState(ESmallEnemyAIState::ChasingTarget);
 	Anim_Startled();
 }
@@ -529,7 +520,6 @@ void ASmallEnemy::Receive_SmackAttack_Pure(const FVector& Direction, const float
 		TimerManager.SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, SmackAttack_InternalTimer, false);
 
 		EnableGravity();
-		TlComp_Scooped->Stop();
 
 		/* Weaker smack attack if actor on ground than in air */
 		float s;
@@ -542,62 +532,9 @@ void ASmallEnemy::Receive_SmackAttack_Pure(const FVector& Direction, const float
 
 		Incapacitate(EAIIncapacitatedType::Stunned, 1.5f/* Stun timer */);
 
-			/// PUTTE DETTE I EN EGEN DELEGATION? Delegate_Launched.Execute()?
 		Launched(Direction);
-		//m_State = EEnemyState::STATE_Launched;
-		//// Animation
-		//Anim_Attacked_Pure(Direction * -1.f);
-		//// Particles
-		//NS_Start_Trail(Direction);
 	}
 }
-
-void ASmallEnemy::Tl_Scooped(float value)
-{
-	// Add Force in Z direction
-	auto c = GetCharacterMovement();
-	float PositiveGravity = c->GetGravityZ() * -1.f * c->Mass;
-	GetCharacterMovement()->AddForce(FVector(0, 0, PositiveGravity * value * ScoopedCurveMultiplier));
-
-	// Reduce horizontal velocity when getting closer to the scooped target2D
-	float multi2D = (float)FVector::DistSquared2D(GetActorLocation(), ScoopedLocation) / ScoopedLength2D;
-	c->Velocity.X *= multi2D;
-	c->Velocity.Y *= multi2D;
-}
-
-void ASmallEnemy::Tl_ScoopedEnd()
-{
-	EnableCollisions();
-}
-
-void ASmallEnemy::Do_ScoopAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor)
-{
-}
-
-void ASmallEnemy::Receive_ScoopAttack_Pure(const FVector& TargetLocation, const FVector& InstigatorLocation, const float& time)
-{
-	if (GetCanBeSmackAttacked())
-	{
-		TlComp_Scooped->PlayFromStart();
-		ScoopedLocation = TargetLocation + FVector(0,0, ScoopedZHeightAdjustment);
-		ScoopedLength2D = FVector::DistSquared2D(GetActorLocation(), ScoopedLocation);
-
-		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndProbe);
-
-		bCanBeSmackAttacked = false;
-		FVector ToInstigator = InstigatorLocation - GetActorLocation();
-		SetActorRotation(FVector(ToInstigator.GetSafeNormal2D() * -1.f).Rotation(), ETeleportType::TeleportPhysics);
-		GetCharacterMovement()->Velocity *= 0.f;
-
-		FVector ScoopDirection = ScoopedLocation - GetActorLocation();
-		FVector Velocity = ((ScoopDirection) / time) + (0.5f * FVector(0, 0, -GravityZ) * time);
-		GetCharacterMovement()->AddImpulse(Velocity, true);
-
-		/* Sets a timer before character can be damaged by the same attack */
-		TimerManager.SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, 0.2f, false);
-	}
-}
-
 void ASmallEnemy::Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength)
 {
 	SetActorRotation(FVector(PoundDirection.GetSafeNormal2D() * -1.f).Rotation(), ETeleportType::TeleportPhysics);
@@ -605,11 +542,8 @@ void ASmallEnemy::Receive_GroundPound_Pure(const FVector& PoundDirection, const 
 	GetCharacterMovement()->AddImpulse(PoundDirection * GP_Strength, true);
 
 	/* Sets a timer before character can be damaged by the same attack */
-	//TimerManager.SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, 0.5f, false);
 	
 	Launched(PoundDirection);
-	// Particles
-	//NS_Start_Trail(PoundDirection);
 }
 
 void ASmallEnemy::NS_Start_Trail(FVector direction)
