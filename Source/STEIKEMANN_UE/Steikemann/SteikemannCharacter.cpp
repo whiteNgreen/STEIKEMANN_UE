@@ -181,7 +181,6 @@ void ASteikemannCharacter::Material_UpdateParameterCollection_Player(float Delta
 	UKismetMaterialLibrary::SetVectorParameterValue(GetWorld(), MPC_Player, "Velocity",			FLinearColor(GetVelocity()));
 	UKismetMaterialLibrary::SetVectorParameterValue(GetWorld(), MPC_Player, "Forward",			FLinearColor(GetActorForwardVector()));
 }
-
 void ASteikemannCharacter::NS_Land_Implementation(const FHitResult& Hit)
 {
 	/* Play Landing particle effect */
@@ -204,7 +203,6 @@ void ASteikemannCharacter::NS_Land_Implementation(const FHitResult& Hit)
 	NiagaraPlayer->SetWorldLocationAndRotation(Hit.ImpactPoint, Hit.ImpactNormal.Rotation());
 	NiagaraPlayer->Activate(true);
 }
-
 
 // Called every frame
 void ASteikemannCharacter::Tick(float DeltaTime)
@@ -231,28 +229,29 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		if (m_GamepadCameraInput.Length() > 1.f)
 			m_GamepadCameraInput.Normalize();
 	}
-	//switch (m_EState)
-	//{
-	//case EState::STATE_OnGround:
-	//	PRINT("STATE_OnGround");
-	//	break;
-	//case EState::STATE_InAir:
-	//	PRINT("STATE_InAir");
-	//	break;
-	//case EState::STATE_OnWall:
-	//	PRINT("STATE_OnWall");
-	//	break;
-	//case EState::STATE_Attacking:
-	//	PRINT("STATE_Attacking");
-	//	break;
-	//case EState::STATE_Grappling:
-	//	PRINT("STATE_Grappling");
-	//	break;
-	//default:
-	//	break;
-	//}
+	switch (m_EState)
+	{
+	case EState::STATE_OnGround:
+		PRINT("STATE_OnGround");
+		break;
+	case EState::STATE_InAir:
+		PRINT("STATE_InAir");
+		break;
+	case EState::STATE_OnWall:
+		PRINT("STATE_OnWall");
+		break;
+	case EState::STATE_Attacking:
+		PRINT("STATE_Attacking");
+		break;
+	case EState::STATE_Grappling:
+		PRINT("STATE_Grappling");
+		break;
+	default:
+		break;
+	}
 	//PRINTPAR("Attack State :: %i", m_EAttackState);
-	//PRINTPAR("Grapple State :: %i", m_EGrappleState);
+	PRINTPAR("Grapple State :: %i", m_EGrappleState);
+	PRINTPAR("Grapple Type  :: %i", m_EGrappleType);
 	//PRINTPAR("Smack Attack State :: %i", m_ESmackAttackState);
 	//PRINTPAR("Air State :: %i", m_EAirState);
 	//PRINTPAR("Pogo Type :: %i", m_EPogoType);
@@ -406,7 +405,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		else if (Is_GH_StaticTarget() && m_EGrappleState == EGrappleState::Pre_Launch)
 			GuideCamera_StaticGrapple(DeltaTime);
 	}
-	if (m_EState == EState::STATE_InAir && m_EAirState == EAirState::AIR_PostScoopJump) {
+	if (m_EState == EState::STATE_InAir && m_EAirState == EAirState::AIR_PostScoopJump) {	// Scoop Jump Camera // REMOVE
 		GrappleDynamicGuideCamera(ScoopedActor, DeltaTime);
 	}
 	PlaceCameraBoom(DeltaTime);
@@ -698,7 +697,7 @@ void ASteikemannCharacter::RightTriggerClick()
 void ASteikemannCharacter::RightTriggerUn_Click()
 {
 	bGrappleClick = false;
-	// Noe ang�ende slapp grapple knappen ?
+	GH_DelegateDynamicLaunch();
 }
 
 void ASteikemannCharacter::GH_SetGrappleType(IGameplayTagAssetInterface* ITag, IGrappleTargetInterface* IGrapple)
@@ -724,7 +723,7 @@ void ASteikemannCharacter::GH_SetGrappleType(IGameplayTagAssetInterface* ITag, I
 	if (IGrapple->IsStuck_Pure())
 	{
 		ResetState();
-		if (m_EState == EState::STATE_OnGround)	m_EGrappleType = EGrappleType::Static_StuckEnemy_Ground;
+		if (m_EState == EState::STATE_OnGround)		m_EGrappleType = EGrappleType::Static_StuckEnemy_Ground;
 		if (m_EState == EState::STATE_InAir)		m_EGrappleType = EGrappleType::Static_StuckEnemy_Air;
 		GH_PreLaunch_Static(&ASteikemannCharacter::GH_Launch_Static_StuckEnemy, IGrapple);
 		return;
@@ -733,6 +732,10 @@ void ASteikemannCharacter::GH_SetGrappleType(IGameplayTagAssetInterface* ITag, I
 		// Player in Air
 	if (m_EState == EState::STATE_InAir)
 	{
+		GH_PreLaunch();
+		IGrapple->HookedPure();
+		IGrapple->HookedPure(GetActorLocation(), true, true);
+
 		m_EGrappleType = EGrappleType::Dynamic_Air;
 		GH_PreLaunch_Dynamic(IGrapple, false);
 		return;
@@ -741,8 +744,23 @@ void ASteikemannCharacter::GH_SetGrappleType(IGameplayTagAssetInterface* ITag, I
 		// Player on Ground
 	if (m_EState == EState::STATE_OnGround)
 	{
+		GH_PreLaunch();
+		IGrapple->HookedPure();
+		IGrapple->HookedPure(GetActorLocation(), true, true);
 		m_EGrappleType = EGrappleType::Dynamic_Ground;
-		GH_PreLaunch_Dynamic(IGrapple, true);
+
+		//TFunc_GrappleHoldFunction = [this, IGrapple]() {
+		//	GH_PreLaunch_Dynamic(IGrapple, true);
+		//	return;
+		//};
+
+		TFunc_GrappleLaunchFunction = [this, IGrapple]() {
+			GH_Launch_Dynamic(IGrapple, true);
+			TFunc_GrappleLaunchFunction.Reset();
+			return;
+		};
+
+		TimerManager.SetTimer(TH_GrappleHold, [this]() { TFunc_GrappleLaunchFunction(); }, GH_GrapplingEnemyHold, false);
 		return;
 	}
 }
@@ -772,11 +790,6 @@ void ASteikemannCharacter::GH_PreLaunch_Static(void(ASteikemannCharacter::* Laun
 
 void ASteikemannCharacter::GH_PreLaunch_Dynamic(IGrappleTargetInterface* IGrapple, bool OnGround)
 {
-	GH_PreLaunch();
-	IGrapple->HookedPure();
-	IGrapple->HookedPure(GetActorLocation(), OnGround, true);
-
-	//FTimerHandle h;
 	TimerManager.SetTimer(TH_Grapplehook_Pre_Launch,
 		[this, IGrapple, OnGround]()
 		{
@@ -795,6 +808,23 @@ void ASteikemannCharacter::GH_PreLaunch_Dynamic(IGrappleTargetInterface* IGrappl
 	// End control rig 
 	FTimerHandle h;
 	TimerManager.SetTimer(h, this, &ASteikemannCharacter::GH_StopControlRig, GrappleDrag_PreLaunch_Timer_Length + (GrappleHook_PostLaunchTimer * 0.3));
+}
+
+void ASteikemannCharacter::GH_Launch_Dynamic(IGrappleTargetInterface* IGrapple, bool OnGround)
+{
+	m_EGrappleState = EGrappleState::Post_Launch;
+	GetMoveComponent()->m_GravityMode = EGravityMode::Default;
+	IGrapple->HookedPure(GetActorLocation(), OnGround, false);
+
+	// Animations
+	Anim_Grapple_End_Pure();
+
+	// End GrappleHook Timer
+	TimerManager.SetTimer(TH_Grapplehook_End_Launch, this, &ASteikemannCharacter::GH_Stop, GrappleHook_PostLaunchTimer);
+
+	// End control rig 
+	FTimerHandle h;
+	TimerManager.SetTimer(h, this, &ASteikemannCharacter::GH_StopControlRig, (GrappleHook_PostLaunchTimer * 0.3));
 }
 
 bool ASteikemannCharacter::Is_GH_StaticTarget() const
@@ -833,11 +863,10 @@ void ASteikemannCharacter::GH_Launch_Static()
 	Anim_Grapple_End_Pure();
 }
 
-
 void ASteikemannCharacter::GH_Launch_Static_StuckEnemy()
 {
 	GetMoveComponent()->DeactivateJumpMechanics();
-	FVector GrappledLocation = Active_GrappledActor->GetActorLocation();
+	FVector GrappledLocation = GH_GetTargetLocation();
 	FVector Direction = GrappledLocation - GetActorLocation();
 	FVector Direction2D = FVector(Direction.X, Direction.Y, 0);
 
@@ -900,6 +929,24 @@ void ASteikemannCharacter::GH_StopControlRig()
 {
 	// Animation
 	bGH_LerpControlRig = false;
+}
+
+void ASteikemannCharacter::GH_DelegateDynamicLaunch()
+{
+	if (!TFunc_GrappleLaunchFunction) return;
+
+	// Call grapple launch when releasing button, but only if the minimal time (GrappleDrag_PreLaunch_Timer_Length) has elapsed
+	if (TimerManager.GetTimerElapsed(TH_GrappleHold) < GrappleDrag_PreLaunch_Timer_Length) {
+		PRINTPARLONG(1.f, "Set timer for remaining time _ Grapple == %f", TimerManager.GetTimerRemaining(TH_GrappleHold) - GrappleDrag_PreLaunch_Timer_Length);
+		TimerManager.SetTimer(TH_GrappleHold, [this]() { TFunc_GrappleLaunchFunction(); }, GrappleDrag_PreLaunch_Timer_Length - TimerManager.GetTimerElapsed(TH_GrappleHold), false);
+		return;
+	}
+	else {
+		PRINTLONG("Call Grapplelaunch function");
+		TimerManager.ClearTimer(TH_GrappleHold);
+		TFunc_GrappleLaunchFunction();
+		//TFunc_GrappleLaunchFunction.Reset();
+	}
 }
 
 
@@ -2526,7 +2573,10 @@ void ASteikemannCharacter::Click_Attack()
 		{
 			if (TimerManager.IsTimerActive(TH_BufferAttack)) return;
 
-			float t = TimerManager.GetTimerRemaining(TH_Grapplehook_End_Launch) - SmackAttack_GH_TimerRemoval;
+			GH_DelegateDynamicLaunch();
+			float t = ((TimerManager.IsTimerActive(TH_Grapplehook_End_Launch) ? TimerManager.GetTimerRemaining(TH_Grapplehook_End_Launch) : GrappleHook_PostLaunchTimer) +
+				(TimerManager.IsTimerActive(TH_GrappleHold) ? TimerManager.GetTimerRemaining(TH_GrappleHold) : 0.f))
+				- SmackAttack_GH_TimerRemoval;
 			if (t > 0.f) {
 				TimerManager.SetTimer(TH_BufferAttack, this, &ASteikemannCharacter::AttackSmack_Grapple_Pure, t);
 				return;

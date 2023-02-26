@@ -268,7 +268,6 @@ void AEnemyAIController::AlertedTimeCheck()
 void AEnemyAIController::StopSensingPlayer()
 {
 	PRINTLONG("STOP SENSING PLAYER");
-	PRINTPARLONG("Time == %f", PSComponent->SensingInterval);
 	DrawDebugPoint(GetWorld(), GetPawn()->GetActorLocation() + FVector::UpVector * 100.f, 40.f, FColor::Blue, false, 1.f, -1);
 
 	TM_AI.ClearTimer(TH_StopSensingPlayer);
@@ -283,6 +282,7 @@ void AEnemyAIController::StopSensingPlayer()
 
 void AEnemyAIController::AttackBegin()
 {
+	PRINTLONG("ATTACK BEGIN");
 	Attack();
 	m_PawnOwner->RotateActorYawToVector(m_Player->GetActorLocation() - m_PawnOwner->GetActorLocation());
 	TM_AI.SetTimer(TH_Attack, [this]() { SetState(ESmallEnemyAIState::ChasingTarget); } , AttackStateTime, false);
@@ -300,6 +300,8 @@ void AEnemyAIController::Attack()
 
 void AEnemyAIController::SetState(const ESmallEnemyAIState& state)
 {
+	if (m_AIIncapacitatedType != EAIIncapacitatedType::None) return;
+
 	AlwaysBeginStates(state);
 	if (m_AIState == state) return;
 	LeaveState(m_AIState, state);
@@ -415,6 +417,7 @@ void AEnemyAIController::IncapacitateAI(const EAIIncapacitatedType& Incapacitate
 		return;
 	}
 	TM_AI.SetTimer(TH_IncapacitateTimer, [this]() {
+		m_AIIncapacitatedType = EAIIncapacitatedType::None;
 		SetState(ESmallEnemyAIState::Alerted);
 	}, Time, false);
 }

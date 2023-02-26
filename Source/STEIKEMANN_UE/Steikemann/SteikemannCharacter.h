@@ -817,6 +817,7 @@ public:	// Launch Functions
 	void GH_PreLaunch();
 	void GH_PreLaunch_Static(void(ASteikemannCharacter::* LaunchFunction)(), IGrappleTargetInterface* IGrapple);
 	void GH_PreLaunch_Dynamic(IGrappleTargetInterface* IGrapple, bool OnGround);
+	void GH_Launch_Dynamic(IGrappleTargetInterface* IGrapple, bool OnGround);
 
 	void GH_Launch_Static();
 	void GH_Launch_Static_StuckEnemy();
@@ -834,6 +835,7 @@ public:	// Animation functions
 		void Anim_Grapple_End();
 	void Anim_Grapple_End_Pure();
 	void GH_StopControlRig();
+	void GH_DelegateDynamicLaunch();
 
 	// For the control rig 
 	FVector GH_GetTargetLocation() const;
@@ -852,10 +854,17 @@ private:
 	TWeakObjectPtr<AActor> Active_GrappledActor{ nullptr };
 	TWeakObjectPtr<AActor> GrappledEnemy{ nullptr };
 
+	FTimerHandle TH_GrappleHold;
+	TFunction<void()> TFunc_GrappleHoldFunction;
+	TFunction<void()> TFunc_GrappleLaunchFunction;
+
 public:	// UPROPERTY Variables
 	// How long movement input will be disabled after pulling a dynamic target free from being stuck
 	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
 		float GH_PostPullingTargetFreeTime{ 0.5f };
+	/* How long can the player hold the grappled enemy before they are launched? */
+	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
+		float GH_GrapplingEnemyHold{ 1.f };
 	//-----------------------------------------------
 
 public: 

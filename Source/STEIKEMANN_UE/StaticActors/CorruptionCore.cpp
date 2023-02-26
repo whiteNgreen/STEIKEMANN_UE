@@ -50,7 +50,6 @@ void ACorruptionCore::ReceiveDamage(const int damage)
 {
 	//Health > 0 ? Health -= damage : Health = 0;
 	Health = FMath::Clamp(Health -= damage, 0, 10);
-	PRINTPARLONG("Core Health: %i", Health);
 	if (Health == 0) { Death(); }
 }
 

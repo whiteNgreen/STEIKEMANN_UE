@@ -43,7 +43,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Variables")
 		bool bShouldRotate{ true };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Variables")
-		float RotationSpeed{ 10.f };
+		float RotationSpeed{ 100.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Variables")
 		float RotationSpeed_LerpSpeed{ 2.f };
 	float RotationSpeed_Internal{};

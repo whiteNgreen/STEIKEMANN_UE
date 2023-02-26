@@ -38,11 +38,13 @@ void AGrappleTarget::UnTargetedPure()
 void AGrappleTarget::InReach_Pure()
 {
 	Execute_InReach(this);
+	bOpen = true;
 }
 
 void AGrappleTarget::OutofReach_Pure()
 {
 	Execute_OutofReach(this);
+	bOpen = false;
 }
 
 

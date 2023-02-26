@@ -315,7 +315,7 @@ void ASmallEnemy::Chomp_EnableCollision()
 
 void ASmallEnemy::Chomp_DisableCollision()
 {
-	BoxComp_Chomp->SetGenerateOverlapEvents(true);
+	BoxComp_Chomp->SetGenerateOverlapEvents(false);
 	BoxComp_Chomp->SetRelativeScale3D(FVector(0,0,0));
 }
 
@@ -333,12 +333,6 @@ void ASmallEnemy::IncapacitateUndeterminedTime(const EAIIncapacitatedType& Incap
 	IncapacitatedCollisionDelegate.BindUObject(this, function);
 	IncapacitatedLandDelegation.BindUObject(this, &ASmallEnemy::IncapacitatedLand);
 }
-
-//void ASmallEnemy::Capacitate(const EAIIncapacitatedType& IncapacitateType, float Time, const ESmallEnemyAIState& NextState)
-//{
-//	AEnemyAIController* AI = Cast<AEnemyAIController>(GetController());
-//	AI->CapacitateAI(Time, NextState);
-//}
 
 void ASmallEnemy::IncapacitatedLand()
 {
@@ -364,7 +358,6 @@ bool ASmallEnemy::IsTargetWithinSpawn(const FVector& target, const float& radius
 
 void ASmallEnemy::Capacitate_Grappled()
 {
-	//Capacitate(EAIIncapacitatedType::Grappled, 1.f/*Post grappled stun timer*/);
 	Incapacitate(EAIIncapacitatedType::Grappled, 1.f/*Post grappled stun timer*/);
 }
 

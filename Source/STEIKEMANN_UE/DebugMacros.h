@@ -9,7 +9,7 @@
 #define PRINTLONG(X)			( GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Blue, FString::Printf(TEXT(X))) )
 
 #define PRINTPAR(X, ...)		( GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Yellow, FString::Printf(TEXT(X), ##__VA_ARGS__)) )
-#define PRINTPARLONG(X, ...)	( GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Yellow, FString::Printf(TEXT(X), ##__VA_ARGS__)) )
+#define PRINTPARLONG(T, X, ...)	( GEngine->AddOnScreenDebugMessage(-1, T, FColor::Yellow, FString::Printf(TEXT(X), ##__VA_ARGS__)) )
 
 #define PLOG(X) ( UE_LOG(LogTemp, Display, FString::Printf(TEXT(X))) )
 
