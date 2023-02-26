@@ -46,16 +46,13 @@ void ACollectible::OnCollectibleBeginOverlap(UPrimitiveComponent* OverlappedComp
 
 void ACollectible::Destruction()
 {
+	Destruction_IMPL();
 	/* Particles and disable mesh + collision */
 	UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), DeathParticles, GetActorLocation());
 	Sphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	Mesh->SetHiddenInGame(true, true);
+	if (Mesh)
+		Mesh->SetHiddenInGame(true, true);
 
-	/* Destroy object after 10 seconds */
-	auto func = [this]() {
-		Destroy();
-	};
-	FTimerDelegate FDelegate;
-	FDelegate.BindLambda(func);
-	GetWorldTimerManager().SetTimer(FTHDestruction, FDelegate, 2.f, false);
+	/* Destroy object after 2.f seconds */
+	GetWorldTimerManager().SetTimer(FTHDestruction, [this]() { Destroy(); }, 2.f, false);
 }

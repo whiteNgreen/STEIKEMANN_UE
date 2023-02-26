@@ -10,6 +10,8 @@
 
 #include "CorruptionCore.generated.h"
 
+class UCapsuleComponent;
+
 UCLASS()
 class ACorruptionCore : public ABaseStaticActor,
 	public IAttackInterface
@@ -21,7 +23,9 @@ public:
 	ACorruptionCore();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
-		UStaticMeshComponent* Mesh{ nullptr };
+		USkeletalMeshComponent* Mesh{ nullptr };
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
+		UCapsuleComponent* Collider{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
 		class USphereComponent* Sphere{ nullptr };

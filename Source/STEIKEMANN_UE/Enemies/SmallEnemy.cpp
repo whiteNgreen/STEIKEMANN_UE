@@ -266,7 +266,6 @@ void ASmallEnemy::EnableGravity()
 {
 	m_Gravity = EGravityState::Default;
 }
-
 void ASmallEnemy::DisableGravity()
 {
 	m_Gravity = EGravityState::ForcedNone;
@@ -284,7 +283,6 @@ void ASmallEnemy::ChompCollisionOverlap(UPrimitiveComponent* OverlappedComponent
 		auto IAttack = Cast<IAttackInterface>(OtherActor);
 		IAttack->Receive_SmackAttack_Pure(FVector(OtherActor->GetActorLocation() - GetActorLocation()).GetSafeNormal(), 1000.f);
 
-		//AttackContactDelegate_Instigator.Broadcast();
 		AttackContactDelegate.Broadcast(OtherActor);
 	}
 }

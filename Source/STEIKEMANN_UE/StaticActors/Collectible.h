@@ -55,6 +55,8 @@ public:
 	//void Init();
 
 	FTimerHandle FTHDestruction;
+	UFUNCTION(BlueprintImplementableEvent)
+		void Destruction_IMPL();
 	void Destruction();
 
 protected:

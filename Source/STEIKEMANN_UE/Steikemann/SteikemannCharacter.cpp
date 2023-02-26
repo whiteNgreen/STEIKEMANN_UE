@@ -241,10 +241,11 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		break;
 	}
 	//PRINTPAR("Attack State :: %i", m_EAttackState);
-	PRINTPAR("Grapple State :: %i", m_EGrappleState);
-	PRINTPAR("Grapple Type  :: %i", m_EGrappleType);
+	//PRINTPAR("Grapple State :: %i", m_EGrappleState);
+	//PRINTPAR("Grapple Type  :: %i", m_EGrappleType);
 	//PRINTPAR("Smack Attack State :: %i", m_ESmackAttackState);
 	//PRINTPAR("Air State :: %i", m_EAirState);
+	PRINTPAR("Ground State :: %i", m_EGroundState);
 	//PRINTPAR("Pogo Type :: %i", m_EPogoType);
 	//PRINTPAR("Jump Count = %i", JumpCurrentCount);
 	//PRINTPAR("MovementInputState = %i", m_EMovementInputState);
@@ -1152,9 +1153,12 @@ void ASteikemannCharacter::GuideCameraTowardsVector(FVector vector, float alpha)
 void ASteikemannCharacter::GuideCameraPitch(float z, float alpha)
 {
 	FVector old = GetControlRotation().Vector();
-	old.Z = z;
-	float angle = acosf(z);
-	old = (cosf((PI/2) * z) * old.GetSafeNormal2D()) + (sinf((PI / 2) * z) * FVector::UpVector);
+	FVector right = FVector::CrossProduct(FVector::UpVector, old);
+	old = old.RotateAngleAxis(90.f * z, right);
+	//old.X *= 1.f - FMath::Abs(z);
+	//old.Y *= 1.f - FMath::Abs(z);
+	//old.Z = z;
+	//old.Normalize();
 	FQuat target{ old.Rotation() };
 
 	FQuat Rot{ GetPlayerController()->GetControlRotation() };
@@ -1164,6 +1168,7 @@ void ASteikemannCharacter::GuideCameraPitch(float z, float alpha)
 	GetPlayerController()->SetControlRotation(Rot1);
 }
 
+	// decrepid? -- not in use
 float ASteikemannCharacter::GuideCameraPitchAdjustmentLookAt(FVector LookatLocation, float MinDistance, float MaxDistance, float PitchAtMin, float PitchAtMax, float ZdiffMultiplier)
 {
 	// Pitch adjustment, based on distance to object
@@ -1188,12 +1193,12 @@ void ASteikemannCharacter::GrappleDynamicGuideCamera(AActor* target, float delta
 
 	FVector input = InputVectorRaw;
 
+	FVector Direction;
+
 	FVector grappled = target->GetActorLocation();
 	grappled.Z = GetActorLocation().Z;
-	//grappled.Z = InitialGrappleDynamicZ;
 	//FVector toGrapple = (grappled - GetActorLocation()) - FVector(0, 0, GuideCameraPitchAdjustmentLookAt(grappled, GrappleDynamic_Pitch_DistanceMIN, GrappleHookRange, GrappleDynamic_Pitch_MIN, GrappleDynamic_Pitch_MAX, GrappleDynamic_ZdiffMultiplier));
-	FVector toGrapple = (grappled - GetActorLocation());
-	toGrapple.Normalize();
+	FVector toGrapple = (grappled - GetActorLocation()).GetSafeNormal();
 	FVector toGrapple2D = toGrapple.GetSafeNormal2D();
 	
 	// Yaw
@@ -1209,14 +1214,19 @@ void ASteikemannCharacter::GrappleDynamicGuideCamera(AActor* target, float delta
 	GuideCameraTowardsVector(cameraYaw, y * GrappleDynamic_YawAlpha);
 
 	// Pitch
-	float x = input.X;
-	if (x < 0.f) x *= -1.f;
+	float x = FMath::Abs(input.X);
 	float alphaX = 1.f - x;
-	GuideCameraPitch(FMath::Clamp(input.X, -GrappleDynamic_MaxPitch, GrappleDynamic_MaxPitch), x * GrappleDynamic_PitchAlpha);
 
 	// Default Guide towards grappled target
-	GuideCameraTowardsVector(toGrapple, alphaY * GrappleDynamic_DefaultAlpha);
-	GuideCameraPitch(GrappleDynamic_DefaultPitch, alphaX * GrappleDynamic_DefaultAlpha);
+	FVector defaultDir = toGrapple2D;
+	defaultDir.Z = GrappleDynamic_DefaultPitch;
+
+	FVector currentdirection = defaultDir;
+	FVector up = FVector::CrossProduct(currentdirection, FVector::CrossProduct(FVector::UpVector, currentdirection));
+	FVector pitchDirection = ((currentdirection * (1.f/*FMath::Max(alphaX, 0.4f)*/)) + (up * FMath::Clamp(input.X, GrappleDynamic_MinPitch, GrappleDynamic_MaxPitch)));
+	GuideCameraTowardsVector(pitchDirection, x * GrappleDynamic_PitchAlpha);
+
+	GuideCameraTowardsVector(defaultDir, alphaX * GrappleDynamic_DefaultAlpha);
 }
 
 void ASteikemannCharacter::GuideCamera_Movement(float DeltaTime)
@@ -1421,6 +1431,7 @@ void ASteikemannCharacter::LockMovementForPeriod(float time, TFunction<void()> l
 
 void ASteikemannCharacter::Landed(const FHitResult& Hit)
 {
+	Roll_End();
 	if (bIsDead)
 	{
 		DeathDelegate_Land.Execute();
@@ -1638,6 +1649,18 @@ void ASteikemannCharacter::CancelAnimationMontageIfMoving(TFunction<void()> lamb
 		StopAnimMontage();
 	if (lambdaCall)
 		lambdaCall;
+}
+
+void ASteikemannCharacter::Roll(FVector direction)
+{
+	m_EGroundState = EGroundState::GROUND_Roll;
+	RotateActorYawToVector(direction);
+	Roll_IMPL();
+}
+
+void ASteikemannCharacter::Roll_End()
+{
+	m_EGroundState = EGroundState::GROUND_Walk;
 }
 
 bool ASteikemannCharacter::PB_TargetBeneath()
@@ -1889,6 +1912,12 @@ void ASteikemannCharacter::Click_Slide()
 	case EState::STATE_None:
 		break;
 	case EState::STATE_OnGround:
+		if (m_EGroundState == EGroundState::GROUND_Walk) {
+			FVector dir = m_InputVector;
+			if (m_InputVector.SizeSquared() < 0.5f)
+				dir = GetControlRotation().Vector().GetUnsafeNormal2D();
+			Roll(dir);
+		}
 		break;
 	case EState::STATE_InAir:
 		break;
@@ -2058,8 +2087,11 @@ void ASteikemannCharacter::PTakeDamage(int damage, const FVector& Direction, int
 	Health = FMath::Clamp(Health -= damage, 0, MaxHealth);
 	if (Health == 0) { Death(); }
 
+	m_EMovementInputState = EMovementInput::Locked;
 	FTimerHandle TH;
 	TimerManager.SetTimer(TH, [this]() { bPlayerCanTakeDamage = true; }, DamageInvincibilityTime, false);
+	FTimerHandle Move;
+	TimerManager.SetTimer(Move, [this]() { m_EMovementInputState = EMovementInput::Open; }, DamageInvincibilityTime / 2.f, false);
 	
 	/* Damage launch */
 	GetMoveComponent()->Velocity *= 0.f;
@@ -2099,6 +2131,8 @@ void ASteikemannCharacter::Respawn()
 	Health = MaxHealth;
 	bIsDead = false;
 	bPlayerCanTakeDamage = true;
+	m_EMovementInputState = EMovementInput::Open;
+	m_EGroundState = EGroundState::GROUND_Walk;
 	CloseHazards.Empty();
 	EnableInput(GetPlayerController());
 	GetMoveComponent()->Velocity *= 0;
@@ -2459,6 +2493,8 @@ void ASteikemannCharacter::OnGrappleTargetDetectionEndOverlap(UPrimitiveComponen
 {
 	if (OtherActor != this)
 	{
+		if (OtherComp->IsA(UBoxComponent::StaticClass())) return;
+
 		IGrappleTargetInterface* GrappleInterface = Cast<IGrappleTargetInterface>(OtherActor);
 		if (GrappleInterface)
 		{

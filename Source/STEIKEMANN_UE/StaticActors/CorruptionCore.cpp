@@ -4,13 +4,17 @@
 #include "../StaticActors/CorruptionCore.h"
 #include "NiagaraFunctionLibrary.h"
 #include "../StaticActors/GrappleTarget.h"
+#include "Components/CapsuleComponent.h"
 
 // Sets default values
 ACorruptionCore::ACorruptionCore()
 {
-	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
+	Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Mesh"));
 	Mesh->SetupAttachment(Root);
 	
+	Collider = CreateDefaultSubobject<UCapsuleComponent>("Collider");
+	Collider->SetupAttachment(Mesh);
+
 	Sphere = CreateDefaultSubobject<USphereComponent>(TEXT("Sphere"));
 	Sphere->SetupAttachment(Root);
 
@@ -48,7 +52,6 @@ void ACorruptionCore::Gen_ReceiveAttack(const FVector& Direction, const float& S
 
 void ACorruptionCore::ReceiveDamage(const int damage)
 {
-	//Health > 0 ? Health -= damage : Health = 0;
 	Health = FMath::Clamp(Health -= damage, 0, 10);
 	if (Health == 0) { Death(); }
 }
@@ -57,8 +60,8 @@ void ACorruptionCore::Death()
 {
 	/* Particles and disable mesh + collision */
 	UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), DeathParticles, GetActorLocation());
-	Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Sphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Collider->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Mesh->SetHiddenInGame(true, true);
 
 	/* Spawn collectible */

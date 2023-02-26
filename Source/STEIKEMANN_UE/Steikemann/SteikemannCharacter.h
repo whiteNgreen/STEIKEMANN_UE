@@ -47,7 +47,12 @@ enum class EState : int8
 	STATE_Attacking,
 	STATE_Grappling
 };
-
+UENUM()
+enum class EGroundState : int8
+{
+	GROUND_Walk,
+	GROUND_Roll
+};
 UENUM()
 enum class EAirState : int8
 {
@@ -237,7 +242,6 @@ public:
 			float NSM_Land_ParticleSpeed		/*UMETA(DisplayName = "Particle Speed Multiplier")*/ { 0.5f };
 
 		#pragma endregion //Landing
-
 	#pragma region OnWall
 		/* ------------------- PE: OnWall ------------------- */
 		UPROPERTY(EditAnywhere, Category = "Particle Effects|WallJump")
@@ -246,14 +250,12 @@ public:
 		UPROPERTY(EditAnywhere, Category = "Particle Effects|WallJump")
 			float NS_WallSlide_ParticleAmount	/*UMETA(DisplayName = "WallSlide ParticleAmount")*/ { 1000.f };
 	#pragma endregion //OnWall
-
 	#pragma region Attack
 	UNiagaraComponent* NiagaraComp_Attack{ nullptr };
 	UPROPERTY(EditAnywhere, Category = "Particle Effects|Attack")
 		UNiagaraSystem* NS_AttackContact{ nullptr };
 
 	#pragma endregion //Attack
-
 	#pragma region Crouch
 		UNiagaraComponent* NiComp_CrouchSlide{ nullptr };
 
@@ -346,26 +348,30 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic", meta = (UIMin = "0", UIMax = "1"))
 		float GrappleDynamic_MaxPitch{ 0.5f };
 	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic", meta = (UIMin = "0", UIMax = "1"))
+		float GrappleDynamic_MinPitch{ -0.5f };
+	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic", meta = (UIMin = "0", UIMax = "1"))
 		float GrappleDynamic_PitchAlpha{ 0.2f };
 	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic", meta = (UIMin = "-1", UIMax = "1"))
 		float GrappleDynamic_DefaultPitch{ 0.2f };
 
 
-	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic|Pitch", meta = (UIMin = "0", UIMax = "1500"))
-		float GrappleDynamic_Pitch_DistanceMIN	 { 100.f };
-	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic|Pitch", meta = (UIMin = "0", UIMax = "500"))
-		float GrappleDynamic_Pitch_MIN{ 100.f };
-	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic|Pitch", meta = (UIMin = "0", UIMax = "5000"))
-		float GrappleDynamic_Pitch_MAX{ 100.f };
-	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic|Pitch", meta = (UIMin = "0", UIMax = "2"))
-		float GrappleDynamic_ZdiffMultiplier{ 1.f };
+	//UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic|Pitch", meta = (UIMin = "0", UIMax = "1500"))
+	//	float GrappleDynamic_Pitch_DistanceMIN	 { 100.f };
+	//UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic|Pitch", meta = (UIMin = "0", UIMax = "500"))
+	//	float GrappleDynamic_Pitch_MIN{ 100.f };
+	//UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic|Pitch", meta = (UIMin = "0", UIMax = "5000"))
+	//	float GrappleDynamic_Pitch_MAX{ 100.f };
+	//UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic|Pitch", meta = (UIMin = "0", UIMax = "2"))
+	//	float GrappleDynamic_ZdiffMultiplier{ 1.f };
 
 	float InitialGrappleDynamicZ{};
 
 	float GrappleDynamic_SLerpAlpha{};
 	void GuideCameraTowardsVector(FVector vector, float alpha);
 	void GuideCameraPitch(float z, float alpha);
-	float GuideCameraPitchAdjustmentLookAt(FVector LookatLocation, float MinDistance, float MaxDistance, float PitchAtMin, float PitchAtMax, float ZdiffMultiplier);
+		
+		// decrepid? -- not in use
+	float GuideCameraPitchAdjustmentLookAt(FVector LookatLocation, float MinDistance, float MaxDistance, float PitchAtMin, float PitchAtMax, float ZdiffMultiplier);	
 
 	void GrappleDynamicGuideCamera(AActor* target, float deltatime);
 
@@ -415,6 +421,7 @@ public:	// States
 	virtual void AllowActionCancelationWithInput() override;
 private:
 	EState m_EState = EState::STATE_OnGround;
+	EGroundState m_EGroundState = EGroundState::GROUND_Walk;
 	EAirState m_EAirState = EAirState::AIR_None;
 	float m_BaseGravity{};
 
@@ -511,6 +518,13 @@ public:
 		void CancelAnimation();
 	void CancelAnimationMontageIfMoving(TFunction<void()> lambdaCall);
 #pragma endregion			//Basic_Movement
+#pragma region Roll
+	UFUNCTION(BlueprintImplementableEvent)
+		void Roll_IMPL();
+	void Roll(FVector direction);
+	UFUNCTION(BlueprintCallable)
+		void Roll_End();
+#pragma endregion //Roll
 #pragma region Pogo
 private:
 	EPogoType m_EPogoType = EPogoType::POGO_None;
