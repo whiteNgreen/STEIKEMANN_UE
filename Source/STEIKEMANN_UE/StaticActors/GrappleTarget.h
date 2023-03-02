@@ -39,4 +39,8 @@ public:
 	virtual void HookedPure(const FVector InstigatorLocation, bool OnGround, bool PreAction = false) override{}
 
 	virtual void UnHookedPure() override;
+
+public:		// Variables
+	UPROPERTY(BlueprintReadOnly)
+		bool bOpen{};
 };

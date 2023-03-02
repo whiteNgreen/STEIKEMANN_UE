@@ -94,7 +94,6 @@ ASteikemannCharacter::ASteikemannCharacter(const FObjectInitializer& ObjectIniti
 	WallDetector = CreateDefaultSubobject<UWallDetectionComponent>(TEXT("WallDetector"));
 
 	TlComp_Attack_SMACK = CreateDefaultSubobject<UTimelineComponent>("TlComp_AttackTurn");
-	TlComp_Attack_SCOOP = CreateDefaultSubobject<UTimelineComponent>("TlComp_ScoopAttackTurn");
 }
 
 // Called when the game starts or when spawned
@@ -134,7 +133,6 @@ void ASteikemannCharacter::BeginPlay()
 		TimerManager.SetTimer(h, this, &ASteikemannCharacter::Respawn, RespawnTimer);
 		Anim_Death();	// Do IsFalling check to determine which animation to play
 		});
-	AttackContactDelegate.BindUObject(this, &ASteikemannCharacter::AttackContact);
 	Delegate_MaterialUpdate.AddUObject(this, &ASteikemannCharacter::Material_UpdateParameterCollection_Player);
 
 	// TimelineComponents
@@ -143,13 +141,6 @@ void ASteikemannCharacter::BeginPlay()
 	TlComp_Attack_SMACK->AddInterpFloat(Curve_AttackTurnStrength, floatStatic);
 	floatStatic.BindUObject(this, &ASteikemannCharacter::TlCurve_AttackMovement);
 	TlComp_Attack_SMACK->AddInterpFloat(Curve_AttackMovementStrength, floatStatic);
-
-	floatStatic.BindUObject(this, &ASteikemannCharacter::TlCurve_ScoopAttackTurn);
-	TlComp_Attack_SCOOP->AddInterpFloat(Curve_AttackTurnStrength_SCOOP, floatStatic);
-	floatStatic.BindUObject(this, &ASteikemannCharacter::TlCurve_ScoopAttackMovement);
-	TlComp_Attack_SCOOP->AddInterpFloat(Curve_AttackMovementStrength_SCOOP, floatStatic);
-
-	
 	
 	/* Attack Collider */
 	AttackCollider->OnComponentBeginOverlap.AddDynamic(this, &ASteikemannCharacter::OnAttackColliderBeginOverlap);
@@ -181,7 +172,6 @@ void ASteikemannCharacter::Material_UpdateParameterCollection_Player(float Delta
 	UKismetMaterialLibrary::SetVectorParameterValue(GetWorld(), MPC_Player, "Velocity",			FLinearColor(GetVelocity()));
 	UKismetMaterialLibrary::SetVectorParameterValue(GetWorld(), MPC_Player, "Forward",			FLinearColor(GetActorForwardVector()));
 }
-
 void ASteikemannCharacter::NS_Land_Implementation(const FHitResult& Hit)
 {
 	/* Play Landing particle effect */
@@ -205,7 +195,6 @@ void ASteikemannCharacter::NS_Land_Implementation(const FHitResult& Hit)
 	NiagaraPlayer->Activate(true);
 }
 
-
 // Called every frame
 void ASteikemannCharacter::Tick(float DeltaTime)
 {
@@ -215,6 +204,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Red, FString::Printf(TEXT("Common : %i"), CollectibleCommon), true, FVector2D(1.5f));
 	GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Red, FString::Printf(TEXT("CorruptionCore : %i"), CollectibleCorruptionCore), true, FVector2D(1.5f));
 	GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Red, FString::Printf(TEXT("Health : %i"), Health), true, FVector2D(4));
+
 
 	if (bIsDead) { return; }
 	/* Rotate Inputvector to match the playercontroller */
@@ -230,30 +220,32 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		if (m_GamepadCameraInput.Length() > 1.f)
 			m_GamepadCameraInput.Normalize();
 	}
-	//switch (m_EState)
-	//{
-	//case EState::STATE_OnGround:
-	//	PRINT("STATE_OnGround");
-	//	break;
-	//case EState::STATE_InAir:
-	//	PRINT("STATE_InAir");
-	//	break;
-	//case EState::STATE_OnWall:
-	//	PRINT("STATE_OnWall");
-	//	break;
-	//case EState::STATE_Attacking:
-	//	PRINT("STATE_Attacking");
-	//	break;
-	//case EState::STATE_Grappling:
-	//	PRINT("STATE_Grappling");
-	//	break;
-	//default:
-	//	break;
-	//}
+	switch (m_EState)
+	{
+	case EState::STATE_OnGround:
+		PRINT("STATE_OnGround");
+		break;
+	case EState::STATE_InAir:
+		PRINT("STATE_InAir");
+		break;
+	case EState::STATE_OnWall:
+		PRINT("STATE_OnWall");
+		break;
+	case EState::STATE_Attacking:
+		PRINT("STATE_Attacking");
+		break;
+	case EState::STATE_Grappling:
+		PRINT("STATE_Grappling");
+		break;
+	default:
+		break;
+	}
 	//PRINTPAR("Attack State :: %i", m_EAttackState);
 	//PRINTPAR("Grapple State :: %i", m_EGrappleState);
+	//PRINTPAR("Grapple Type  :: %i", m_EGrappleType);
 	//PRINTPAR("Smack Attack State :: %i", m_ESmackAttackState);
 	//PRINTPAR("Air State :: %i", m_EAirState);
+	PRINTPAR("Ground State :: %i", m_EGroundState);
 	//PRINTPAR("Pogo Type :: %i", m_EPogoType);
 	//PRINTPAR("Jump Count = %i", JumpCurrentCount);
 	//PRINTPAR("MovementInputState = %i", m_EMovementInputState);
@@ -291,11 +283,6 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	}
 	case EState::STATE_InAir:
 	{
-		if (HasReachedPostScoopedJumpHeight())
-		{
-			HeightReachedDelegate.Broadcast();
-			HeightReachedDelegate.Clear();
-		}
 		switch (m_EPogoType)
 		{
 		case EPogoType::POGO_None:
@@ -353,8 +340,8 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 			break;
 		case EAttackState::Smack:
 			break;
-		case EAttackState::Scoop:
-			break;
+		//case EAttackState::Scoop:
+		//	break;
 		case EAttackState::GroundPound:
 			if (m_EPogoType == EPogoType::POGO_Groundpound) 
 			{
@@ -365,8 +352,6 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		default:
 			break;
 		}
-		//if (m_EAttackState == EAttackState::GroundPound)
-			//bPB_Groundpound_PredeterminedPogoHit = PB_Groundpound_Predeterminehit();
 		break;
 	case EState::STATE_Grappling:
 		if (m_EPogoType == EPogoType::POGO_Passive)
@@ -405,9 +390,6 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		else if (Is_GH_StaticTarget() && m_EGrappleState == EGrappleState::Pre_Launch)
 			GuideCamera_StaticGrapple(DeltaTime);
 	}
-	if (m_EState == EState::STATE_InAir && m_EAirState == EAirState::AIR_PostScoopJump) {
-		GrappleDynamicGuideCamera(ScoopedActor, DeltaTime);
-	}
 	PlaceCameraBoom(DeltaTime);
 	if (bCameraLerpBack_PostPrompt)
 		bCameraLerpBack_PostPrompt = LerpCameraBackToBoom(DeltaTime);
@@ -416,11 +398,6 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 
 
 	EndTick(DeltaTime);
-	/* ----------------------- COMBAT TICKS ------------------------------ */
-	//PreBasicAttackMoveCharacter(DeltaTime);
-	//SmackAttackMoveCharacter(DeltaTime);
-	//ScoopAttackMoveCharacter(DeltaTime);
-
 }
 
 // Called to bind functionality to input
@@ -460,10 +437,6 @@ void ASteikemannCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	/* -- SMACK ATTACK -- */
 	PlayerInputComponent->BindAction("SmackAttack", IE_Pressed, this, &ASteikemannCharacter::Click_Attack);
 	PlayerInputComponent->BindAction("SmackAttack", IE_Released, this, &ASteikemannCharacter::UnClick_Attack);
-
-	/* -- SCOOP ATTACK -- */
-	PlayerInputComponent->BindAction("ScoopAttack", IE_Pressed, this, &ASteikemannCharacter::Click_ScoopAttack);
-	PlayerInputComponent->BindAction("ScoopAttack", IE_Released, this, &ASteikemannCharacter::UnClick_ScoopAttack);
 
 	/* Attack - GroundPound */
 	PlayerInputComponent->BindAction("GroundPound", IE_Pressed, this, &ASteikemannCharacter::Click_GroundPound);
@@ -697,7 +670,7 @@ void ASteikemannCharacter::RightTriggerClick()
 void ASteikemannCharacter::RightTriggerUn_Click()
 {
 	bGrappleClick = false;
-	// Noe ang�ende slapp grapple knappen ?
+	GH_DelegateDynamicLaunch();
 }
 
 void ASteikemannCharacter::GH_SetGrappleType(IGameplayTagAssetInterface* ITag, IGrappleTargetInterface* IGrapple)
@@ -723,7 +696,7 @@ void ASteikemannCharacter::GH_SetGrappleType(IGameplayTagAssetInterface* ITag, I
 	if (IGrapple->IsStuck_Pure())
 	{
 		ResetState();
-		if (m_EState == EState::STATE_OnGround)	m_EGrappleType = EGrappleType::Static_StuckEnemy_Ground;
+		if (m_EState == EState::STATE_OnGround)		m_EGrappleType = EGrappleType::Static_StuckEnemy_Ground;
 		if (m_EState == EState::STATE_InAir)		m_EGrappleType = EGrappleType::Static_StuckEnemy_Air;
 		GH_PreLaunch_Static(&ASteikemannCharacter::GH_Launch_Static_StuckEnemy, IGrapple);
 		return;
@@ -732,6 +705,10 @@ void ASteikemannCharacter::GH_SetGrappleType(IGameplayTagAssetInterface* ITag, I
 		// Player in Air
 	if (m_EState == EState::STATE_InAir)
 	{
+		GH_PreLaunch();
+		IGrapple->HookedPure();
+		IGrapple->HookedPure(GetActorLocation(), true, true);
+
 		m_EGrappleType = EGrappleType::Dynamic_Air;
 		GH_PreLaunch_Dynamic(IGrapple, false);
 		return;
@@ -740,8 +717,18 @@ void ASteikemannCharacter::GH_SetGrappleType(IGameplayTagAssetInterface* ITag, I
 		// Player on Ground
 	if (m_EState == EState::STATE_OnGround)
 	{
+		GH_PreLaunch();
+		IGrapple->HookedPure();
+		IGrapple->HookedPure(GetActorLocation(), true, true);
 		m_EGrappleType = EGrappleType::Dynamic_Ground;
-		GH_PreLaunch_Dynamic(IGrapple, true);
+
+		TFunc_GrappleLaunchFunction = [this, IGrapple]() {
+			GH_Launch_Dynamic(IGrapple, true);
+			TFunc_GrappleLaunchFunction.Reset();
+			return;
+		};
+
+		TimerManager.SetTimer(TH_GrappleHold, [this]() { TFunc_GrappleLaunchFunction(); }, GH_GrapplingEnemyHold, false);
 		return;
 	}
 }
@@ -771,11 +758,6 @@ void ASteikemannCharacter::GH_PreLaunch_Static(void(ASteikemannCharacter::* Laun
 
 void ASteikemannCharacter::GH_PreLaunch_Dynamic(IGrappleTargetInterface* IGrapple, bool OnGround)
 {
-	GH_PreLaunch();
-	IGrapple->HookedPure();
-	IGrapple->HookedPure(GetActorLocation(), OnGround, true);
-
-	//FTimerHandle h;
 	TimerManager.SetTimer(TH_Grapplehook_Pre_Launch,
 		[this, IGrapple, OnGround]()
 		{
@@ -794,6 +776,23 @@ void ASteikemannCharacter::GH_PreLaunch_Dynamic(IGrappleTargetInterface* IGrappl
 	// End control rig 
 	FTimerHandle h;
 	TimerManager.SetTimer(h, this, &ASteikemannCharacter::GH_StopControlRig, GrappleDrag_PreLaunch_Timer_Length + (GrappleHook_PostLaunchTimer * 0.3));
+}
+
+void ASteikemannCharacter::GH_Launch_Dynamic(IGrappleTargetInterface* IGrapple, bool OnGround)
+{
+	m_EGrappleState = EGrappleState::Post_Launch;
+	GetMoveComponent()->m_GravityMode = EGravityMode::Default;
+	IGrapple->HookedPure(GetActorLocation(), OnGround, false);
+
+	// Animations
+	Anim_Grapple_End_Pure();
+
+	// End GrappleHook Timer
+	TimerManager.SetTimer(TH_Grapplehook_End_Launch, this, &ASteikemannCharacter::GH_Stop, GrappleHook_PostLaunchTimer);
+
+	// End control rig 
+	FTimerHandle h;
+	TimerManager.SetTimer(h, this, &ASteikemannCharacter::GH_StopControlRig, (GrappleHook_PostLaunchTimer * 0.3));
 }
 
 bool ASteikemannCharacter::Is_GH_StaticTarget() const
@@ -832,11 +831,10 @@ void ASteikemannCharacter::GH_Launch_Static()
 	Anim_Grapple_End_Pure();
 }
 
-
 void ASteikemannCharacter::GH_Launch_Static_StuckEnemy()
 {
 	GetMoveComponent()->DeactivateJumpMechanics();
-	FVector GrappledLocation = Active_GrappledActor->GetActorLocation();
+	FVector GrappledLocation = GH_GetTargetLocation();
 	FVector Direction = GrappledLocation - GetActorLocation();
 	FVector Direction2D = FVector(Direction.X, Direction.Y, 0);
 
@@ -890,8 +888,6 @@ void ASteikemannCharacter::StartAnimLerp_ControlRig()
 
 void ASteikemannCharacter::Anim_Grapple_End_Pure()
 {
-	//bGH_LerpControlRig = false;
-
 	Anim_Grapple_End();
 }
 
@@ -899,6 +895,23 @@ void ASteikemannCharacter::GH_StopControlRig()
 {
 	// Animation
 	bGH_LerpControlRig = false;
+}
+
+void ASteikemannCharacter::GH_DelegateDynamicLaunch()
+{
+	if (!TFunc_GrappleLaunchFunction) return;
+
+	// Call grapple launch when releasing button, but only if the minimal time (GrappleDrag_PreLaunch_Timer_Length) has elapsed
+	if (TimerManager.GetTimerElapsed(TH_GrappleHold) < GrappleDrag_PreLaunch_Timer_Length) {
+		PRINTPARLONG(1.f, "Set timer for remaining time _ Grapple == %f", TimerManager.GetTimerRemaining(TH_GrappleHold) - GrappleDrag_PreLaunch_Timer_Length);
+		TimerManager.SetTimer(TH_GrappleHold, [this]() { TFunc_GrappleLaunchFunction(); }, GrappleDrag_PreLaunch_Timer_Length - TimerManager.GetTimerElapsed(TH_GrappleHold), false);
+		return;
+	}
+	else {
+		PRINTLONG("Call Grapplelaunch function");
+		TimerManager.ClearTimer(TH_GrappleHold);
+		TFunc_GrappleLaunchFunction();
+	}
 }
 
 
@@ -1140,9 +1153,12 @@ void ASteikemannCharacter::GuideCameraTowardsVector(FVector vector, float alpha)
 void ASteikemannCharacter::GuideCameraPitch(float z, float alpha)
 {
 	FVector old = GetControlRotation().Vector();
-	old.Z = z;
-	float angle = acosf(z);
-	old = (cosf((PI/2) * z) * old.GetSafeNormal2D()) + (sinf((PI / 2) * z) * FVector::UpVector);
+	FVector right = FVector::CrossProduct(FVector::UpVector, old);
+	old = old.RotateAngleAxis(90.f * z, right);
+	//old.X *= 1.f - FMath::Abs(z);
+	//old.Y *= 1.f - FMath::Abs(z);
+	//old.Z = z;
+	//old.Normalize();
 	FQuat target{ old.Rotation() };
 
 	FQuat Rot{ GetPlayerController()->GetControlRotation() };
@@ -1152,6 +1168,7 @@ void ASteikemannCharacter::GuideCameraPitch(float z, float alpha)
 	GetPlayerController()->SetControlRotation(Rot1);
 }
 
+	// decrepid? -- not in use
 float ASteikemannCharacter::GuideCameraPitchAdjustmentLookAt(FVector LookatLocation, float MinDistance, float MaxDistance, float PitchAtMin, float PitchAtMax, float ZdiffMultiplier)
 {
 	// Pitch adjustment, based on distance to object
@@ -1176,12 +1193,12 @@ void ASteikemannCharacter::GrappleDynamicGuideCamera(AActor* target, float delta
 
 	FVector input = InputVectorRaw;
 
+	FVector Direction;
+
 	FVector grappled = target->GetActorLocation();
 	grappled.Z = GetActorLocation().Z;
-	//grappled.Z = InitialGrappleDynamicZ;
 	//FVector toGrapple = (grappled - GetActorLocation()) - FVector(0, 0, GuideCameraPitchAdjustmentLookAt(grappled, GrappleDynamic_Pitch_DistanceMIN, GrappleHookRange, GrappleDynamic_Pitch_MIN, GrappleDynamic_Pitch_MAX, GrappleDynamic_ZdiffMultiplier));
-	FVector toGrapple = (grappled - GetActorLocation());
-	toGrapple.Normalize();
+	FVector toGrapple = (grappled - GetActorLocation()).GetSafeNormal();
 	FVector toGrapple2D = toGrapple.GetSafeNormal2D();
 	
 	// Yaw
@@ -1197,14 +1214,19 @@ void ASteikemannCharacter::GrappleDynamicGuideCamera(AActor* target, float delta
 	GuideCameraTowardsVector(cameraYaw, y * GrappleDynamic_YawAlpha);
 
 	// Pitch
-	float x = input.X;
-	if (x < 0.f) x *= -1.f;
+	float x = FMath::Abs(input.X);
 	float alphaX = 1.f - x;
-	GuideCameraPitch(FMath::Clamp(input.X, -GrappleDynamic_MaxPitch, GrappleDynamic_MaxPitch), x * GrappleDynamic_PitchAlpha);
 
 	// Default Guide towards grappled target
-	GuideCameraTowardsVector(toGrapple, alphaY * GrappleDynamic_DefaultAlpha);
-	GuideCameraPitch(GrappleDynamic_DefaultPitch, alphaX * GrappleDynamic_DefaultAlpha);
+	FVector defaultDir = toGrapple2D;
+	defaultDir.Z = GrappleDynamic_DefaultPitch;
+
+	FVector currentdirection = defaultDir;
+	FVector up = FVector::CrossProduct(currentdirection, FVector::CrossProduct(FVector::UpVector, currentdirection));
+	FVector pitchDirection = ((currentdirection * (1.f/*FMath::Max(alphaX, 0.4f)*/)) + (up * FMath::Clamp(input.X, GrappleDynamic_MinPitch, GrappleDynamic_MaxPitch)));
+	GuideCameraTowardsVector(pitchDirection, x * GrappleDynamic_PitchAlpha);
+
+	GuideCameraTowardsVector(defaultDir, alphaX * GrappleDynamic_DefaultAlpha);
 }
 
 void ASteikemannCharacter::GuideCamera_Movement(float DeltaTime)
@@ -1263,7 +1285,6 @@ void ASteikemannCharacter::SetDefaultState()
 		break;
 	case EState::STATE_InAir:
 		if (m_EAirState == EAirState::AIR_Pogo)				return;
-		if (m_EAirState == EAirState::AIR_PostScoopJump)	return;
 		break;
 	case EState::STATE_OnWall:								return;
 	case EState::STATE_Attacking: 
@@ -1410,6 +1431,7 @@ void ASteikemannCharacter::LockMovementForPeriod(float time, TFunction<void()> l
 
 void ASteikemannCharacter::Landed(const FHitResult& Hit)
 {
+	Roll_End();
 	if (bIsDead)
 	{
 		DeathDelegate_Land.Execute();
@@ -1462,11 +1484,7 @@ void ASteikemannCharacter::Jump()
 	{
 	case EState::STATE_None:		break;
 	case EState::STATE_OnGround:	break;
-	case EState::STATE_InAir:
-		if (m_EAirState == EAirState::AIR_PostScoopJump) {
-			return;
-		}
-		break;
+	case EState::STATE_InAir:		break;
 	case EState::STATE_OnWall:		break;
 	case EState::STATE_Attacking:	break;
 	case EState::STATE_Grappling:	break;
@@ -1495,8 +1513,6 @@ void ASteikemannCharacter::Jump()
 					UE_LOG(LogTemp, Warning, TEXT("----------------"));
 
 					m_EPogoType = EPogoType::POGO_Active;
-					//PB_Active_IMPL();
-					//Anim_Activate_Jump();
 					break;
 				}
 
@@ -1552,7 +1568,6 @@ void ASteikemannCharacter::Jump()
 		}
 		case EState::STATE_Attacking:
 		{
-			BufferDelegate_Attack(&ASteikemannCharacter::PostScoopJump);// TRENGER ENUM for attack buffer state, og beholde Enum Attack type for å identifisere typen attack
 			break;
 		}
 		case EState::STATE_Grappling:
@@ -1620,8 +1635,6 @@ bool ASteikemannCharacter::IsFalling() const
 {
 	if (!GetMoveComponent().IsValid()) { return false; }
 	return  GetMoveComponent()->MovementMode == MOVE_Falling;
-		//&& m_EState == EState::STATE_InAir 
-		//&& m_EAirState == EAirState::AIR_Freefall;
 }
 
 bool ASteikemannCharacter::IsOnGround() const
@@ -1636,6 +1649,18 @@ void ASteikemannCharacter::CancelAnimationMontageIfMoving(TFunction<void()> lamb
 		StopAnimMontage();
 	if (lambdaCall)
 		lambdaCall;
+}
+
+void ASteikemannCharacter::Roll(FVector direction)
+{
+	m_EGroundState = EGroundState::GROUND_Roll;
+	RotateActorYawToVector(direction);
+	Roll_IMPL();
+}
+
+void ASteikemannCharacter::Roll_End()
+{
+	m_EGroundState = EGroundState::GROUND_Walk;
 }
 
 bool ASteikemannCharacter::PB_TargetBeneath()
@@ -1808,8 +1833,6 @@ void ASteikemannCharacter::PB_Exit()
 {
 	m_EAttackState = EAttackState::None;
 	m_EPogoType = EPogoType::POGO_None;
-	//m_EPogoTickCheck = EPogoTickCheck::PB_Tick_None;
-	//m_PogoTarget = nullptr;
 }
 
 bool ASteikemannCharacter::ValidLengthToCapsule(FVector HitLocation, FVector capsuleLocation, float CapsuleHeight, float CapsuleRadius)
@@ -1889,6 +1912,12 @@ void ASteikemannCharacter::Click_Slide()
 	case EState::STATE_None:
 		break;
 	case EState::STATE_OnGround:
+		if (m_EGroundState == EGroundState::GROUND_Walk) {
+			FVector dir = m_InputVector;
+			if (m_InputVector.SizeSquared() < 0.5f)
+				dir = GetControlRotation().Vector().GetUnsafeNormal2D();
+			Roll(dir);
+		}
 		break;
 	case EState::STATE_InAir:
 		break;
@@ -2011,7 +2040,7 @@ void ASteikemannCharacter::GainHealth(int amount)
 
 void ASteikemannCharacter::PTakeDamage(int damage, AActor* otheractor, int i/* = 0*/)
 {
-	if (bIsDead) { return; }
+	if (bIsDead || !bPlayerCanTakeDamage) { return; }
 
 	bPlayerCanTakeDamage = false;
 	Health = FMath::Clamp(Health -= damage, 0, MaxHealth);
@@ -2034,9 +2063,9 @@ void ASteikemannCharacter::PTakeDamage(int damage, AActor* otheractor, int i/* =
 	TimerManager.SetTimer(TH, 
 		[this, otheractor, i]()
 		{ 
-		for (auto& it : CloseHazards) {
-			PTakeDamage(1, otheractor, i+1);
-			return;
+			for (auto& it : CloseHazards) {
+				PTakeDamage(1, otheractor, i+1);
+				return;
 		}
 		bPlayerCanTakeDamage = true; 
 		}, 
@@ -2045,6 +2074,29 @@ void ASteikemannCharacter::PTakeDamage(int damage, AActor* otheractor, int i/* =
 	/* Damage launch */
 	GetMoveComponent()->Velocity *= 0.f;
 	GetMoveComponent()->AddImpulse(direction * SelfDamageLaunchStrength, true);
+
+	// Animation
+	Anim_TakeDamage();
+}
+
+void ASteikemannCharacter::PTakeDamage(int damage, const FVector& Direction, int i)
+{
+	if (bIsDead || !bPlayerCanTakeDamage) { return; }
+
+	bPlayerCanTakeDamage = false;
+	Health = FMath::Clamp(Health -= damage, 0, MaxHealth);
+	if (Health == 0) { Death(); }
+
+	m_EMovementInputState = EMovementInput::Locked;
+	FTimerHandle TH;
+	TimerManager.SetTimer(TH, [this]() { bPlayerCanTakeDamage = true; }, DamageInvincibilityTime, false);
+	FTimerHandle Move;
+	TimerManager.SetTimer(Move, [this]() { m_EMovementInputState = EMovementInput::Open; }, DamageInvincibilityTime / 2.f, false);
+	
+	/* Damage launch */
+	GetMoveComponent()->Velocity *= 0.f;
+	GetMoveComponent()->AddImpulse(FVector(Direction + FVector::UpVector).GetSafeNormal() * SelfDamageLaunchStrength, true);
+	SetActorRotation(FRotator(0, (-Direction).Rotation().Yaw, 0));
 
 	// Animation
 	Anim_TakeDamage();
@@ -2079,6 +2131,8 @@ void ASteikemannCharacter::Respawn()
 	Health = MaxHealth;
 	bIsDead = false;
 	bPlayerCanTakeDamage = true;
+	m_EMovementInputState = EMovementInput::Open;
+	m_EGroundState = EGroundState::GROUND_Walk;
 	CloseHazards.Empty();
 	EnableInput(GetPlayerController());
 	GetMoveComponent()->Velocity *= 0;
@@ -2439,6 +2493,8 @@ void ASteikemannCharacter::OnGrappleTargetDetectionEndOverlap(UPrimitiveComponen
 {
 	if (OtherActor != this)
 	{
+		if (OtherComp->IsA(UBoxComponent::StaticClass())) return;
+
 		IGrappleTargetInterface* GrappleInterface = Cast<IGrappleTargetInterface>(OtherActor);
 		if (GrappleInterface)
 		{
@@ -2479,18 +2535,10 @@ void ASteikemannCharacter::Click_Attack()
 	}
 	case EState::STATE_InAir:
 	{
-		// Delegate the Disable ScoopJump gravity effect on smack attack buffer execute delegate
-		if (m_EAirState == EAirState::AIR_PostScoopJump) {
-			AttackSmack_Start_Pure();
-			BufferDelegate_Attack(&ASteikemannCharacter::Disable_PostScoopJumpGravity);
-			return;
-		}
-		//AttackSmack_Start_Ground_Pure();	// TRENGER ENUM for attack buffer state, og beholde Enum Attack type for å identifisere typen attack
 		break;
 	}
 	case EState::STATE_OnWall:
 	{
-
 		break;
 	}
 	case EState::STATE_Attacking:
@@ -2505,7 +2553,10 @@ void ASteikemannCharacter::Click_Attack()
 		{
 			if (TimerManager.IsTimerActive(TH_BufferAttack)) return;
 
-			float t = TimerManager.GetTimerRemaining(TH_Grapplehook_End_Launch) - SmackAttack_GH_TimerRemoval;
+			GH_DelegateDynamicLaunch();
+			float t = ((TimerManager.IsTimerActive(TH_Grapplehook_End_Launch) ? TimerManager.GetTimerRemaining(TH_Grapplehook_End_Launch) : GrappleHook_PostLaunchTimer) +
+				(TimerManager.IsTimerActive(TH_GrappleHold) ? TimerManager.GetTimerRemaining(TH_GrappleHold) : 0.f))
+				- SmackAttack_GH_TimerRemoval;
 			if (t > 0.f) {
 				TimerManager.SetTimer(TH_BufferAttack, this, &ASteikemannCharacter::AttackSmack_Grapple_Pure, t);
 				return;
@@ -2524,135 +2575,6 @@ void ASteikemannCharacter::Click_Attack()
 void ASteikemannCharacter::UnClick_Attack()
 {
 	bAttackPress = false;
-}
-
-void ASteikemannCharacter::Start_ScoopAttack_Pure()
-{
-	m_EState = EState::STATE_Attacking;
-	m_EAttackState = EAttackState::Scoop;
-	m_EMovementInputState = EMovementInput::Locked;
-
-	Start_ScoopAttack();
-}
-
-void ASteikemannCharacter::Start_ScoopAttack_Ground_Pure()
-{
-	Start_ScoopAttack_Pure();
-	RotateToAttack();
-
-	if (!IsFalling())
-		TlComp_Attack_SCOOP->PlayFromStart();
-}
-
-void ASteikemannCharacter::Start_ScoopAttack_Grapple_Pure()
-{
-	TimerManager.ClearTimer(TH_Grapplehook_End_Launch);
-	GH_Stop(EState::STATE_Attacking);
-
-	Start_ScoopAttack_Pure();
-}
-
-void ASteikemannCharacter::Click_ScoopAttack()
-{
-	/* Return conditions */
-	if (bClickScoopAttack) { return; }
-	bClickScoopAttack = true;
-	ScoopedActor = nullptr;
-
-	switch (m_EState)
-	{
-	case EState::STATE_OnGround:
-	{
-		Start_ScoopAttack_Ground_Pure();
-		break;
-	}
-	case EState::STATE_InAir:
-	{
-		Do_GroundPound();
-		break;
-	}
-	case EState::STATE_OnWall:
-	{
-
-		break;
-	}
-	case EState::STATE_Attacking:
-	{
-		BufferDelegate_Attack(&ASteikemannCharacter::Start_ScoopAttack_Ground_Pure);
-		break;
-	}
-	case EState::STATE_Grappling:
-	{
-		/* Buffer Attack if Grappling to Dynamic Target */
-		if (m_EGrappleType == EGrappleType::Dynamic_Ground)
-		{
-			if (TimerManager.IsTimerActive(TH_BufferAttack)) return;
-			float t = TimerManager.GetTimerRemaining(TH_Grapplehook_End_Launch) - SmackAttack_GH_TimerRemoval;
-			if (t > 0.f) {
-				TimerManager.SetTimer(TH_BufferAttack, this, &ASteikemannCharacter::Start_ScoopAttack_Grapple_Pure, t, false);
-				return;
-			}
-			Start_ScoopAttack_Grapple_Pure();
-			return;
-		}
-		break;
-	}
-	default:
-		break;
-	}
-	return;	
-}
-
-void ASteikemannCharacter::UnClick_ScoopAttack()
-{
-	bClickScoopAttack = false;
-}
-
-bool ASteikemannCharacter::HasReachedPostScoopedJumpHeight() const
-{
-	return GetActorLocation().Z >= Jump_HeightToReach && m_EAirState == EAirState::AIR_PostScoopJump;
-}
-
-void ASteikemannCharacter::PostScoopJump()
-{
-	// Regular jump if player did not hit anything with their scoop attack
-	if (!ScoopedActor) {
-		Jump_Undetermined();
-		return;
-	}
-
-	JumpCurrentCount++;
-	m_EState = EState::STATE_InAir;
-	m_EAirState = EAirState::AIR_PostScoopJump;
-
-	RotateActorYawToVector(ScoopedActor->GetActorLocation() - GetActorLocation());
-	m_EMovementInputState = EMovementInput::Locked;
-
-	Jump_HeightToReach = GetActorLocation().Z + ScoopHeight;
-
-	float time = ScoopHeightTimeRatio * (ScoopHeight / 100.f);
-	GetMoveComponent()->JumpHeight(ScoopHeight, time);
-	//GetMoveComponent()->JumpHeight(ScoopHeight, PostScoop_JumpTime);
-	HeightReachedDelegate.AddUObject(GetMoveComponent().Get(), &USteikemannCharMovementComponent::DisableGravity);
-
-	HeightReachedDelegate.AddLambda([this]() { 
-		TimerManager.SetTimer(TH_ScoopJumpGravityEnable, [this](){ PostScoopJumpGravity_End(); }, ScoopJump_Hangtime, false); 
-		});
-
-	Anim_Activate_Jump();//Anim_Activate_WallJump
-}
-
-void ASteikemannCharacter::PostScoopJumpGravity_End()
-{
-	GetMoveComponent()->EnableGravity();
-	m_EMovementInputState = EMovementInput::Open;
-	m_EAirState = EAirState::AIR_Freefall;
-	HeightReachedDelegate.Clear();
-	ScoopedActor = nullptr;
-}
-void ASteikemannCharacter::Disable_PostScoopJumpGravity()
-{
-	TimerManager.SetTimer(TH_ScoopJumpGravityEnable, this, &ASteikemannCharacter::PostScoopJumpGravity_End, ScoopJump_Canceled_Hangtime);
 }
 
 void ASteikemannCharacter::AttackSmack_Start_Pure()
@@ -2730,24 +2652,9 @@ void ASteikemannCharacter::BufferDelegate_Attack(void(ASteikemannCharacter::* fu
 
 }
 
-void ASteikemannCharacter::AttackContact(AActor* instigator, AActor* target)
+void ASteikemannCharacter::AttackContact(AActor* target)
 {
-	// Cancel function if target has already been hit
-	if (!AttackContactedActors.Find(target)) {
-		return;	
-	}
-	AttackContactedActors.Add(target);
-
-	instigator->CustomTimeDilation = Statics::AttackContactTimeDilation;
-	// Do Whatever needs to be done to the actor here	// Like f.ex starting an animation before starting the time dilation
-	target->CustomTimeDilation = Statics::AttackContactTimeDilation;
-
-	FTimerHandle h;
-	GetWorldTimerManager().SetTimer(h, [instigator, target]() {		// Using world timer manager for timers meant to run in realtime
-		instigator->CustomTimeDilation = 1.f;
-		target->CustomTimeDilation = 1.f;
-		}, AttackContactTimer, false);
-	
+	Super::AttackContact(target);
 	// Particles
 	AttackContact_Particles(AttackCollider->GetComponentLocation(), AttackCollider->GetComponentQuat());
 }
@@ -2805,6 +2712,10 @@ void ASteikemannCharacter::OnAttackColliderBeginOverlap(UPrimitiveComponent* Ove
 		EAttackType AType;
 		if (OverlappedComp == AttackCollider) { AType = EAttackType::SmackAttack; }
 		if (OverlappedComp == GroundPoundCollider) { AType = EAttackType::GroundPound; }
+
+		//AttackContactDelegate_Instigator.Broadcast();
+		AttackContactDelegate.Broadcast(OtherActor);
+		
 		/* Attacking a corruption core */
 		if (TCon.HasTag(Tag::CorruptionCore()))
 		{
@@ -2820,17 +2731,12 @@ void ASteikemannCharacter::OnAttackColliderBeginOverlap(UPrimitiveComponent* Ove
 		/* Smack attack collider */
 		if (OverlappedComp == AttackCollider && OtherComp->GetClass() == UCapsuleComponent::StaticClass())
 		{
-			AttackContactDelegate.Execute(this, OtherActor);
 			switch (m_EAttackState)
 			{
 			case EAttackState::None:
 				break;
 			case EAttackState::Smack:
 				Do_SmackAttack_Pure(IAttack, OtherActor);
-				//return;
-				break;
-			case EAttackState::Scoop:
-				Do_ScoopAttack_Pure(IAttack, OtherActor);
 				break;
 			case EAttackState::GroundPound:
 				break;
@@ -2879,16 +2785,6 @@ void ASteikemannCharacter::TlCurve_AttackMovement(float value)
 	TlCurve_AttackMovement_IMPL(value);
 }
 
-void ASteikemannCharacter::TlCurve_ScoopAttackTurn(float value)
-{
-	TlCurve_AttackTurn_IMPL(value);
-}
-
-void ASteikemannCharacter::TlCurve_ScoopAttackMovement(float value)
-{
-	TlCurve_AttackMovement_IMPL(value);
-}
-
 void ASteikemannCharacter::Do_SmackAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor)
 {
 	// Burde sjekke om den kan bli angrepet i det hele tatt. 
@@ -2919,32 +2815,8 @@ void ASteikemannCharacter::Do_SmackAttack_Pure(IAttackInterface* OtherInterface,
 
 void ASteikemannCharacter::Receive_SmackAttack_Pure(const FVector& Direction, const float& Strength)
 {
+	PTakeDamage(1, Direction);
 }
-
-
-void ASteikemannCharacter::Do_ScoopAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor)
-{
-	const bool b{ OtherInterface->GetCanBeSmackAttacked() };
-	TlComp_Attack_SCOOP->Stop();
-
-	if (b)
-	{
-		ScoopedActor = OtherActor;
-
-		/* Rotates player towards scooped actor */
-		RotateActorYawToVector((OtherActor->GetActorLocation() - GetActorLocation()).GetSafeNormal());
-
-		FVector Direction = OtherActor->GetActorLocation() - GetActorLocation();
-		float length = FVector::Dist(GetActorLocation(), OtherActor->GetActorLocation());
-		float forwardstrength = ScoopForwardLength - length;
-		float height = ScoopHeight - (OtherActor->GetActorLocation().Z - GetActorLocation().Z);
-		float time = ScoopHeightTimeRatio * (height / 100.f);
-
-		FVector ScoopLocation = OtherActor->GetActorLocation() + (GetActorForwardVector() * forwardstrength) + (FVector::UpVector * height);
-		OtherInterface->Receive_ScoopAttack_Pure(ScoopLocation, GetActorLocation(), time);	
-	}
-}
-
 
 void ASteikemannCharacter::Click_GroundPound()
 {

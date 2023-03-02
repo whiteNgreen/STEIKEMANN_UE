@@ -3,12 +3,15 @@
 
 #include "../Enemies/SmallEnemy.h"
 #include "EnemyAIController.h"
+#include "EnemyAnimInstance.h"
+#include "../Spawner/EnemySpawner.h"
 #include "../CommonFunctions.h"
 #include "EnemyAnimInstance.h"
 #include "DrawDebugHelpers.h"
 #include "Components/CapsuleComponent.h"
 #include "Gameframework/CharacterMovementComponent.h"
 #include "../GameplayTags.h"
+#include "../Steikemann/SteikemannCharacter.h"
 
 // Sets default values
 ASmallEnemy::ASmallEnemy()
@@ -20,8 +23,10 @@ ASmallEnemy::ASmallEnemy()
 	PlayerPogoDetection = CreateDefaultSubobject<USphereComponent>(TEXT("PlayerPogoDetection"));
 	PlayerPogoDetection->SetupAttachment(RootComponent);
 
-	TlComp_Scooped = CreateDefaultSubobject<UTimelineComponent>("Timeline_Scooped");
 	TlComp_Smacked = CreateDefaultSubobject<UTimelineComponent>("Timeline_Smacked");
+
+	BoxComp_Chomp = CreateDefaultSubobject<UBoxComponent>("Attack Collider");
+	BoxComp_Chomp->SetupAttachment(GetMesh(), FName("SOCKET_Head"));
 }
 
 // Called when the game starts or when spawned
@@ -32,6 +37,9 @@ void ASmallEnemy::BeginPlay()
 	WallDetector->SetCapsuleSize(WDC_Capsule_Radius, WDC_Capsule_Halfheight);
 	WallDetector->SetHeight(WDC_MinHeight, GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
 	WallDetector->SetDebugStatus(bWDC_Debug);
+
+	ChompColliderScale = BoxComp_Chomp->GetRelativeScale3D();
+	Chomp_DisableCollision();
 
 	// Adding gameplay tags
 	GameplayTags.AddTag(Tag::AubergineDoggo());
@@ -50,15 +58,11 @@ void ASmallEnemy::BeginPlay()
 	NComp_AirTrailing->Deactivate();
 	Delegate_ParticleUpdate.AddUObject(this, &ASmallEnemy::NS_Update_Trail);
 
+	// Delegates
+	BoxComp_Chomp->OnComponentBeginOverlap.AddDynamic(this, &ASmallEnemy::ChompCollisionOverlap);
+
 	// Timeline Components
 	FOnTimelineFloatStatic FloatBind;
-	FloatBind.BindUObject(this, &ASmallEnemy::Tl_Scooped);
-	TlComp_Scooped->AddInterpFloat(Curve_ScoopedZForceFloat, FloatBind);
-
-	FOnTimelineEventStatic EventStatic;
-	EventStatic.BindUObject(this, &ASmallEnemy::Tl_ScoopedEnd);
-	TlComp_Scooped->SetTimelineFinishedFunc(EventStatic);
-
 	FloatBind.BindUObject(this, &ASmallEnemy::Tl_Smacked);
 	TlComp_Smacked->AddInterpFloat(Curve_NSTrail, FloatBind);
 }
@@ -135,15 +139,21 @@ void ASmallEnemy::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 void ASmallEnemy::Anim_Attacked_Pure(FVector direction)
 {
 	Anim_Attacked();
-	AnimInstance->SetLaunchedInAir(direction);
+	m_Anim->SetLaunchedInAir(direction);
+}
+
+void ASmallEnemy::SetSpawnPointData(TSharedPtr<SpawnPointData> spawn)
+{
+	m_SpawnPointData = spawn;
+	m_AI->m_SpawnPointData = spawn;
 }
 
 FVector ASmallEnemy::GetRandomLocationNearSpawn()
 {
-	FVector location = m_SpawnPointData.Location;
+	FVector location = m_SpawnPointData->Location;
 	FVector direction = FVector::ForwardVector.RotateAngleAxis(RandomFloat(0.f, 360.f), FVector::UpVector);
 
-	location += direction * RandomFloat(m_SpawnPointData.Radius_Min, m_SpawnPointData.Radius_Max);
+	location += direction * RandomFloat(m_SpawnPointData->Radius_Min, m_SpawnPointData->Radius_Max);
 
 	return location;
 }
@@ -155,6 +165,17 @@ void ASmallEnemy::DisableCollisions()
 void ASmallEnemy::EnableCollisions()
 {
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+}
+
+void ASmallEnemy::SetDogType(enum EDogType type)
+{
+	m_DogType = type;
+
+	AEnemyAIController* con = Cast<AEnemyAIController>(GetController());
+	if (con) {
+		con->m_DogType = type;
+		con->m_DogPack = m_DogPack.Get();
+	}
 }
 
 FGameplayTag ASmallEnemy::SensingPawn(APawn* pawn)
@@ -174,6 +195,30 @@ FGameplayTag ASmallEnemy::SensingPawn(APawn* pawn)
 		return Tag::AubergineDoggo();
 	}
 	return FGameplayTag();
+}
+
+void ASmallEnemy::Alert(const APawn& instigator)
+{
+	SleepingEnd();
+	m_AI->SetState(ESmallEnemyAIState::ChasingTarget);
+	Anim_Startled();
+}
+
+void ASmallEnemy::SleepingBegin()
+{
+	m_Anim->bIsSleeping = true;
+}
+
+void ASmallEnemy::SleepingEnd()
+{
+	m_Anim->bIsSleeping = false;
+}
+
+void ASmallEnemy::CHOMP_Pure()
+{
+
+
+	Anim_CHOMP();
 }
 
 void ASmallEnemy::SetDefaultState()
@@ -209,11 +254,11 @@ void ASmallEnemy::Landed(const FHitResult& Hit)
 	if (IncapacitatedLandDelegation.ExecuteIfBound())
 		IncapacitatedLandDelegation.Unbind();
 
-	if (IncapacitatedCollisionDelegate.ExecuteIfBound())
+	if (IncapacitatedCollisionDelegate.ExecuteIfBound())	// HA CAPSULE_HIT DELEGATION FOR DENNE
 		IncapacitatedCollisionDelegate.Unbind();
 
 	m_State = EEnemyState::STATE_OnGround;
-	AnimInstance->bIsLaunchedInAir = false;
+	m_Anim->bIsLaunchedInAir = false;
 	NS_Stop_Trail();
 }
 
@@ -221,16 +266,52 @@ void ASmallEnemy::EnableGravity()
 {
 	m_Gravity = EGravityState::Default;
 }
-
 void ASmallEnemy::DisableGravity()
 {
 	m_Gravity = EGravityState::ForcedNone;
 }
 
-void ASmallEnemy::Incapacitate(const EAIIncapacitatedType& IncapacitateType, float Time, const ESmallEnemyAIState& NextState)
+void ASmallEnemy::ChompCollisionOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	AEnemyAIController* AI = Cast<AEnemyAIController>(GetController());
-	AI->IncapacitateAI(IncapacitateType, Time, NextState);
+	if (OtherActor == this) return;
+
+	auto iTag = Cast<IGameplayTagAssetInterface>(OtherActor);
+	if (!iTag) return;
+
+	if (iTag->HasMatchingGameplayTag(Tag::Player()) && OtherComp->IsA(UCapsuleComponent::StaticClass()))
+	{
+		auto IAttack = Cast<IAttackInterface>(OtherActor);
+		IAttack->Receive_SmackAttack_Pure(FVector(OtherActor->GetActorLocation() - GetActorLocation()).GetSafeNormal(), 1000.f);
+
+		AttackContactDelegate.Broadcast(OtherActor);
+	}
+}
+
+void ASmallEnemy::Activate_AttackCollider()
+{
+	Chomp_EnableCollision();
+}
+void ASmallEnemy::Deactivate_AttackCollider()
+{
+	Chomp_DisableCollision();
+}
+
+void ASmallEnemy::Chomp_EnableCollision()
+{
+	BoxComp_Chomp->SetGenerateOverlapEvents(true);
+	BoxComp_Chomp->SetRelativeScale3D(ChompColliderScale);
+}
+
+void ASmallEnemy::Chomp_DisableCollision()
+{
+	BoxComp_Chomp->SetGenerateOverlapEvents(false);
+	BoxComp_Chomp->SetRelativeScale3D(FVector(0,0,0));
+}
+
+void ASmallEnemy::Incapacitate(const EAIIncapacitatedType& IncapacitateType, float Time/*, const ESmallEnemyAIState& NextState*/)
+{
+	m_AI->IncapacitateAI(IncapacitateType, Time/*, NextState*/);
+	Chomp_DisableCollision();
 }
 
 void ASmallEnemy::IncapacitateUndeterminedTime(const EAIIncapacitatedType& IncapacitateType, void(ASmallEnemy::* function)())
@@ -242,15 +323,16 @@ void ASmallEnemy::IncapacitateUndeterminedTime(const EAIIncapacitatedType& Incap
 	IncapacitatedLandDelegation.BindUObject(this, &ASmallEnemy::IncapacitatedLand);
 }
 
-void ASmallEnemy::Capacitate(const EAIIncapacitatedType& IncapacitateType, float Time, const ESmallEnemyAIState& NextState)
-{
-	AEnemyAIController* AI = Cast<AEnemyAIController>(GetController());
-	AI->CapacitateAI(Time, NextState);
-}
-
 void ASmallEnemy::IncapacitatedLand()
 {
-	Capacitate(EAIIncapacitatedType::None, 1.f/* Post land stun */);
+	PRINTLONG("Incapacitated Land");
+	Incapacitate(EAIIncapacitatedType::Stunned, Incapacitated_LandedStunTime);
+}
+
+bool ASmallEnemy::IsIncapacitated() const
+{
+	AEnemyAIController* AI = Cast<AEnemyAIController>(GetController());
+	return AI->m_AIState == ESmallEnemyAIState::Incapacitated;
 }
 
 void ASmallEnemy::CollisionDelegate()
@@ -258,28 +340,41 @@ void ASmallEnemy::CollisionDelegate()
 
 }
 
+bool ASmallEnemy::IsTargetWithinSpawn(const FVector& target, const float& radiusmulti) const
+{
+	return FVector::Dist(m_SpawnPointData->Location, target) < m_SpawnPointData->Radius_Max * radiusmulti;
+}
+
 void ASmallEnemy::Capacitate_Grappled()
 {
-	Capacitate(EAIIncapacitatedType::Grappled, 1.f/*Post grappled stun timer*/);
+	Incapacitate(EAIIncapacitatedType::Grappled, 1.f/*Post grappled stun timer*/);
 }
 
 void ASmallEnemy::RotateActorYawToVector(FVector AimVector, float DeltaTime)
 {
-	FVector Aim = AimVector;
-	Aim.Normalize();
-
-	FVector AimXY = Aim;
+	FVector AimXY = AimVector;
 	AimXY.Z = 0.f;
 	AimXY.Normalize();
 
-	float YawDotProduct = FVector::DotProduct(AimXY, FVector::ForwardVector);
+	//float YawDotProduct = FVector::DotProduct(AimXY, FVector::ForwardVector);
+	float YawDotProduct = FVector::DotProduct(AimXY, GetActorForwardVector());
 	float Yaw = FMath::RadiansToDegrees(acosf(YawDotProduct));
 
 	/*		Check if yaw is to the right or left		*/
-	float RightDotProduct = FVector::DotProduct(AimXY, FVector::RightVector);
+	//float RightDotProduct = FVector::DotProduct(AimXY, FVector::RightVector);
+	float RightDotProduct = FVector::DotProduct(AimXY, GetActorRightVector());
 	if (RightDotProduct < 0.f) { Yaw *= -1.f; }
 
-	SetActorRotation(FRotator(GetActorRotation().Pitch, Yaw, 0.f), ETeleportType::TeleportPhysics);
+	if (DeltaTime > 0.f) {
+		PRINTPAR("Yaw == %f", Yaw);
+		Yaw *= DeltaTime;
+		PRINTPAR("Yaw *= DeltaTime == %f", Yaw);
+	}
+
+	//SetActorRotation(FRotator(GetActorRotation().Pitch, Yaw, 0.f), ETeleportType::TeleportPhysics);
+	AddActorWorldRotation(FRotator(0.f, Yaw, 0.f), false, nullptr, ETeleportType::TeleportPhysics);
+	DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + GetActorForwardVector() * 100.f, FColor::Red);
+
 }
 
 void ASmallEnemy::StickToWall()
@@ -297,6 +392,15 @@ void ASmallEnemy::LeaveWall()
 
 	//AI - Register collision delegate
 	IncapacitateUndeterminedTime(EAIIncapacitatedType::Grappled, &ASmallEnemy::CollisionDelegate);
+}
+
+void ASmallEnemy::SpottingPlayer_Begin()
+{
+	m_Anim->bSpottingPlayer = true;
+}
+void ASmallEnemy::SpottingPlayer_End()
+{
+	m_Anim->bSpottingPlayer = false;
 }
 
 void ASmallEnemy::TargetedPure()
@@ -410,8 +514,10 @@ void ASmallEnemy::Receive_SmackAttack_Pure(const FVector& Direction, const float
 {
 	if (GetCanBeSmackAttacked())
 	{
+		/* Sets a timer before character can be damaged by the same attack */
+		TimerManager.SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, SmackAttack_InternalTimer, false);
+
 		EnableGravity();
-		TlComp_Scooped->Stop();
 
 		/* Weaker smack attack if actor on ground than in air */
 		float s;
@@ -424,65 +530,9 @@ void ASmallEnemy::Receive_SmackAttack_Pure(const FVector& Direction, const float
 
 		Incapacitate(EAIIncapacitatedType::Stunned, 1.5f/* Stun timer */);
 
-		/* Sets a timer before character can be damaged by the same attack */
-		TimerManager.SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, SmackAttack_InternalTimer, false);
-
-			/// PUTTE DETTE I EN EGEN DELEGATION? Delegate_Launched.Execute()?
-		m_State = EEnemyState::STATE_Launched;
-		RotateActorYawToVector(Direction * -1.f);
-		// Animation
-		Anim_Attacked_Pure(Direction * -1.f);
-		// Particles
-		NS_Start_Trail(Direction);
+		Launched(Direction);
 	}
 }
-
-void ASmallEnemy::Tl_Scooped(float value)
-{
-	// Add Force in Z direction
-	auto c = GetCharacterMovement();
-	float PositiveGravity = c->GetGravityZ() * -1.f * c->Mass;
-	GetCharacterMovement()->AddForce(FVector(0, 0, PositiveGravity * value * ScoopedCurveMultiplier));
-
-	// Reduce horizontal velocity when getting closer to the scooped target2D
-	float multi2D = (float)FVector::DistSquared2D(GetActorLocation(), ScoopedLocation) / ScoopedLength2D;
-	c->Velocity.X *= multi2D;
-	c->Velocity.Y *= multi2D;
-}
-
-void ASmallEnemy::Tl_ScoopedEnd()
-{
-	EnableCollisions();
-}
-
-void ASmallEnemy::Do_ScoopAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor)
-{
-}
-
-void ASmallEnemy::Receive_ScoopAttack_Pure(const FVector& TargetLocation, const FVector& InstigatorLocation, const float& time)
-{
-	if (GetCanBeSmackAttacked())
-	{
-		TlComp_Scooped->PlayFromStart();
-		ScoopedLocation = TargetLocation + FVector(0,0, ScoopedZHeightAdjustment);
-		ScoopedLength2D = FVector::DistSquared2D(GetActorLocation(), ScoopedLocation);
-
-		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndProbe);
-
-		bCanBeSmackAttacked = false;
-		FVector ToInstigator = InstigatorLocation - GetActorLocation();
-		SetActorRotation(FVector(ToInstigator.GetSafeNormal2D() * -1.f).Rotation(), ETeleportType::TeleportPhysics);
-		GetCharacterMovement()->Velocity *= 0.f;
-
-		FVector ScoopDirection = ScoopedLocation - GetActorLocation();
-		FVector Velocity = ((ScoopDirection) / time) + (0.5f * FVector(0, 0, -GravityZ) * time);
-		GetCharacterMovement()->AddImpulse(Velocity, true);
-
-		/* Sets a timer before character can be damaged by the same attack */
-		TimerManager.SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, 0.2f, false);
-	}
-}
-
 void ASmallEnemy::Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength)
 {
 	SetActorRotation(FVector(PoundDirection.GetSafeNormal2D() * -1.f).Rotation(), ETeleportType::TeleportPhysics);
@@ -490,10 +540,8 @@ void ASmallEnemy::Receive_GroundPound_Pure(const FVector& PoundDirection, const 
 	GetCharacterMovement()->AddImpulse(PoundDirection * GP_Strength, true);
 
 	/* Sets a timer before character can be damaged by the same attack */
-	//TimerManager.SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, 0.5f, false);
 	
-	// Particles
-	NS_Start_Trail(PoundDirection);
+	Launched(PoundDirection);
 }
 
 void ASmallEnemy::NS_Start_Trail(FVector direction)
@@ -540,4 +588,19 @@ void ASmallEnemy::Receive_Pogo_GroundPound_Pure()
 
 	// Particles
 	//UNiagaraFunctionLibrary::SpawnSystemAtLocation()
+}
+
+void ASmallEnemy::Launched()
+{
+	Launched(GetVelocity().GetSafeNormal());
+}
+
+void ASmallEnemy::Launched(FVector direction)
+{
+	m_State = EEnemyState::STATE_Launched;
+	// Animation
+	Anim_Attacked_Pure(direction * -1.f);
+	RotateActorYawToVector(direction * -1.f);
+	// Particles
+	NS_Start_Trail(direction);
 }

@@ -48,12 +48,6 @@ public:
 	virtual void ResetCanBeSmackAttacked(){}
 
 
-	UFUNCTION(BlueprintNativeEvent, Category = "Attack|ScoopAttack")
-		void ScoopAttack();
-	virtual void Do_ScoopAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor){}
-	virtual void Receive_ScoopAttack_Pure(const FVector& TargetLocation, const FVector& InstigatorLocation, const float& time){}
-
-
 	UFUNCTION(BlueprintNativeEvent, Category = "Attack|GroundPound")
 		void GroundPound();
 	virtual void Do_GroundPound_Pure(IAttackInterface* OtherInterface, AActor* OtherActor){}

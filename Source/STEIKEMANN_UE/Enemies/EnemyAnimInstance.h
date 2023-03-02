@@ -35,4 +35,8 @@ public:	// Variables
 		FRotator Launched_SpinAngle{};
 	UPROPERTY(BlueprintReadOnly)
 		bool bIsLaunchedInAir{};
+	UPROPERTY(BlueprintReadOnly)
+		bool bIsSleeping{};
+	UPROPERTY(BlueprintReadOnly)
+		bool bSpottingPlayer{};
 };

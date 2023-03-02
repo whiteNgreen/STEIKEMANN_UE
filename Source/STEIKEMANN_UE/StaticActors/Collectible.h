@@ -25,8 +25,8 @@ public:
 	// Sets default values for this actor's properties
 	ACollectible();
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Mesh")
-		UStaticMeshComponent* Mesh { nullptr };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mesh")
+		USkeletalMeshComponent* Mesh { nullptr };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
 		class USphereComponent* Sphere{ nullptr };
 	
@@ -40,6 +40,14 @@ public:
 		class UNiagaraSystem* DeathParticles{ nullptr };
 
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Variables")
+		bool bShouldRotate{ true };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Variables")
+		float RotationSpeed{ 100.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Variables")
+		float RotationSpeed_LerpSpeed{ 2.f };
+	float RotationSpeed_Internal{};
+
 	/* Buffer/Timer before collectible can be collected */
 	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "OnSpawn")
 		//float InitTimer{ 0.5f };
@@ -47,6 +55,8 @@ public:
 	//void Init();
 
 	FTimerHandle FTHDestruction;
+	UFUNCTION(BlueprintImplementableEvent)
+		void Destruction_IMPL();
 	void Destruction();
 
 protected:
