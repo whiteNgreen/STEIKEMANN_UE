@@ -37,20 +37,21 @@ void AGrappleTarget::UnTargetedPure()
 
 void AGrappleTarget::InReach_Pure()
 {
+	bInReach = true;
 	Execute_InReach(this);
-	bOpen = true;
 }
 
 void AGrappleTarget::OutofReach_Pure()
 {
+	bInReach = false;
 	Execute_OutofReach(this);
-	bOpen = false;
 }
 
 
 
 void AGrappleTarget::HookedPure()
 {
+	bInReach = true;
 	Execute_Hooked(this);
 }
 

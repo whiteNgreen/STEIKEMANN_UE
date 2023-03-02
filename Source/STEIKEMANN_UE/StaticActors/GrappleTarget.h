@@ -40,7 +40,9 @@ public:
 
 	virtual void UnHookedPure() override;
 
+public:	// Anim Functions
+
 public:		// Variables
 	UPROPERTY(BlueprintReadOnly)
-		bool bOpen{};
+		bool bInReach{};
 };

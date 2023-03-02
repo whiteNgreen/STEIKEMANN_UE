@@ -71,13 +71,10 @@ void AEnemyAIController::OnPossess(APawn* InPawn)
 	m_DogPack = m_PawnOwner->m_DogPack.Get();
 	m_DogType = m_PawnOwner->m_DogType;
 	m_PawnOwner->m_AI = this;
-
-	AActor* player = UGameplayStatics::GetActorOfClass(GetWorld(), ASteikemannCharacter::StaticClass());
-	m_Player = player;
+	
+	GetPlayerPtr();
 
 	SetState(ESmallEnemyAIState::RecentlySpawned);
-	//ChaseTimedUpdate();
-	//m_AIState = ESmallEnemyAIState::ChasingTarget;	// Tmp method of testing ChasingTarget
 }
 
 void AEnemyAIController::RecentlySpawnedBegin()
@@ -224,7 +221,7 @@ void AEnemyAIController::SpotPlayer()
 
 	SetState(ESmallEnemyAIState::ChasingTarget);
 
-	m_DogPack->AlertPack(m_PawnOwner);
+	if (m_DogPack) m_DogPack->AlertPack(m_PawnOwner);
 
 	DrawDebugPoint(GetWorld(), GetPawn()->GetActorLocation() + FVector::UpVector * 100.f, 40.f, FColor::Red, false, 2.f, -2);
 }
@@ -542,8 +539,9 @@ void AEnemyAIController::ChaseUpdate(float DeltaTime)
 		break;
 	}
 
-	if (FVector::Dist(GetPawn()->GetActorLocation(), m_Player->GetActorLocation()) < 200.f)
-		SetState(ESmallEnemyAIState::Attack);
+	if (m_Player)
+		if (FVector::Dist(GetPawn()->GetActorLocation(), m_Player->GetActorLocation()) < 200.f)
+			SetState(ESmallEnemyAIState::Attack);
 }
 
 void AEnemyAIController::LerpPinkTeal_ChaseLocation(float DeltaTime)
@@ -552,6 +550,16 @@ void AEnemyAIController::LerpPinkTeal_ChaseLocation(float DeltaTime)
 	PinkTeal_ChaseLocation.X = FMath::FInterpTo(PinkTeal_ChaseLocation.X, PinkTeal_ChaseLocation_Target.X, DeltaTime, PinkTeal_SideLength_LerpSpeed);
 	PinkTeal_ChaseLocation.Y = FMath::FInterpTo(PinkTeal_ChaseLocation.Y, PinkTeal_ChaseLocation_Target.Y, DeltaTime, PinkTeal_SideLength_LerpSpeed);
 	PinkTeal_ChaseLocation.Z = FMath::FInterpTo(PinkTeal_ChaseLocation.Z, PinkTeal_ChaseLocation_Target.Z, DeltaTime, PinkTeal_SideLength_LerpSpeed);
+}
+
+void AEnemyAIController::GetPlayerPtr()
+{
+	AActor* player = UGameplayStatics::GetActorOfClass(GetWorld(), ASteikemannCharacter::StaticClass());
+	m_Player = player;
+	if (!player) {
+		FTimerHandle h;
+		GetWorldTimerManager().SetTimer(h, this, &AEnemyAIController::GetPlayerPtr, 0.5f);
+	}
 }
 
 void AEnemyAIController::ChasePlayer_Red()
@@ -564,7 +572,8 @@ void AEnemyAIController::ChasePlayer_Red()
 
 void AEnemyAIController::ChasePlayer_Red_Update()
 {
-	PinkTeal_ChaseLocation = m_Player->GetActorLocation();
+	if (m_Player)
+		PinkTeal_ChaseLocation = m_Player->GetActorLocation();
 }
 
 void AEnemyAIController::ChasePlayer_Pink()

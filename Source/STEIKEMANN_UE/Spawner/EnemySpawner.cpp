@@ -218,10 +218,13 @@ ASmallEnemy* AEnemySpawner::SpawnCharacter()
 void EDogPack::AlertPack(ASmallEnemy* Instigator)
 {
 	if (!Instigator) return;
-	if (Red && Red != Instigator)
-		Red->Alert(*Instigator);
-	if (Pink && Pink != Instigator)
-		Pink->Alert(*Instigator);
-	if (Teal && Teal != Instigator)
-		Teal->Alert(*Instigator);
+	if (Red)
+		if (Red != Instigator)
+			Red->Alert(*Instigator);
+	if (Pink)
+		if (Pink != Instigator)
+			Pink->Alert(*Instigator);
+	if (Teal)
+		if (Teal != Instigator)
+			Teal->Alert(*Instigator);
 }

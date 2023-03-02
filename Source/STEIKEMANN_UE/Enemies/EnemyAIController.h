@@ -143,6 +143,7 @@ public:	// Functions
 	void ChaseTimedUpdate();
 	void ChaseUpdate(float DeltaTime);
 	void LerpPinkTeal_ChaseLocation(float DeltaTime);
+	void GetPlayerPtr();
 	AActor* m_Player{ nullptr };
 	FTimerHandle TH_ChaseUpdate;
 
