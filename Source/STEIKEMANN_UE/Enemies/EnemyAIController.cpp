@@ -32,6 +32,7 @@ void AEnemyAIController::BeginPlay()
 void AEnemyAIController::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	if (!m_PawnOwner) return;
 	TM_AI.Tick(DeltaTime);
 	
 	switch (m_AIState)
