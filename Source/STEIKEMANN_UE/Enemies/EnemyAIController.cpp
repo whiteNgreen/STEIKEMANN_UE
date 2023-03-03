@@ -60,7 +60,7 @@ void AEnemyAIController::Tick(float DeltaTime)
 	default:
 		break;
 	}
-	PrintState();
+	//PrintState();
 }
 
 void AEnemyAIController::OnPossess(APawn* InPawn)
