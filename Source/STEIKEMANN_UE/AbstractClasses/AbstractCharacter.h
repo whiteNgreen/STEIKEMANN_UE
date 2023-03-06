@@ -72,4 +72,6 @@ public:
 	TArray<AActor*> AttackContactedActors;
 	virtual void AttackContact(AActor* target);
 
+	bool bCanBounce{ true };
+	virtual bool ShroomBounce(FVector direction, float strength);
 };

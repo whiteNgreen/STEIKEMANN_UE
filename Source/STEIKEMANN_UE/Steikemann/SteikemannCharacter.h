@@ -524,7 +524,7 @@ public:
 	void Roll(FVector direction);
 	UFUNCTION(BlueprintCallable)
 		void Roll_End();
-#pragma endregion //Roll
+#pragma endregion					//Roll
 #pragma region Pogo
 private:
 	EPogoType m_EPogoType = EPogoType::POGO_None;
@@ -607,6 +607,10 @@ public: // Animation
 		void Anim_Pogo_Active();
 
 #pragma endregion					//Pogo
+#pragma region Bounce
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		class UBouncyShroomActorComponent* BounceComp;
+#pragma endregion // Bounce
 #pragma region Crouch		
 public:
 	bool bPressedCrouch{};

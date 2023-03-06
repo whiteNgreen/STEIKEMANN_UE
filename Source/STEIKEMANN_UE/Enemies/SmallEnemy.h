@@ -341,4 +341,9 @@ public:
 public:
 	void Receive_Pogo_GroundPound_Pure() override;
 #pragma endregion			//Pogo
+#pragma region Bounce
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		class UBouncyShroomActorComponent* BounceComp;
+#pragma endregion // Bounce
+
 };

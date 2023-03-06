@@ -3,6 +3,7 @@
 
 #include "../AbstractClasses/AbstractCharacter.h"
 #include "../DebugMacros.h"
+#include "GameFrameWork/CharacterMovementComponent.h"
 
 ABaseCharacter::ABaseCharacter()
 {
@@ -70,3 +71,17 @@ void ABaseCharacter::AttackContact(AActor* target)
 		this->CustomTimeDilation = 1.f;
 		}, AttackContactTimer, false);
 }
+
+bool ABaseCharacter::ShroomBounce(FVector direction, float strength)
+{
+	if (!bCanBounce) return false;
+	auto c = GetCharacterMovement();
+	c->Velocity *= 0.f;
+	c->AddImpulse(direction * strength, true);
+
+	bCanBounce = false;
+	FTimerHandle h;
+	TimerManager.SetTimer(h, [this]() { bCanBounce = true; }, 0.5f, false);
+	return true;
+}
+

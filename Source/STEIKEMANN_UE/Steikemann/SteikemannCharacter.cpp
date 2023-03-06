@@ -18,6 +18,7 @@
 #include "Components/BoxComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/TimelineComponent.h"
+#include "../Components/BouncyShroomActorComponent.h"
 
 // Camera
 #include "Camera/CameraComponent.h"
@@ -74,6 +75,8 @@ ASteikemannCharacter::ASteikemannCharacter(const FObjectInitializer& ObjectIniti
 	GrappleTargetingDetectionSphere->SetupAttachment(GetCapsuleComponent());
 	GrappleTargetingDetectionSphere->SetGenerateOverlapEvents(false);
 	GrappleTargetingDetectionSphere->SetSphereRadius(0.1f);
+
+	BounceComp = CreateDefaultSubobject<UBouncyShroomActorComponent>("Bounce Component");
 
 	Component_Audio = CreateDefaultSubobject<UAudioComponent>(TEXT("AudioComponent"));
 	Component_Audio->SetupAttachment(RootComponent);

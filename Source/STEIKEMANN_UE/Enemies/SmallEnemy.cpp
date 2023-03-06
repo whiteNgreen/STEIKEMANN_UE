@@ -12,6 +12,7 @@
 #include "Gameframework/CharacterMovementComponent.h"
 #include "../GameplayTags.h"
 #include "../Steikemann/SteikemannCharacter.h"
+#include "../Components/BouncyShroomActorComponent.h"
 
 // Sets default values
 ASmallEnemy::ASmallEnemy()
@@ -27,6 +28,8 @@ ASmallEnemy::ASmallEnemy()
 
 	BoxComp_Chomp = CreateDefaultSubobject<UBoxComponent>("Attack Collider");
 	BoxComp_Chomp->SetupAttachment(GetMesh(), FName("SOCKET_Head"));
+
+	BounceComp = CreateDefaultSubobject<UBouncyShroomActorComponent>("Bounce Component");
 }
 
 // Called when the game starts or when spawned
