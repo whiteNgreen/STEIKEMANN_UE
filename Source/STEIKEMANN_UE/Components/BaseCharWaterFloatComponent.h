@@ -30,9 +30,15 @@ public:
 	* How quicky the owning pawn will float up to water level. 
 	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		float Bouyancy{ 100.f };
+		float Bouyancy{ 0.8f };
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float WaterLevelAdditional{ 50.f };
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float WaterLevelDivide{ 200.f };
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		//float VelZdivideAmount{ 200.f };
 
-	//void FloatingInWater();
+	void FloatingInWater();
 
 	UFUNCTION()
 		void OnOwnerCapsuleOverlapWithWater(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
@@ -41,6 +47,7 @@ public:
 
 private:
 	class ABaseCharacter* m_Owner;
+	class UCharacterMovementComponent* m_CharMovement;
 	bool bIsFloatingInWater{};
 	float WaterLevel{};
 };

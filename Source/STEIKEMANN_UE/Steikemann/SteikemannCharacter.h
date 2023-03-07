@@ -205,7 +205,7 @@ public:
 
 	bool ActivatePrompt();
 	bool ExitPrompt();
-#pragma endregion						// Prompt Area
+#pragma endregion				// Prompt Area
 #pragma region Audio
 	UPROPERTY(EditAnywhere, Category = "Audio")
 		UAudioComponent* Component_Audio{ nullptr };
@@ -423,7 +423,7 @@ private:
 	EState m_EState = EState::STATE_OnGround;
 	EGroundState m_EGroundState = EGroundState::GROUND_Walk;
 	EAirState m_EAirState = EAirState::AIR_None;
-	float m_BaseGravity{};
+	//float m_BaseGravity{};
 
 public:/* ------------------- Basic Movement ------------------- */
 public:
@@ -610,7 +610,7 @@ public: // Animation
 #pragma region Bounce
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		class UBouncyShroomActorComponent* BounceComp;
-#pragma endregion // Bounce
+#pragma endregion					//Bounce
 #pragma region Crouch		
 public:
 	bool bPressedCrouch{};
@@ -723,7 +723,8 @@ public:// Capsule
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall")
 		bool bWDC_Debug{};
 
-	UWallDetectionComponent* WallDetector{ nullptr };
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		class UWallDetectionComponent* WallDetector{ nullptr };
 	
 	// Wall Decetion
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|WallDetection")

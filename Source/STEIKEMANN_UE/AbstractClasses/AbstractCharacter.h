@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "../StaticVariables.h"
+#include "../Components/BaseCharWaterFloatComponent.h"
 
 // Particles
 #include "NiagaraFunctionLibrary.h"
@@ -35,6 +35,9 @@ public:
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FParticleUpdate, float DeltaTime)
 DECLARE_MULTICAST_DELEGATE_OneParam(FMaterialUpdate, float DeltaTime)
+DECLARE_DELEGATE(FWaterPuddleEnter)
+DECLARE_DELEGATE(FWaterPuddleExit)
+
 class UNiagaraSystem;
 class UNiagaraComponent;
 
@@ -46,6 +49,7 @@ class STEIKEMANN_UE_API ABaseCharacter : public AAbstractCharacter
 public:
 	ABaseCharacter();
 	ABaseCharacter(const FObjectInitializer& ObjectInitializer);
+	void BaseComponentInit();
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 	virtual void EndTick(float DeltaTime);
@@ -78,5 +82,16 @@ public:
 
 	FVector LandVelocity{};
 	virtual void Landed(const FHitResult& Hit) override;
+
+	float m_GravityScale;
+	float m_BaseGravityZ;
+
+
+#pragma region WaterPuddle
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		class UBaseCharWaterFloatComponent* WaterInterActionComponent;
+	FWaterPuddleEnter Delegate_WaterPuddleEnter;
+	FWaterPuddleExit Delegate_WaterPuddleExit;
+#pragma endregion				//WaterPuddle
 
 };

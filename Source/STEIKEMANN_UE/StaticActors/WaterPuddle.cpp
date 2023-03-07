@@ -19,3 +19,5 @@ void AWaterPuddle::BeginPlay()
 
 	GTagContainer.AddTag(Tag::WaterPuddle());
 }
+
+

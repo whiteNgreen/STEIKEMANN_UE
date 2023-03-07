@@ -7,6 +7,7 @@
 
 #include "Components/CapsuleComponent.h"
 #include "GameFrameWork/Character.h"
+#include "GameFrameWork/CharacterMovementComponent.h"
 #include "../GameplayTags.h"
 #include "../StaticActors/WaterPuddle.h"
 #include "../AbstractClasses/AbstractCharacter.h"
@@ -30,8 +31,9 @@ void UBaseCharWaterFloatComponent::BeginPlay()
 	// ...
 	m_Owner = Cast<ABaseCharacter>(GetOwner());
 	if (m_Owner) {
-		m_Owner->GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &UBaseCharWaterFloatComponent::OnOwnerCapsuleOverlapWithWater);
-		m_Owner->GetCapsuleComponent()->OnComponentEndOverlap.AddDynamic(this, &UBaseCharWaterFloatComponent::OnOwnerCapsuleEndOverlapWithWater);
+		m_Owner->GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this,	&UBaseCharWaterFloatComponent::OnOwnerCapsuleOverlapWithWater);
+		m_Owner->GetCapsuleComponent()->OnComponentEndOverlap.AddDynamic(this,		&UBaseCharWaterFloatComponent::OnOwnerCapsuleEndOverlapWithWater);
+		m_CharMovement = m_Owner->GetCharacterMovement();
 	}
 }
 
@@ -42,6 +44,24 @@ void UBaseCharWaterFloatComponent::TickComponent(float DeltaTime, ELevelTick Tic
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	// ...
+	if (bIsFloatingInWater && m_CharMovement) {
+		FloatingInWater();
+	}
+}
+
+void UBaseCharWaterFloatComponent::FloatingInWater()
+{
+	PRINTPAR("VelocityZ: %f", m_CharMovement->Velocity.Z);
+	float ZbelowWaterLevel = (WaterLevel + WaterLevelAdditional) - m_Owner->GetActorLocation().Z;
+	float Zwaterleveldivide = -ZbelowWaterLevel / WaterLevelDivide;
+
+	//float VelDivide = m_CharMovement->Velocity.Z / VelZdivideAmount;
+	//float VelMultiplied = VelDivide > 0.f ? Gaussian(VelDivide, 2, 1.f) : VelDivide * VelDivide * 0.4f + 1.f;
+	//PRINTPAR("Gaussian: %f", VelMultiplied);
+	float a = 2.f;
+	PRINTPAR("GravityZ: %f", -1.f * (m_Owner->m_BaseGravityZ * Bouyancy * (Gaussian(Zwaterleveldivide) * ((a - 1.f) / a))));
+	m_CharMovement->AddForce(FVector(0, 0, -1.f * (m_Owner->m_BaseGravityZ * Bouyancy)));
+	//m_CharMovement->AddForce(FVector(0, 0, -1.f * (m_Owner->m_BaseGravityZ * (ZbelowWaterLevel * Bouyancy / 100.f) + m_Owner->m_BaseGravityZ * VelMultiplied)));
 }
 
 void UBaseCharWaterFloatComponent::OnOwnerCapsuleOverlapWithWater(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
@@ -51,9 +71,15 @@ void UBaseCharWaterFloatComponent::OnOwnerCapsuleOverlapWithWater(UPrimitiveComp
 	IGameplayTagAssetInterface* ITag = Cast<IGameplayTagAssetInterface>(OtherActor);
 	if (!ITag) return;
 
+	/**
+	* Enter water puddle
+	*/
 	if (ITag->HasMatchingGameplayTag(Tag::WaterPuddle()))
 	{
-		
+		bIsFloatingInWater = true;
+		WaterLevel = OtherActor->GetActorLocation().Z;
+		m_Owner->Delegate_WaterPuddleEnter.ExecuteIfBound();
+		m_CharMovement->AddImpulse(FVector(m_CharMovement->Velocity * -0.8f), true);
 	}
 }
 
@@ -64,9 +90,13 @@ void UBaseCharWaterFloatComponent::OnOwnerCapsuleEndOverlapWithWater(UPrimitiveC
 	IGameplayTagAssetInterface* ITag = Cast<IGameplayTagAssetInterface>(OtherActor);
 	if (!ITag) return;
 
+	/**
+	* Exit water puddle
+	*/
 	if (ITag->HasMatchingGameplayTag(Tag::WaterPuddle()))
 	{
-
+		bIsFloatingInWater = false;
+		m_Owner->Delegate_WaterPuddleExit.ExecuteIfBound();
 	}
 
 }

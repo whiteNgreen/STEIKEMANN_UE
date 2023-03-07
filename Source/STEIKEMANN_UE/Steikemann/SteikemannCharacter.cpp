@@ -23,7 +23,6 @@
 // Camera
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
-
 #include "Components/SplineComponent.h"
 
 // Audio
@@ -33,6 +32,7 @@
 #include "GameFrameWork/WorldSettings.h"
 
 // Steikemann
+#include "../StaticVariables.h"
 #include "../GameplayTags.h"
 #include "../StaticActors/Collectible.h"
 #include "../StaticActors/PlayerRespawn.h"
@@ -114,7 +114,7 @@ void ASteikemannCharacter::BeginPlay()
 	GetCapsuleComponent()->OnComponentEndOverlap.AddDynamic(this, &ASteikemannCharacter::OnCapsuleComponentEndOverlap);
 	MaxHealth = Health;
 	StartTransform = GetActorTransform();
-	m_BaseGravity = MovementComponent->GetGravityZ();
+	//m_BaseGravityZ = MovementComponent->GetGravityZ();
 	ResetState();
 
 	// Camera
@@ -846,7 +846,7 @@ void ASteikemannCharacter::GH_Launch_Static_StuckEnemy()
 	float z{};
 	z = ((GrappledLocation.Z + GrappleHook_AboveStuckEnemy) - GetActorLocation().Z);
 
-	Velocity.Z = (z / GrappleHook_Time_ToStuckEnemy) + (0.5 * m_BaseGravity * GrappleHook_Time_ToStuckEnemy * -1.f);
+	Velocity.Z = (z / GrappleHook_Time_ToStuckEnemy) + (0.5 * m_BaseGravityZ * GrappleHook_Time_ToStuckEnemy * -1.f);
 	GetMoveComponent()->AddImpulse(Velocity, true);
 
 	// When grapple hooking to stuck enemy, set a wall jump activation timer 

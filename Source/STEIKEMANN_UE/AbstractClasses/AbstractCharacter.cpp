@@ -4,14 +4,23 @@
 #include "../AbstractClasses/AbstractCharacter.h"
 #include "../DebugMacros.h"
 #include "GameFrameWork/CharacterMovementComponent.h"
+// Base components
+#include "../StaticVariables.h"
 
 ABaseCharacter::ABaseCharacter()
 {
+	BaseComponentInit();
 }
 
 ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
+	BaseComponentInit();
+}
+
+void ABaseCharacter::BaseComponentInit()
+{
+	WaterInterActionComponent = CreateDefaultSubobject<UBaseCharWaterFloatComponent>("Water Interaction Component");
 }
 
 void ABaseCharacter::BeginPlay()
@@ -19,6 +28,10 @@ void ABaseCharacter::BeginPlay()
 	Super::BeginPlay();
 	AttackContactDelegate.AddUObject(this, &ABaseCharacter::AttackContact);
 	//AttackContactDelegate_Instigator.AddUObject(this, &ABaseCharacter::AttackContact_Instigator);
+
+	auto i = GetCharacterMovement();
+	m_GravityScale = i->GravityScale;
+	m_BaseGravityZ = i->GetGravityZ();
 }
 
 void ABaseCharacter::Tick(float DeltaTime)
@@ -89,4 +102,5 @@ void ABaseCharacter::Landed(const FHitResult& Hit)
 {
 	LandVelocity = GetCharacterMovement()->Velocity;
 }
+
 
