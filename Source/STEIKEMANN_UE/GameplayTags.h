@@ -38,7 +38,8 @@ namespace Tag {
 	static FGameplayTag CorruptionCore() { return FGameplayTag::RequestGameplayTag("Environment.CorruptionCore"); }
 	static FGameplayTag EnvironmentHazard() { return FGameplayTag::RequestGameplayTag("Environment.Hazard"); }
 	static FGameplayTag StickingWall() { return FGameplayTag::RequestGameplayTag("Environment.StickingWall"); }
-	static FGameplayTag BouncyShroom() { return FGameplayTag::RequestGameplayTag("Environment.StickingWall"); }
+	static FGameplayTag BouncyShroom() { return FGameplayTag::RequestGameplayTag("Environment.BouncyShroom"); }
+	static FGameplayTag WaterPuddle() { return FGameplayTag::RequestGameplayTag("Environment.WaterPuddle"); }
 
 	// Collectible
 	static FGameplayTag Collectible() { return FGameplayTag::RequestGameplayTag("Collectible"); }

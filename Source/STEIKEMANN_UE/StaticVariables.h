@@ -28,3 +28,10 @@ static inline float DotGuassian(const float& dot, float a = 0.3f, float b = 0.0f
 {
 	return FMath::Exp(-(FMath::Pow(dot - b, 2)) / (2.0 * FMath::Pow(a, 2)));
 }
+
+static inline FVector ReflectionVector(const FVector& n, const FVector& d, const float& reflectionStrength = 1.f)
+{
+	FVector Ortho = FVector::CrossProduct(n, FVector::CrossProduct(d, n));
+	FVector proj = d.ProjectOnTo(Ortho);
+	return n + (proj * reflectionStrength);
+}

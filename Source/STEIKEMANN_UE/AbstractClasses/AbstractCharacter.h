@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "../StaticVariables.h"
 
 // Particles
 #include "NiagaraFunctionLibrary.h"
@@ -74,4 +75,8 @@ public:
 
 	bool bCanBounce{ true };
 	virtual bool ShroomBounce(FVector direction, float strength);
+
+	FVector LandVelocity{};
+	virtual void Landed(const FHitResult& Hit) override;
+
 };

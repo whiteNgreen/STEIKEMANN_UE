@@ -19,14 +19,29 @@ void ABouncyShroom::BeginPlay()
 
 	GTagContainer.AddTag(Tag::BouncyShroom());
 	ShroomDirection = DirectionArrowComp->GetComponentRotation().Vector();
+	ShroomLocation = CollisionBox->GetComponentLocation();
 }
 
-bool ABouncyShroom::GetBounceInfo(const FVector normalImpulse, FVector& OUT_direction, float& OUT_strength)
+bool ABouncyShroom::GetBounceInfo(const FVector actorLocation, const FVector normalImpulse, const FVector IncommingDirection, FVector& OUT_direction, float& OUT_strength)
 {
-	//if (FVector::DotProduct(normalImpulse.GetSafeNormal(), ShroomDirection) < 0.7) 
-		//return false;
+	if (normalImpulse.SizeSquared() >= 0.2) {
+		if (FVector::DotProduct(normalImpulse.GetSafeNormal(), ShroomDirection) < 0.7f) 
+			return false;
+	}
+	else {
+		if (FVector::DotProduct(FVector(actorLocation - ShroomLocation).GetSafeNormal(), ShroomDirection) < 0.f)
+			return false;
+	}
+	
+	if (bReflectDirection){
+		OUT_direction = ReflectionVector(ShroomDirection, IncommingDirection, ReflectionStrength);
 
-	OUT_direction = ShroomDirection;
+		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + OUT_direction * 100.f, FColor::White, false, 2.f, -1, 8.f);
+		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + ShroomDirection * 100.f, FColor::Blue, false, 2.f, -1, 8.f);
+	}
+	else {
+		OUT_direction = ShroomDirection;
+	}
 	OUT_strength *= BounceMultiplier;
 	return true;
 }

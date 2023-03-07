@@ -6,6 +6,7 @@
 
 #include "Components/CapsuleComponent.h"
 #include "GameFrameWork/Character.h"
+#include "GameFrameWork/CharacterMovementComponent.h"
 #include "../GameplayTags.h"
 #include "../StaticActors/BouncyShroom.h"
 #include "../AbstractClasses/AbstractCharacter.h"
@@ -15,7 +16,7 @@ UBouncyShroomActorComponent::UBouncyShroomActorComponent()
 {
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
-	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bCanEverTick = false;
 
 	// ...
 }
@@ -51,20 +52,13 @@ void UBouncyShroomActorComponent::OnOwnerCapsuleHitShroom(UPrimitiveComponent* H
 
 	if (ITag->HasMatchingGameplayTag(Tag::BouncyShroom()))
 	{
-		//if (!HitComponent->IsA(UBoxComponent::StaticClass())) return;
-		PRINTPARLONG(2.f, "BOUNCE: %s -> %s", *m_Owner->GetName(), *OtherActor->GetName());
+		if (!OtherComp->IsA(UBoxComponent::StaticClass())) return;
 
 		ABouncyShroom* Shroom = Cast<ABouncyShroom>(OtherActor);
 		FVector direction;
 		float strength = BounceStrength;
-		//Shroom->GetBounceInfo(NormalImpulse, direction, strength);
-		if (Shroom->GetBounceInfo(NormalImpulse, direction, strength)) 
-		{
+		if (Shroom->GetBounceInfo(GetOwner()->GetActorLocation(), NormalImpulse, m_Owner->LandVelocity.GetSafeNormal(), direction, strength)) {
 			m_Owner->ShroomBounce(direction, strength);
-
-			PRINTPARLONG(2.f, "BOUNCE: %s", *m_Owner->GetName());
-			DrawDebugLine(GetWorld(), m_Owner->GetActorLocation(), m_Owner->GetActorLocation() + NormalImpulse * 200.f, FColor::Blue, false, 3.f, 0, 3.f);
-			DrawDebugLine(GetWorld(), m_Owner->GetActorLocation(), m_Owner->GetActorLocation() + direction * 100.f, FColor::Orange, false, 3.f, -1, 5.f);
 		}
 	}
 }

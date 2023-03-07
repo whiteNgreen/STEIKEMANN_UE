@@ -1434,6 +1434,7 @@ void ASteikemannCharacter::LockMovementForPeriod(float time, TFunction<void()> l
 
 void ASteikemannCharacter::Landed(const FHitResult& Hit)
 {
+	Super::Landed(Hit);
 	Roll_End();
 	if (bIsDead)
 	{

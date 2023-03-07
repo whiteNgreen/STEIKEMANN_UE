@@ -25,6 +25,10 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float BounceMultiplier{ 1.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		bool bReflectDirection{ true };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (EditCondition = "bReflectDirection", EditConditionHides))
+		float ReflectionStrength{ 1.f };
 public:
 	ABouncyShroom();
 
@@ -34,6 +38,7 @@ protected:
 
 private:
 	FVector ShroomDirection;
+	FVector ShroomLocation;
 public:
-	bool GetBounceInfo(const FVector normalImpulse, FVector& OUT_direction, float& OUT_strength);
+	bool GetBounceInfo(const FVector actorLocation, const FVector normalImpulse, const FVector IncommingDirection, FVector& OUT_direction, float& OUT_strength);
 };

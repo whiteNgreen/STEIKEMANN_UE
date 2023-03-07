@@ -81,7 +81,12 @@ bool ABaseCharacter::ShroomBounce(FVector direction, float strength)
 
 	bCanBounce = false;
 	FTimerHandle h;
-	TimerManager.SetTimer(h, [this]() { bCanBounce = true; }, 0.5f, false);
+	TimerManager.SetTimer(h, [this]() { bCanBounce = true; }, 0.1f, false);
 	return true;
+}
+
+void ABaseCharacter::Landed(const FHitResult& Hit)
+{
+	LandVelocity = GetCharacterMovement()->Velocity;
 }
 
