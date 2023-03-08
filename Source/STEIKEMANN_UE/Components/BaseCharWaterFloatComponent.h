@@ -26,19 +26,20 @@ public:
 
 
 public:
-	/**
-	* How quicky the owning pawn will float up to water level. 
+	/* How far below the water level is considered close to the surface */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float WL_CloseToSurface{ 6.f };
+	/** 
+	* How far below the water level will it begin to lerp towards being close to the surface 
+	* Lerping between the two methods of Gaussian(close to surface) and exponential 
+	*	methods of adding force.
 	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		float Bouyancy{ 0.8f };
+		float WL_CloseToSurface_Lerplength{ 12.f };
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		float WaterLevelAdditional{ 50.f };
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		float WaterLevelDivide{ 200.f };
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		//float VelZdivideAmount{ 200.f };
+		float WL_HorizontalSlowDownStrength{ 4.f };
 
-	void FloatingInWater();
+	void FloatingInWater(float DeltaTime);
 
 	UFUNCTION()
 		void OnOwnerCapsuleOverlapWithWater(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
@@ -50,4 +51,7 @@ private:
 	class UCharacterMovementComponent* m_CharMovement;
 	bool bIsFloatingInWater{};
 	float WaterLevel{};
+	float m_OwnerGravity;
+
+	float m_VelMulti{};
 };

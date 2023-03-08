@@ -34,6 +34,7 @@ void UBaseCharWaterFloatComponent::BeginPlay()
 		m_Owner->GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this,	&UBaseCharWaterFloatComponent::OnOwnerCapsuleOverlapWithWater);
 		m_Owner->GetCapsuleComponent()->OnComponentEndOverlap.AddDynamic(this,		&UBaseCharWaterFloatComponent::OnOwnerCapsuleEndOverlapWithWater);
 		m_CharMovement = m_Owner->GetCharacterMovement();
+		m_OwnerGravity = m_Owner->m_BaseGravityZ;
 	}
 }
 
@@ -45,23 +46,76 @@ void UBaseCharWaterFloatComponent::TickComponent(float DeltaTime, ELevelTick Tic
 
 	// ...
 	if (bIsFloatingInWater && m_CharMovement) {
-		FloatingInWater();
+		FloatingInWater(DeltaTime);
 	}
 }
 
-void UBaseCharWaterFloatComponent::FloatingInWater()
+void UBaseCharWaterFloatComponent::FloatingInWater(float DeltaTime)
 {
-	PRINTPAR("VelocityZ: %f", m_CharMovement->Velocity.Z);
-	float ZbelowWaterLevel = (WaterLevel + WaterLevelAdditional) - m_Owner->GetActorLocation().Z;
-	float Zwaterleveldivide = -ZbelowWaterLevel / WaterLevelDivide;
+	if (GetOwner()->GetActorLocation().Z > WaterLevel) return;
+	
+	float zmulti{ 1.f };
+	float zdiff = WaterLevel - GetOwner()->GetActorLocation().Z;
+	float velZ = m_CharMovement->Velocity.Z;
 
-	//float VelDivide = m_CharMovement->Velocity.Z / VelZdivideAmount;
-	//float VelMultiplied = VelDivide > 0.f ? Gaussian(VelDivide, 2, 1.f) : VelDivide * VelDivide * 0.4f + 1.f;
-	//PRINTPAR("Gaussian: %f", VelMultiplied);
-	float a = 2.f;
-	PRINTPAR("GravityZ: %f", -1.f * (m_Owner->m_BaseGravityZ * Bouyancy * (Gaussian(Zwaterleveldivide) * ((a - 1.f) / a))));
-	m_CharMovement->AddForce(FVector(0, 0, -1.f * (m_Owner->m_BaseGravityZ * Bouyancy)));
-	//m_CharMovement->AddForce(FVector(0, 0, -1.f * (m_Owner->m_BaseGravityZ * (ZbelowWaterLevel * Bouyancy / 100.f) + m_Owner->m_BaseGravityZ * VelMultiplied)));
+	/**
+	* zmulti based on distance to from water level down to actor location
+	* Negative Gaussian - 0,1,0
+	*/
+	float zmulti_strength = 2.f;
+	zmulti = -FMath::Exp(-FMath::Pow(zdiff, 2) * 0.01) * zmulti_strength + 1.f + zmulti_strength;
+
+	/**
+	* Floating Upwards
+	* Strength varies based on the objects speed
+	*/
+	float velm{ 1.f };
+	if (velZ >= 0.f) {
+		/**
+		* When close to the surface
+		* Positive Gaussian - 1,0,1
+		*/
+		if (zdiff <= WL_CloseToSurface) {
+			velm = FMath::Exp(-FMath::Pow(velZ, 2) * 0.001f);
+		}
+		/**
+		* Getting closer to the surface, linear interpolation between the functions
+		*/
+		else if (zdiff > WL_CloseToSurface && zdiff <= WL_CloseToSurface_Lerplength) {
+			float one = FMath::Exp(-FMath::Pow(velZ, 2) * 0.001f);
+			float two = FMath::Min(FMath::Pow(zdiff, 2) / 600.f, 2.f) - FMath::Min(FMath::Pow(velZ, 2) / 2000.f, 1.8f);
+			float t = zdiff / WL_CloseToSurface_Lerplength;
+			velm = one * t + (1.f - t) * two;
+		}
+		/**
+		* Is far down in the water. Exponential strength with a ceiling.
+		* To not overdo the effect when far down, the value is subtracted by the velocity.Z of the object
+		*/
+		else {
+			velm = FMath::Min(FMath::Pow(zdiff, 2) / 600.f, 2.f) - FMath::Min(FMath::Pow(velZ, 2) / 2000.f, 1.8f);
+		}
+	}
+	/**
+	* Going down
+	* Negative Gaussian
+	*/
+	else {
+		velm = -FMath::Exp(-FMath::Pow(velZ, 2) * 0.01f) + 2.f;
+	}
+	m_VelMulti = FMath::FInterpTo(m_VelMulti, velm, DeltaTime, 9.f);
+
+	m_CharMovement->AddForce(FVector(0, 0, -m_CharMovement->GetGravityZ() * m_CharMovement->Mass * zmulti * m_VelMulti));
+
+	/**
+	* Horizontal velocity change
+	* Negative Gaussian
+	*/
+	FVector vel = m_CharMovement->Velocity;
+	FVector negativeVel = vel * -1.f;
+	negativeVel.X *= -FMath::Exp(-FMath::Pow(vel.X, 2) * 0.01f) * WL_HorizontalSlowDownStrength + WL_HorizontalSlowDownStrength + 1.f;
+	negativeVel.Y *= -FMath::Exp(-FMath::Pow(vel.Y, 2) * 0.01f) * WL_HorizontalSlowDownStrength + WL_HorizontalSlowDownStrength + 1.f;
+	m_CharMovement->AddForce(negativeVel * m_CharMovement->Mass);
+
 }
 
 void UBaseCharWaterFloatComponent::OnOwnerCapsuleOverlapWithWater(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
