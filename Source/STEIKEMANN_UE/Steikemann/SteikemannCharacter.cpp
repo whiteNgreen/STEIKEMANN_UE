@@ -18,11 +18,11 @@
 #include "Components/BoxComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/TimelineComponent.h"
+#include "../Components/BouncyShroomActorComponent.h"
 
 // Camera
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
-
 #include "Components/SplineComponent.h"
 
 // Audio
@@ -30,8 +30,10 @@
 
 // World
 #include "GameFrameWork/WorldSettings.h"
+#include "../WorldStatics/SteikeWorldStatics.h"
 
 // Steikemann
+#include "../StaticVariables.h"
 #include "../GameplayTags.h"
 #include "../StaticActors/Collectible.h"
 #include "../StaticActors/PlayerRespawn.h"
@@ -75,6 +77,8 @@ ASteikemannCharacter::ASteikemannCharacter(const FObjectInitializer& ObjectIniti
 	GrappleTargetingDetectionSphere->SetGenerateOverlapEvents(false);
 	GrappleTargetingDetectionSphere->SetSphereRadius(0.1f);
 
+	BounceComp = CreateDefaultSubobject<UBouncyShroomActorComponent>("Bounce Component");
+
 	Component_Audio = CreateDefaultSubobject<UAudioComponent>(TEXT("AudioComponent"));
 	Component_Audio->SetupAttachment(RootComponent);
 
@@ -111,7 +115,7 @@ void ASteikemannCharacter::BeginPlay()
 	GetCapsuleComponent()->OnComponentEndOverlap.AddDynamic(this, &ASteikemannCharacter::OnCapsuleComponentEndOverlap);
 	MaxHealth = Health;
 	StartTransform = GetActorTransform();
-	m_BaseGravity = MovementComponent->GetGravityZ();
+	//m_BaseGravityZ = MovementComponent->GetGravityZ();
 	ResetState();
 
 	// Camera
@@ -205,6 +209,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Red, FString::Printf(TEXT("CorruptionCore : %i"), CollectibleCorruptionCore), true, FVector2D(1.5f));
 	GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Red, FString::Printf(TEXT("Health : %i"), Health), true, FVector2D(4));
 
+	SteikeWorldStatics::PlayerLocation = GetActorLocation();
 
 	if (bIsDead) { return; }
 	/* Rotate Inputvector to match the playercontroller */
@@ -220,32 +225,32 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		if (m_GamepadCameraInput.Length() > 1.f)
 			m_GamepadCameraInput.Normalize();
 	}
-	switch (m_EState)
-	{
-	case EState::STATE_OnGround:
-		PRINT("STATE_OnGround");
-		break;
-	case EState::STATE_InAir:
-		PRINT("STATE_InAir");
-		break;
-	case EState::STATE_OnWall:
-		PRINT("STATE_OnWall");
-		break;
-	case EState::STATE_Attacking:
-		PRINT("STATE_Attacking");
-		break;
-	case EState::STATE_Grappling:
-		PRINT("STATE_Grappling");
-		break;
-	default:
-		break;
-	}
+	//switch (m_EState)
+	//{
+	//case EState::STATE_OnGround:
+	//	PRINT("STATE_OnGround");
+	//	break;
+	//case EState::STATE_InAir:
+	//	PRINT("STATE_InAir");
+	//	break;
+	//case EState::STATE_OnWall:
+	//	PRINT("STATE_OnWall");
+	//	break;
+	//case EState::STATE_Attacking:
+	//	PRINT("STATE_Attacking");
+	//	break;
+	//case EState::STATE_Grappling:
+	//	PRINT("STATE_Grappling");
+	//	break;
+	//default:
+	//	break;
+	//}
 	//PRINTPAR("Attack State :: %i", m_EAttackState);
 	//PRINTPAR("Grapple State :: %i", m_EGrappleState);
 	//PRINTPAR("Grapple Type  :: %i", m_EGrappleType);
 	//PRINTPAR("Smack Attack State :: %i", m_ESmackAttackState);
 	//PRINTPAR("Air State :: %i", m_EAirState);
-	PRINTPAR("Ground State :: %i", m_EGroundState);
+	//PRINTPAR("Ground State :: %i", m_EGroundState);
 	//PRINTPAR("Pogo Type :: %i", m_EPogoType);
 	//PRINTPAR("Jump Count = %i", JumpCurrentCount);
 	//PRINTPAR("MovementInputState = %i", m_EMovementInputState);
@@ -843,7 +848,7 @@ void ASteikemannCharacter::GH_Launch_Static_StuckEnemy()
 	float z{};
 	z = ((GrappledLocation.Z + GrappleHook_AboveStuckEnemy) - GetActorLocation().Z);
 
-	Velocity.Z = (z / GrappleHook_Time_ToStuckEnemy) + (0.5 * m_BaseGravity * GrappleHook_Time_ToStuckEnemy * -1.f);
+	Velocity.Z = (z / GrappleHook_Time_ToStuckEnemy) + (0.5 * m_BaseGravityZ * GrappleHook_Time_ToStuckEnemy * -1.f);
 	GetMoveComponent()->AddImpulse(Velocity, true);
 
 	// When grapple hooking to stuck enemy, set a wall jump activation timer 
@@ -903,12 +908,10 @@ void ASteikemannCharacter::GH_DelegateDynamicLaunch()
 
 	// Call grapple launch when releasing button, but only if the minimal time (GrappleDrag_PreLaunch_Timer_Length) has elapsed
 	if (TimerManager.GetTimerElapsed(TH_GrappleHold) < GrappleDrag_PreLaunch_Timer_Length) {
-		PRINTPARLONG(1.f, "Set timer for remaining time _ Grapple == %f", TimerManager.GetTimerRemaining(TH_GrappleHold) - GrappleDrag_PreLaunch_Timer_Length);
 		TimerManager.SetTimer(TH_GrappleHold, [this]() { TFunc_GrappleLaunchFunction(); }, GrappleDrag_PreLaunch_Timer_Length - TimerManager.GetTimerElapsed(TH_GrappleHold), false);
 		return;
 	}
 	else {
-		PRINTLONG("Call Grapplelaunch function");
 		TimerManager.ClearTimer(TH_GrappleHold);
 		TFunc_GrappleLaunchFunction();
 	}
@@ -1431,6 +1434,7 @@ void ASteikemannCharacter::LockMovementForPeriod(float time, TFunction<void()> l
 
 void ASteikemannCharacter::Landed(const FHitResult& Hit)
 {
+	Super::Landed(Hit);
 	Roll_End();
 	if (bIsDead)
 	{

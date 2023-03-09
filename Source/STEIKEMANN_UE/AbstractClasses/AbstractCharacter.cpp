@@ -3,14 +3,24 @@
 
 #include "../AbstractClasses/AbstractCharacter.h"
 #include "../DebugMacros.h"
+#include "GameFrameWork/CharacterMovementComponent.h"
+// Base components
+#include "../StaticVariables.h"
 
 ABaseCharacter::ABaseCharacter()
 {
+	BaseComponentInit();
 }
 
 ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
+	BaseComponentInit();
+}
+
+void ABaseCharacter::BaseComponentInit()
+{
+	WaterInterActionComponent = CreateDefaultSubobject<UBaseCharWaterFloatComponent>("Water Interaction Component");
 }
 
 void ABaseCharacter::BeginPlay()
@@ -18,6 +28,10 @@ void ABaseCharacter::BeginPlay()
 	Super::BeginPlay();
 	AttackContactDelegate.AddUObject(this, &ABaseCharacter::AttackContact);
 	//AttackContactDelegate_Instigator.AddUObject(this, &ABaseCharacter::AttackContact_Instigator);
+
+	auto i = GetCharacterMovement();
+	m_GravityScale = i->GravityScale;
+	m_BaseGravityZ = i->GetGravityZ();
 }
 
 void ABaseCharacter::Tick(float DeltaTime)
@@ -61,8 +75,6 @@ void ABaseCharacter::AttackContact(AActor* target)
 		target->CustomTimeDilation = 1.f;
 		}, AttackContactTimer, false);
 
-	PRINTLONG("ATTACK CONTACT");
-
 	if (GetWorldTimerManager().IsTimerActive(TH_AttackContact_Instigator)) 
 		return;
 	target->CustomTimeDilation = Statics::AttackContactTimeDilation;
@@ -70,3 +82,23 @@ void ABaseCharacter::AttackContact(AActor* target)
 		this->CustomTimeDilation = 1.f;
 		}, AttackContactTimer, false);
 }
+
+bool ABaseCharacter::ShroomBounce(FVector direction, float strength)
+{
+	if (!bCanBounce) return false;
+	auto c = GetCharacterMovement();
+	c->Velocity *= 0.f;
+	c->AddImpulse(direction * strength, true);
+
+	bCanBounce = false;
+	FTimerHandle h;
+	TimerManager.SetTimer(h, [this]() { bCanBounce = true; }, 0.1f, false);
+	return true;
+}
+
+void ABaseCharacter::Landed(const FHitResult& Hit)
+{
+	LandVelocity = GetCharacterMovement()->Velocity;
+}
+
+

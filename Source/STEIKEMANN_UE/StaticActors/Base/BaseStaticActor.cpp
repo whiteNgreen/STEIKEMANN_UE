@@ -20,10 +20,4 @@ void ABaseStaticActor::BeginPlay()
 	
 }
 
-// Called every frame
-void ABaseStaticActor::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-}
 

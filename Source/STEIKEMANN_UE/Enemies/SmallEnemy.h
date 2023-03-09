@@ -81,8 +81,6 @@ protected:
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 public:	// Components
 	// Collision
@@ -170,7 +168,7 @@ public: // Functions
 #pragma region States
 public:	// STATES
 	EEnemyState m_State = EEnemyState::STATE_None;
-	EGravityState m_Gravity = EGravityState::Default;
+	EGravityState m_GravityState = EGravityState::Default;
 	void SetDefaultState();
 
 	virtual void Landed(const FHitResult& Hit) override;
@@ -202,8 +200,8 @@ private: // Functions Capacitate - Used for IncapacitatedLandingDelegate
 	void Capacitate_Grappled();
 
 private: // Gravity
-	float GravityScale;
-	float GravityZ;
+	//float GravityScale;
+	//float GravityZ;
 
 #pragma endregion //States
 public:
@@ -341,4 +339,9 @@ public:
 public:
 	void Receive_Pogo_GroundPound_Pure() override;
 #pragma endregion			//Pogo
+#pragma region Bounce
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		class UBouncyShroomActorComponent* BounceComp;
+#pragma endregion // Bounce
+
 };
