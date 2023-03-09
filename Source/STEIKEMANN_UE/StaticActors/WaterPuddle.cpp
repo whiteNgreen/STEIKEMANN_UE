@@ -5,6 +5,8 @@
 
 AWaterPuddle::AWaterPuddle()
 {
+	PrimaryActorTick.bCanEverTick = false;
+	 
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>("Mesh Plane");
 	Mesh->SetupAttachment(Root);
 	WaterCollision = CreateDefaultSubobject<UBoxComponent>("Water Collider");

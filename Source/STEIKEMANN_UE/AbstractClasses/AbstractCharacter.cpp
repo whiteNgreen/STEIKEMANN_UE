@@ -75,8 +75,6 @@ void ABaseCharacter::AttackContact(AActor* target)
 		target->CustomTimeDilation = 1.f;
 		}, AttackContactTimer, false);
 
-	PRINTLONG("ATTACK CONTACT");
-
 	if (GetWorldTimerManager().IsTimerActive(TH_AttackContact_Instigator)) 
 		return;
 	target->CustomTimeDilation = Statics::AttackContactTimeDilation;
