@@ -47,16 +47,6 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		bool bBlendLowerBody_Air{};
 
-#pragma region Crouch
-
-	UPROPERTY(BlueprintReadOnly)
-		bool bCrouch{};
-	
-	UPROPERTY(BlueprintReadOnly)
-		bool bAnimCrouchSliding{};
-
-#pragma endregion //Croucn
-
 #pragma region Jump
 	
 	/* Checks the Character script if Jump button is pressed */

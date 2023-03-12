@@ -58,10 +58,9 @@ public: // Components
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		USceneComponent* IdlePoint;
 
-//#ifdef WITH_EDITOR
-	UPROPERTY(EditAnywhere)
+#ifdef WITH_EDITOR
 		UBillboardComponent* IdlePointSprite;
-//#endif // WITH_EDITOR
+#endif // WITH_EDITOR
 
 
 public: // Variables

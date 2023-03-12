@@ -282,7 +282,6 @@ void AEnemyAIController::StopSensingPlayer()
 
 void AEnemyAIController::AttackBegin()
 {
-	PRINTLONG("ATTACK BEGIN");
 	Attack();
 	m_PawnOwner->RotateActorYawToVector(m_Player->GetActorLocation() - m_PawnOwner->GetActorLocation());
 	TM_AI.SetTimer(TH_Attack, [this]() { SetState(ESmallEnemyAIState::ChasingTarget); } , AttackStateTime, false);
@@ -623,8 +622,8 @@ void AEnemyAIController::ChasePlayer_CircleAround_Update(const FVector& forward)
 	float Dot = FVector::DotProduct(FromPlayerToPawn.GetSafeNormal2D(), forward);
 	FVector rightProj = FromPlayerToPawn.ProjectOnTo(right).GetSafeNormal();
 
-	PinkTeal_ChaseLocation_Target = playerLoc + (forwardLength * DotGuassian(Dot, 0.5f, -0.5f));
-	PinkTeal_ChaseLocation_Target += (rightProj * DotGuassian(Dot, 0.5f, -1.f) * PinkTeal_SideLength);
+	PinkTeal_ChaseLocation_Target = playerLoc + (forwardLength * SMath:: DotGuassian(Dot, 0.5f, -0.5f));
+	PinkTeal_ChaseLocation_Target += (rightProj * SMath::DotGuassian(Dot, 0.5f, -1.f) * PinkTeal_SideLength);
 
 	//DrawDebugPoint(GetWorld(), PinkTeal_ChaseLocation_Target, 20.f, FColor::White, false, PinkTeal_UpdateTime, -2);
 

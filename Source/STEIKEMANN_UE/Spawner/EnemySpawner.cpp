@@ -54,7 +54,6 @@ void AEnemySpawner::BeginPlay()
 void AEnemySpawner::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	DrawDebugSphere(GetWorld(), GetActorLocation(), SpawnerActiveRadius, 30, FColor::Red, false, 0.f, 0, 5.f);
 }
 
 void AEnemySpawner::BeginActorSpawn(void(AEnemySpawner::* spawnFunction)())
@@ -64,7 +63,6 @@ void AEnemySpawner::BeginActorSpawn(void(AEnemySpawner::* spawnFunction)())
 
 void AEnemySpawner::BeginActorRespawn()
 {
-	DrawDebugSphere(GetWorld(), GetActorLocation(), SpawnerActiveRadius, 30, FColor::Red, false, 1.f, 0, 5.f);
 	DetermineActorsToRespawn(m_ActorsToRespawn);
 	RespawnActors(m_ActorsToRespawn);
 }
@@ -108,7 +106,6 @@ void AEnemySpawner::DetermineActorsToRespawn(TArray<ASmallEnemy*>& actorsToRespa
 		float radius = FVector(it->GetActorLocation() - GetActorLocation()).Length();
 		if (radius < SpawnerActiveRadius) continue;
 		actorsToRespawn.Add(it);
-		DrawDebugLine(GetWorld(), it->GetActorLocation(), GetActorLocation(), FColor::Blue, false, 1.f, 0, 5.f);
 	}
 	for (auto& it : actorsToRespawn)
 		SpawnedActors.Remove(it);
@@ -166,17 +163,14 @@ void AEnemySpawner::SpawnAubergineDog(int& index)
 	switch (index++)
 	{
 	case 0:
-		PRINTLONG("Spawning : RED");
 		spawnedDog->SetDogType(EDogType::Red);
 		m_AuberginePack->Red = spawnedDog;
 		break;
 	case 1:
-		PRINTLONG("Spawning : PINK");
 		spawnedDog->SetDogType(EDogType::Pink);
 		m_AuberginePack->Pink = spawnedDog;
 		break;
 	case 2:
-		PRINTLONG("Spawning : TEAL");
 		spawnedDog->SetDogType(EDogType::Teal);
 		m_AuberginePack->Teal = spawnedDog;
 		index = 0;

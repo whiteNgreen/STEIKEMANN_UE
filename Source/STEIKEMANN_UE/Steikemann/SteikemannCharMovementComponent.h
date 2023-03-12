@@ -64,49 +64,10 @@ public:	// Functions
 private:	// Private Functions
 	void SetGravityScale(float deltatime);
 
-#pragma endregion //Gravity
-
-#pragma region Crouch
-public:
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Crouch|CrouchSlide")
-
-	float CrouchSlideSpeed{};
-	FVector CrouchSlideDirection{};
-
-	void Initiate_CrouchSlide(const FVector& SlideDirection);
-	void Do_CrouchSlide(float DeltaTime);
-
-/* -- Crouch Jump -- */
-	bool bCrouchJump{};
-	void StartCrouchJump()	{ bCrouchJump = true;  }
-	void EndCrouchJump()	{ bCrouchJump = false; }
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Jump|CrouchSlideJump")
-		float CrouchJumpSpeed{ 1000.f };
-
-/* -- CrouchSlide Jump -- */
-	bool bCrouchSlideJump{};
-	FVector CrouchSlideJump_Vector{};
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Jump|CrouchSlideJump")
-		float CrouchSlideJumpAngle	/*UMETA(DisplayName = "Jump Angle")*/ { 30.f };
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Jump|CrouchSlideJump")
-		float CSJ_MaxInputAngleAdjustment /*UMETA(DisplayName = "Max Input Angle Adjustment")*/ { 30.f };
-
-
-	/*	* Initiates the CrouchSlideJump. The SlideDirection vector is the current direction the character is crouchsliding in 
-		* The player can use their input to slightly alter the direction of the CrouchSlideJump 
-		* Function assumes the vectors are normalized */
-	bool CrouchSlideJump(const FVector& SlideDirection, const FVector& Input);
-	void EndCrouchSlideJump() { bCrouchSlideJump = false; }
-
-#pragma endregion //Crouch
+#pragma endregion			//Gravity
 
 #pragma region Jump
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Jump")
-		//bool bJumping{};
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|Jump")
-		//float JumpInterpSpeed{ 2.f };
-
+public:
 	bool DoJump(bool bReplayingMoves) override;
 
 	/* --- New Jump --- */
@@ -138,36 +99,22 @@ public:
 	
 	void DeactivateJumpMechanics();
 
-#pragma endregion //Jump
+#pragma endregion			//Jump
+#pragma region InAir
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|FreeFall")
+		float AirFriction2D_Strength{ 1.f };
+
+	void AirFriction2D(FVector input);
+#pragma endregion			//InAir
 #pragma region Pogo
 public:
 	void PB_Launch_Active(FVector direction, float strength);
-#pragma endregion //Pogo
+#pragma endregion			//Pogo
 #pragma region GRAPPLE HOOK
 	bool bGrappleHook_InitialState{};
 
-#pragma endregion //GRAPPLE HOOK
-
-//#pragma region Bounce
-	//void Bounce(FVector surfacenormal);
-//#pragma endregion //Bounce
-
-//#pragma region Dash
-	//float fPreDashTimerLength{};
-	//float fPreDashTimer{};
-	//float fDashTimerLength{};
-	//float fDashTimer{};
-	//float fDashLength{};
-	//FVector DashDirection;
-
-	//void Start_Dash(float preDashTime, float dashTime, float dashLength, FVector dashdirection);
-	//void Update_Dash(float deltaTime);
-
-	/**	Dash During Grapplehook_Swing - Boost
-	*/
-	//void Grapplehook_Dash(float DashStrength, FVector DashDirection);
-//#pragma endregion //Dash
-
+#pragma endregion	//GRAPPLE HOOK
 #pragma region On Wall
 public:	// WallJump
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wall Mechanics|Drag")
@@ -212,14 +159,13 @@ private:
 	FVector GetInputDirectionToNormal(FVector& input, const FVector& normal, FVector& right, FVector& up);
 	FVector ClampDirectionToAngleFromVector(const FVector& direction, const FVector& clampVector, const float angle, const FVector& right, const FVector& up);
 
-#pragma endregion //On Wall
-
+#pragma endregion			//On Wall
 #pragma region GroundPound
 public:
 	bool bGP_PreLaunch{};
 	void GP_PreLaunch();
 	void GP_Launch(float strength);
-#pragma endregion //GroundPound
+#pragma endregion		//GroundPound
 
 public: // Slipping
 	UPROPERTY(BlueprintReadWrite)

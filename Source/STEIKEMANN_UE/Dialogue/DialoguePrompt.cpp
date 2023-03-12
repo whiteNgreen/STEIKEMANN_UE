@@ -107,19 +107,16 @@ bool ADialoguePrompt::GetNextPromptState(ASteikemannCharacter* player, int8 prom
 	switch (m_PromptIndex)
 	{
 	case 0:
-		PRINTLONG("FIRST PROMPT");
 		/* Save camera transform, to lerp back to the correct spot */
 		player->m_CameraTransform = m_PlayerCamera->GetComponentTransform();	
 		m_ECameraLerp = ECameraLerp::First;
 		returnBool = true;
 		break;
 	case 1:
-		PRINTLONG("SECOND PROMPT");
 		m_ECameraLerp = ECameraLerp::Second;
 		returnBool = true;
 		break;
 	case 2:
-		PRINTLONG("LAST PROMPT");
 		returnBool = true;
 		break;
 	case 3:

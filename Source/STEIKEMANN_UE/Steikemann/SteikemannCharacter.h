@@ -21,6 +21,7 @@
 #define ECC_PogoCollision ECC_GameTraceChannel2
 
 DECLARE_DELEGATE(FAttackActionBuffer)
+DECLARE_DELEGATE_OneParam(FPostAttackBuffer, EPostAttackType& PostAttackType);
 
 //class UNiagaraSystem;
 //class UNiagaraComponent;
@@ -105,6 +106,11 @@ enum class EAttackState : int8
 
 	,Post_GroundPound
 	,Post_Buffer
+};
+UENUM()
+enum class EPostAttackType : int8
+{
+	GrappleSmack
 };
 
 UENUM()
@@ -611,58 +617,11 @@ public: // Animation
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		class UBouncyShroomActorComponent* BounceComp;
 #pragma endregion					//Bounce
-#pragma region Crouch		
-public:
-	bool bPressedCrouch{};
-	bool bIsCrouchWalking{};
-	bool IsCrouchWalking() const { return bIsCrouchWalking; }
-	bool IsCrouching() const { return bIsCrouched; }
-
-	/* Regular Crouch */
-	/* Crouch slide will only start if the player is walking with a speed above this */
-	UPROPERTY(EditAnywhere, Category = "Movement|Crouch")
-		float Crouch_WalkToSlideSpeed  /*UMETA(DisplayName = "Walk To Crouch Slide Speed") */{ 400.f };
-	void Start_Crouch();
-	void Stop_Crouch();
-
-	/* -------------- SLIDE ------------- */
-	bool bPressedSlide{};
-	
-	void Click_Slide();
-	void UnClick_Slide();
-
-	/* How long will the crouch slide last */
-	UPROPERTY(EditAnywhere, Category = "Movement|Crouch")
-		float CrouchSlide_Time  /*UMETA(DisplayName = "Crouch Slide Time")*/ { 0.5f };
-
-	/* How long before a new crouchslide can begin */
-	UPROPERTY(EditAnywhere, Category = "Movement|Crouch")
-		float Post_CrouchSlide_Time  /*UMETA(DisplayName = "Crouch Slide Wait Time")*/ { 0.5f };
-
-	/* Initial CrouchSlide Speed */
-	UPROPERTY(EditAnywhere, Category = "Movement|Crouch")
-		float CrouchSlideSpeed{ 1000.f };
-
-	/* The End CrouchSlide Speed will be multiplied by this value */
-	UPROPERTY(EditAnywhere, Category = "Movement|Crouch")
-		float EndCrouchSlideSpeedMultiplier{ 0.5f };
-
-	bool bCanCrouchSlide{ true };
-	bool bCrouchSliding{};
-	bool IsCrouchSliding() const { return bCrouchSliding; }
-
-	FTimerHandle CrouchSlide_TimerHandle{};
-	FTimerHandle Post_CrouchSlide_TimerHandle{};
-
-	void Start_CrouchSliding();
-	void Stop_CrouchSliding();
-	void Reset_CrouchSliding();
-
-	/* CrouchJump && CrouchSlideJump */
-	bool CanCrouchJump()		const { return IsCrouching() && IsCrouchWalking(); }
-	bool CanCrouchSlideJump()	const { return IsCrouching() && IsCrouchSliding(); }
-
-#pragma endregion					//Crouch	
+#pragma region Right Facebutton
+	bool bPressedSlide{};	
+	void Click_RightFacebutton();
+	void UnClick_RightFacebutton();
+#pragma endregion		//Right Facebutton
 #pragma region Collectibles & Health
 public:
 	void ReceiveCollectible(ECollectibleType type);
@@ -974,13 +933,21 @@ public:
 	void ExecuteAttackBuffer() override;
 	void EndAttackBufferPeriod() override;
 
+
+	FPostAttackBuffer Delegate_PostAttackBuffer;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|SmackAttack|GrappleSmack")
+		float GrappleSmack_HeightMultiplier{ 2.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|SmackAttack|GrappleSmack", meta = (UIMin = "0.0", UIMax = "1.0"))
+		float GrappleSmack_MinHeight{ 0.3f };
+	void PostAttack_GrappleSmack(EPostAttackType& type);
+	
 	void BufferDelegate_Attack(void(ASteikemannCharacter::* func)());
 
 	bool CanBeAttacked() override;
 
 	FVector AttackDirection{};
-
 	FVector AttackColliderScale{};
+
 
 	void Click_Attack();
 	void UnClick_Attack();

@@ -132,7 +132,7 @@ void UBaseCharWaterFloatComponent::OnOwnerCapsuleOverlapWithWater(UPrimitiveComp
 	{
 		bIsFloatingInWater = true;
 		WaterLevel = OtherActor->GetActorLocation().Z;
-		m_Owner->Delegate_WaterPuddleEnter.ExecuteIfBound();
+		//m_Owner->Delegate_WaterPuddleEnter.ExecuteIfBound();
 		m_CharMovement->AddImpulse(FVector(m_CharMovement->Velocity * -0.8f), true);
 	}
 }
@@ -150,7 +150,7 @@ void UBaseCharWaterFloatComponent::OnOwnerCapsuleEndOverlapWithWater(UPrimitiveC
 	if (ITag->HasMatchingGameplayTag(Tag::WaterPuddle()))
 	{
 		bIsFloatingInWater = false;
-		m_Owner->Delegate_WaterPuddleExit.ExecuteIfBound();
+		//m_Owner->Delegate_WaterPuddleExit.ExecuteIfBound();
 	}
 
 }

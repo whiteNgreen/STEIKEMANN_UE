@@ -136,11 +136,12 @@ void ASmallEnemy::Tick(float DeltaTime)
 
 		EndTick(DeltaTime);
 	}
-
+	//else
+		//PRINT("InActive");
 
 	// TAKING TIME
-	//PRINTPAR("Doggo tick single  = %f milliseconds", tim.End());
-	//PRINTPAR("Doggo tick average = %f milliseconds", tim.End_Average());
+	//tim.Print("Doggo tick single");
+	//tim.Print_Average("Doggo tick average");
 }
 
 void ASmallEnemy::Anim_Attacked_Pure(FVector direction)

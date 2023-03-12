@@ -20,7 +20,7 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 
 void ABaseCharacter::BaseComponentInit()
 {
-	WaterInterActionComponent = CreateDefaultSubobject<UBaseCharWaterFloatComponent>("Water Interaction Component");
+	//WaterInterActionComponent = CreateDefaultSubobject<UBaseCharWaterFloatComponent>("Water Interaction Component");
 }
 
 void ABaseCharacter::BeginPlay()

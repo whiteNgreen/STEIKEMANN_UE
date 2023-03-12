@@ -225,28 +225,28 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		if (m_GamepadCameraInput.Length() > 1.f)
 			m_GamepadCameraInput.Normalize();
 	}
-	//switch (m_EState)
-	//{
-	//case EState::STATE_OnGround:
-	//	PRINT("STATE_OnGround");
-	//	break;
-	//case EState::STATE_InAir:
-	//	PRINT("STATE_InAir");
-	//	break;
-	//case EState::STATE_OnWall:
-	//	PRINT("STATE_OnWall");
-	//	break;
-	//case EState::STATE_Attacking:
-	//	PRINT("STATE_Attacking");
-	//	break;
-	//case EState::STATE_Grappling:
-	//	PRINT("STATE_Grappling");
-	//	break;
-	//default:
-	//	break;
-	//}
-	//PRINTPAR("Attack State :: %i", m_EAttackState);
-	//PRINTPAR("Grapple State :: %i", m_EGrappleState);
+	switch (m_EState)
+	{
+	case EState::STATE_OnGround:
+		PRINT("STATE_OnGround");
+		break;
+	case EState::STATE_InAir:
+		PRINT("STATE_InAir");
+		break;
+	case EState::STATE_OnWall:
+		PRINT("STATE_OnWall");
+		break;
+	case EState::STATE_Attacking:
+		PRINT("STATE_Attacking");
+		break;
+	case EState::STATE_Grappling:
+		PRINT("STATE_Grappling");
+		break;
+	default:
+		break;
+	}
+	PRINTPAR("Attack State :: %i", m_EAttackState);
+	PRINTPAR("Grapple State :: %i", m_EGrappleState);
 	//PRINTPAR("Grapple Type  :: %i", m_EGrappleType);
 	//PRINTPAR("Smack Attack State :: %i", m_ESmackAttackState);
 	//PRINTPAR("Air State :: %i", m_EAirState);
@@ -288,6 +288,21 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	}
 	case EState::STATE_InAir:
 	{
+		switch (m_EAirState)
+		{
+		case EAirState::AIR_None:
+			break;
+		case EAirState::AIR_Freefall:
+			GetMoveComponent()->AirFriction2D(m_InputVector);
+			break;
+		case EAirState::AIR_Jump:
+			break;
+		case EAirState::AIR_Pogo:
+			break;
+		default:
+			break;
+		}
+
 		switch (m_EPogoType)
 		{
 		case EPogoType::POGO_None:
@@ -430,8 +445,8 @@ void ASteikemannCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ASteikemannCharacter::JumpRelease).bConsumeInput = true;
 
 	/* -- SLIDE -- */
-	PlayerInputComponent->BindAction("Slide", IE_Pressed, this, &ASteikemannCharacter::Click_Slide);
-	PlayerInputComponent->BindAction("Slide", IE_Released, this, &ASteikemannCharacter::UnClick_Slide);
+	PlayerInputComponent->BindAction("Slide", IE_Pressed, this, &ASteikemannCharacter::Click_RightFacebutton);
+	PlayerInputComponent->BindAction("Slide", IE_Released, this, &ASteikemannCharacter::UnClick_RightFacebutton);
 	
 
 	/* -- GRAPPLEHOOK -- */
@@ -1872,41 +1887,8 @@ void ASteikemannCharacter::PB_EnterPogoState(float time)
 	TimerManager.SetTimer(TH_Pogo, [this](){ m_EAirState = EAirState::AIR_Freefall;  }, time, false);
 }
 
-void ASteikemannCharacter::Start_Crouch()
-{
-	bPressedCrouch = true;
 
-	if (GetMoveComponent()->IsWalking())
-	{
-		/* Crouch Slide */
-		if (GetVelocity().Size() > Crouch_WalkToSlideSpeed && bCanCrouchSlide && !IsCrouchSliding() && !IsCrouchWalking())	// Start Crouch Slide
-		{
-			Start_CrouchSliding();
-			return;
-		}
-
-		/* Crouch */
-		
-		bIsCrouchWalking = true;
-		GetCapsuleComponent()->SetCapsuleRadius(25.f);	// Temporary solution for cube to crouch
-
-		Crouch();
-	}
-}
-
-void ASteikemannCharacter::Stop_Crouch()
-{
-	bPressedCrouch = false;
-
-	if (bIsCrouchWalking)
-	{
-		bIsCrouchWalking = false;
-
-		UnCrouch();
-	}
-}
-
-void ASteikemannCharacter::Click_Slide()
+void ASteikemannCharacter::Click_RightFacebutton()
 {
 	if (m_PromptState == EPromptState::InPrompt)
 		ExitPrompt();
@@ -1959,64 +1941,14 @@ void ASteikemannCharacter::Click_Slide()
 	return;	// Remomve Slide mechanic
 
 	if (bPressedSlide) { return; }
-	if (IsCrouchSliding()) { return; }
 
 	bPressedSlide = true;
 
-	if (GetMoveComponent()->IsWalking())
-	{
-		/* Crouch Slide */
-		if (GetVelocity().Size() >= Crouch_WalkToSlideSpeed && bCanCrouchSlide && !IsCrouchSliding() && !IsCrouchWalking())	// Start Crouch Slide
-		{
-			Start_CrouchSliding();
-			return;
-		}
-	}
 }
 
-void ASteikemannCharacter::UnClick_Slide()
+void ASteikemannCharacter::UnClick_RightFacebutton()
 {
 	bPressedSlide = false;
-}
-
-void ASteikemannCharacter::Start_CrouchSliding()
-{
-	//if (!IsCrouchSliding())
-	{
-		bCrouchSliding = true;
-
-		/* Adjust capsule collider */
-		// code here
-
-		NiComp_CrouchSlide->SetNiagaraVariableVec3("User.M_Velocity", GetVelocity() * -1.f);
-		NiComp_CrouchSlide->Activate();
-
-		FVector SlideDirection{ m_InputVector };
-		if (m_InputVector.IsZero())
-		{
-			SlideDirection = GetActorForwardVector();
-		}
-		GetMoveComponent()->Initiate_CrouchSlide(SlideDirection);
-
-		TimerManager.SetTimer(CrouchSlide_TimerHandle, this, &ASteikemannCharacter::Stop_CrouchSliding, CrouchSlide_Time);
-	}
-}
-
-void ASteikemannCharacter::Stop_CrouchSliding()
-{
-	bCrouchSliding = false;
-	bCanCrouchSlide = false;
-	NiComp_CrouchSlide->Deactivate();
-	TimerManager.SetTimer(Post_CrouchSlide_TimerHandle, this, &ASteikemannCharacter::Reset_CrouchSliding, Post_CrouchSlide_Time);
-
-	if (bPressedCrouch) { Start_Crouch(); return; }	// If player is still holding the crouch button, move over to crouch movement
-
-	UnCrouch();
-}
-
-void ASteikemannCharacter::Reset_CrouchSliding()
-{
-	bCanCrouchSlide = true;
 }
 
 void ASteikemannCharacter::ReceiveCollectible(ECollectibleType type)
@@ -2108,7 +2040,7 @@ void ASteikemannCharacter::PTakeDamage(int damage, const FVector& Direction, int
 
 void ASteikemannCharacter::Death()
 {
-	PRINTLONG("POTITT IS DEAD");
+	PRINTLONG(2.f, "POTITT IS DEAD");
 
 	bIsDead = true;
 	if (GetPlayerController())
@@ -2129,7 +2061,7 @@ void ASteikemannCharacter::Death_Deathzone()
 
 void ASteikemannCharacter::Respawn()
 {
-	PRINTLONG("RESPAWN PLAYER");
+	PRINTLONG(2.f, "RESPAWN PLAYER");
 
 	/* Reset player */
 	Health = MaxHealth;
@@ -2602,6 +2534,7 @@ void ASteikemannCharacter::AttackSmack_Grapple_Pure()
 {
 	TimerManager.ClearTimer(TH_Grapplehook_End_Launch);
 	GH_Stop(EState::STATE_Attacking);
+	Delegate_PostAttackBuffer.BindUObject(this, &ASteikemannCharacter::PostAttack_GrappleSmack);
 
 	AttackSmack_Start_Pure();
 }
@@ -2642,7 +2575,14 @@ void ASteikemannCharacter::ExecuteAttackBuffer()
 
 void ASteikemannCharacter::EndAttackBufferPeriod()
 {
+	Delegate_PostAttackBuffer.Unbind();
 	m_EAttackState = EAttackState::None;
+}
+
+void ASteikemannCharacter::PostAttack_GrappleSmack(EPostAttackType& type)
+{
+	type = EPostAttackType::GrappleSmack;
+	PRINTLONG(3.f, "POST ATTACK:: GrappleSmack");
 }
 
 void ASteikemannCharacter::BufferDelegate_Attack(void(ASteikemannCharacter::* func)())
@@ -2653,7 +2593,6 @@ void ASteikemannCharacter::BufferDelegate_Attack(void(ASteikemannCharacter::* fu
 	else {
 		Delegate_AttackBuffer.BindUObject(this, func);
 	}
-
 }
 
 void ASteikemannCharacter::AttackContact(AActor* target)
@@ -2797,23 +2736,44 @@ void ASteikemannCharacter::Do_SmackAttack_Pure(IAttackInterface* OtherInterface,
 
 	if (b)
 	{
-
+		EPostAttackType attackEffect;
 		FVector Direction{ OtherActor->GetActorLocation() - GetActorLocation() };
 		Direction = Direction.GetSafeNormal2D();
+		float AdditionalStrength{ 1.f };
 
-		FVector cam;
+		if (Delegate_PostAttackBuffer.IsBound()) 
+		{
+			Delegate_PostAttackBuffer.Execute(attackEffect);
+			if (attackEffect == EPostAttackType::GrappleSmack) 
+			{
+				FVector cam = GetControlRotation().Vector();
+				Direction = cam.GetSafeNormal2D();
+				//float z = FMath::Clamp(SMath::SimpleGaussian(cam.Z * GrappleSmack_HeightMultiplier, 2.f, 1.f, 0.f, -1.f), GrappleSmack_MinHeight, 1.f);
+				float z = FMath::Clamp(SMath::SimpleGaussian(((InputVectorRaw.X + cam.Z)/2.f) * GrappleSmack_HeightMultiplier, 2.f, 1.f, 0.f, -1.f), GrappleSmack_MinHeight, 1.f);
+				Direction *= 1.f - z;
+				Direction.Z = z;
+				Direction.Normalize();
+				AdditionalStrength = SMath::SimpleGaussian(FMath::Min(z, z - GrappleSmack_MinHeight), 3.f, 1.7f, 0.f, -0.7f);
+				
+				PRINTPARLONG(3.f, "Direction Z: %f", z);
+				PRINTPARLONG(3.f, "AdditionalStrength Z: %f", AdditionalStrength);
 
-		if (m_InputVector.IsNearlyZero())
-			Direction = (Direction + (GetActorForwardVector() * SmackDirection_InputMultiplier)).GetSafeNormal2D();
-		else {
-			Direction = (Direction + (m_InputVector * SmackDirection_InputMultiplier) + (GetControlRotation().Vector().GetSafeNormal2D() * SmackDirection_CameraMultiplier)).GetSafeNormal2D();
+				DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + Direction * 200.f, FColor::Red, false, 3.f, 0, 5.f);
+			}
 		}
-
-		float angle = FMath::DegreesToRadians(SmackUpwardAngle);
-		angle = angle + (angle * (InputVectorRaw.X * SmackAttack_InputAngleMultiplier));
-
-		Direction = (cosf(angle) * Direction) + (sinf(angle) * FVector::UpVector);
-		OtherInterface->Receive_SmackAttack_Pure(Direction, SmackAttackStrength + (SmackAttackStrength * (InputVectorRaw.X * SmackAttack_InputStrengthMultiplier)));
+		else
+		{
+			float angle{};
+			if (m_InputVector.IsNearlyZero())
+				Direction = (Direction + (GetActorForwardVector() * SmackDirection_InputMultiplier)).GetSafeNormal2D();
+			else {
+				Direction = (Direction + (m_InputVector * SmackDirection_InputMultiplier) + (GetControlRotation().Vector().GetSafeNormal2D() * SmackDirection_CameraMultiplier)).GetSafeNormal2D();
+			}
+			angle = FMath::DegreesToRadians(SmackUpwardAngle);
+			angle = angle + (angle * (InputVectorRaw.X * SmackAttack_InputAngleMultiplier));
+			Direction = (cosf(angle) * Direction) + (sinf(angle) * FVector::UpVector);
+		}
+		OtherInterface->Receive_SmackAttack_Pure(Direction, SmackAttackStrength * AdditionalStrength + (SmackAttackStrength * (InputVectorRaw.X * SmackAttack_InputStrengthMultiplier)));
 	}
 }
 

@@ -6,7 +6,7 @@
 
 // Print To Screen MACRO
 #define PRINT(X)				( GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Blue, FString::Printf(TEXT(X))) )
-#define PRINTLONG(X)			( GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Blue, FString::Printf(TEXT(X))) )
+#define PRINTLONG(T, X)			( GEngine->AddOnScreenDebugMessage(-1, T,	FColor::Blue, FString::Printf(TEXT(X))) )
 
 #define PRINTPAR(X, ...)		( GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Yellow, FString::Printf(TEXT(X), ##__VA_ARGS__)) )
 #define PRINTPARLONG(T, X, ...)	( GEngine->AddOnScreenDebugMessage(-1, T, FColor::Yellow, FString::Printf(TEXT(X), ##__VA_ARGS__)) )
@@ -59,6 +59,16 @@ public:
 			ti = 0.f;
 		average = 0.f;
 		count = 0;
+	}
+	void Print(FString s) {
+		FString p = s;
+		p += FString::Printf(TEXT(" = %f milliseconds"), End());
+		GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Yellow, p);
+	}
+	void Print_Average(FString s) {
+		FString p = s;
+		p += FString::Printf(TEXT(" = %f milliseconds"), End_Average());
+		GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Yellow, p);
 	}
 private:
 	timer timer;
