@@ -10,7 +10,7 @@ UENUM(BlueprintType)
 enum EAttackType
 {
 	SmackAttack,
-	Scoop,
+	//Scoop,
 	GroundPound,
 	PogoBounce,
 	Environmental

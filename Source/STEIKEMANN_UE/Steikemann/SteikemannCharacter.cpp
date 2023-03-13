@@ -2659,17 +2659,14 @@ void ASteikemannCharacter::OnAttackColliderBeginOverlap(UPrimitiveComponent* Ove
 		//AttackContactDelegate_Instigator.Broadcast();
 		AttackContactDelegate.Broadcast(OtherActor);
 		
-		/* Attacking a corruption core */
-		if (TCon.HasTag(Tag::CorruptionCore()))
+		/* Attacking a corruption core || Enemy Spawner || InkFlower*/
+		if (TCon.HasTag(Tag::CorruptionCore()) || 
+			TCon.HasTag(Tag::InkFlower()) || 
+			TCon.HasTag(Tag::EnemySpawner()))
 		{
 			Gen_Attack(IAttack, OtherActor, AType);
 		}
 
-		/* Attacking Enemy Spawner */
-		if (TCon.HasTag(Tag::EnemySpawner()))
-		{
-			Gen_Attack(IAttack, OtherActor, AType);
-		}
 
 		/* Smack attack collider */
 		if (OverlappedComp == AttackCollider && OtherComp->GetClass() == UCapsuleComponent::StaticClass())
