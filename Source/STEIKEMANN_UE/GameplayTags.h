@@ -43,4 +43,5 @@ namespace Tag {
 
 	// Collectible
 	static FGameplayTag Collectible() { return FGameplayTag::RequestGameplayTag("Collectible"); }
+	static FGameplayTag InkFlower() { return FGameplayTag::RequestGameplayTag("InkFlower"); }
 }
