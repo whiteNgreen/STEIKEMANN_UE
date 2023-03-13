@@ -27,14 +27,16 @@ enum class EPointType
 USTRUCT(BlueprintType)
 struct FocusPoint 
 {
+public:
 	//GENERATED_BODY()
 	GENERATED_BODY()
 
+	FocusPoint() {}
 	UObject* ParentObj{ nullptr };
 	class UBoxComponent* FocusBox{ nullptr };
 	class USplineComponent* FocusSpline{ nullptr };
 	UPROPERTY()
-		EFocusType ComponentType;
+		EFocusType ComponentType = EFocusType::FOCUS_Point;
 	//UPrimitiveComponent* FocusObj{ nullptr };
 
 
@@ -45,10 +47,10 @@ struct FocusPoint
 	/* Priority of Focus Point among other potential Focus Points 
 	 * Priority of 0 will ignore every other volume, if two priority 0's overlap, only the first entered will be acknowledged */
 	UPROPERTY(EditInstanceOnly, Category = "FocusPoint", meta = (UIMin = "0", DisplayPriority = "0"))
-		int Priority;
+		int Priority{};
 
 	UPROPERTY(EditInstanceOnly, Category = "FocusPoint", meta = (DisplayPriority = "1"))
-		EPointType Type;
+		EPointType Type = EPointType::NONE;
 
 	
 	/* -------------------------------- LOOKAT_Absolute & CAMERA_Absolute -------------------------------- */

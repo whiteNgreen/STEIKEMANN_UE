@@ -33,6 +33,8 @@ void AEnemyAIController::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	if (!m_PawnOwner) return;
+
+
 	TM_AI.Tick(DeltaTime);
 	
 	switch (m_AIState)
@@ -60,7 +62,7 @@ void AEnemyAIController::Tick(float DeltaTime)
 	default:
 		break;
 	}
-	PrintState();
+	//PrintState();
 }
 
 void AEnemyAIController::OnPossess(APawn* InPawn)
@@ -141,9 +143,9 @@ void AEnemyAIController::IdleUpdate_Red(float DeltaTime)
 	}
 	else if (m_EIdleState == EIdleState::Guard)
 	{
-		PRINT("GUARDING!");
+		//PRINT("GUARDING!");
 	}
-	DrawDebugPoint(GetWorld(), IdleLocation, 40.f, FColor::Black);
+	//DrawDebugPoint(GetWorld(), IdleLocation, 40.f, FColor::Black);
 }
 
 void AEnemyAIController::IdleUpdate_PinkTeal(float DeltaTime)
@@ -159,9 +161,9 @@ void AEnemyAIController::IdleUpdate_PinkTeal(float DeltaTime)
 	}
 	else if (m_EIdleState == EIdleState::Sleeping)
 	{
-		PRINT("sleeping...");
+		//PRINT("sleeping...");
 	}
-	DrawDebugPoint(GetWorld(), IdleLocation, 30.f, FColor::Blue, false, 0, -1);
+	//DrawDebugPoint(GetWorld(), IdleLocation, 30.f, FColor::Blue, false, 0, -1);
 }
 
 void AEnemyAIController::AIOnSeePawn(APawn* pawn)
@@ -223,7 +225,7 @@ void AEnemyAIController::SpotPlayer()
 
 	if (m_DogPack) m_DogPack->AlertPack(m_PawnOwner);
 
-	DrawDebugPoint(GetWorld(), GetPawn()->GetActorLocation() + FVector::UpVector * 100.f, 40.f, FColor::Red, false, 2.f, -2);
+	//DrawDebugPoint(GetWorld(), GetPawn()->GetActorLocation() + FVector::UpVector * 100.f, 40.f, FColor::Red, false, 2.f, -2);
 }
 
 void AEnemyAIController::AlertedInit(const APawn& instigator)
@@ -231,7 +233,7 @@ void AEnemyAIController::AlertedInit(const APawn& instigator)
 	SetState(ESmallEnemyAIState::Alerted);
 	SuspiciousLocation = instigator.GetActorLocation();
 	
-	DrawDebugPoint(GetWorld(), SuspiciousLocation, 40.f, FColor::Orange, false, PSComponent->SensingInterval, -2);
+	//DrawDebugPoint(GetWorld(), SuspiciousLocation, 40.f, FColor::Orange, false, PSComponent->SensingInterval, -2);
 }
 
 void AEnemyAIController::AlertedBegin()
@@ -252,7 +254,7 @@ void AEnemyAIController::AlertedEnd()
 void AEnemyAIController::AlertedUpdate(float DeltaTime)
 {
 	m_PawnOwner->RotateActorYawToVector(FVector(SuspiciousLocation - GetPawn()->GetActorLocation()), DeltaTime);
-	DrawDebugLine(GetWorld(), GetPawn()->GetActorLocation(), GetPawn()->GetActorLocation() + FVector(SuspiciousLocation - GetPawn()->GetActorLocation()), FColor::Orange);
+	//DrawDebugLine(GetWorld(), GetPawn()->GetActorLocation(), GetPawn()->GetActorLocation() + FVector(SuspiciousLocation - GetPawn()->GetActorLocation()), FColor::Orange);
 }
 
 void AEnemyAIController::AlertedTimeCheck()
@@ -260,13 +262,13 @@ void AEnemyAIController::AlertedTimeCheck()
 	TM_AI.SetTimer(TH_StopSensingPlayer, this, &AEnemyAIController::StopSensingPlayer, PSComponent->SensingInterval + 0.4f);
 	bIsSensingPawn = true;
 
-	DrawDebugPoint(GetWorld(), GetPawn()->GetActorLocation() + FVector::UpVector * 100.f, 40.f, FColor::Orange, false, PSComponent->SensingInterval);
+	//DrawDebugPoint(GetWorld(), GetPawn()->GetActorLocation() + FVector::UpVector * 100.f, 40.f, FColor::Orange, false, PSComponent->SensingInterval);
 }
 
 void AEnemyAIController::StopSensingPlayer()
 {
-	PRINTLONG("STOP SENSING PLAYER");
-	DrawDebugPoint(GetWorld(), GetPawn()->GetActorLocation() + FVector::UpVector * 100.f, 40.f, FColor::Blue, false, 1.f, -1);
+	//PRINTLONG("STOP SENSING PLAYER");
+	//DrawDebugPoint(GetWorld(), GetPawn()->GetActorLocation() + FVector::UpVector * 100.f, 40.f, FColor::Blue, false, 1.f, -1);
 
 	TM_AI.ClearTimer(TH_StopSensingPlayer);
 	TM_AI.ClearTimer(TH_SpotPlayer);
@@ -516,7 +518,7 @@ void AEnemyAIController::ChaseUpdate(float DeltaTime)
 		ChasePlayer_Red_Update();
 		ChasePlayer_Red();
 
-		DrawDebugPoint(GetWorld(), PinkTeal_ChaseLocation, 30.f, FColor::Red, false, 0.f, -1);
+		//DrawDebugPoint(GetWorld(), PinkTeal_ChaseLocation, 30.f, FColor::Red, false, 0.f, -1);
 		break;
 	}
 	case EDogType::Pink:
@@ -524,7 +526,7 @@ void AEnemyAIController::ChaseUpdate(float DeltaTime)
 		ChasePlayer_Pink();
 		LerpPinkTeal_ChaseLocation(DeltaTime);
 
-		DrawDebugPoint(GetWorld(), PinkTeal_ChaseLocation, 30.f, FColor::Purple, false, 0.f, -1);
+		//DrawDebugPoint(GetWorld(), PinkTeal_ChaseLocation, 30.f, FColor::Purple, false, 0.f, -1);
 		break;
 	}
 	case EDogType::Teal:
@@ -532,7 +534,7 @@ void AEnemyAIController::ChaseUpdate(float DeltaTime)
 		ChasePlayer_Teal();
 		LerpPinkTeal_ChaseLocation(DeltaTime);
 
-		DrawDebugPoint(GetWorld(), PinkTeal_ChaseLocation, 30.f, FColor::Cyan, false, 0.f, -1);
+		//DrawDebugPoint(GetWorld(), PinkTeal_ChaseLocation, 30.f, FColor::Cyan, false, 0.f, -1);
 		break;
 	}
 	default:
@@ -566,7 +568,7 @@ void AEnemyAIController::ChasePlayer_Red()
 {
 	if (!m_Player) return;
 
-	PRINT("Chasing Player :: RED");
+	//PRINT("Chasing Player :: RED");
 	MoveToLocation(PinkTeal_ChaseLocation);
 }
 
@@ -584,7 +586,7 @@ void AEnemyAIController::ChasePlayer_Pink()
 	if (!GetPathFollowingComponent()->HasValidPath())
 		MoveToLocation(m_Player->GetActorLocation());
 
-	PRINT("Chasing Player :: PINK");
+	//PRINT("Chasing Player :: PINK");
 }
 
 void AEnemyAIController::ChasePlayer_Teal()
@@ -595,7 +597,7 @@ void AEnemyAIController::ChasePlayer_Teal()
 	if (!GetPathFollowingComponent()->HasValidPath())
 		MoveToLocation(m_Player->GetActorLocation());
 
-	PRINT("Chasing Player :: TEAL");
+	//PRINT("Chasing Player :: TEAL");
 }
 
 void AEnemyAIController::ChasePlayer_CircleAround_Update(const FVector& forward)
@@ -624,7 +626,7 @@ void AEnemyAIController::ChasePlayer_CircleAround_Update(const FVector& forward)
 	PinkTeal_ChaseLocation_Target = playerLoc + (forwardLength * DotGuassian(Dot, 0.5f, -0.5f));
 	PinkTeal_ChaseLocation_Target += (rightProj * DotGuassian(Dot, 0.5f, -1.f) * PinkTeal_SideLength);
 
-	DrawDebugPoint(GetWorld(), PinkTeal_ChaseLocation_Target, 20.f, FColor::White, false, PinkTeal_UpdateTime, -2);
+	//DrawDebugPoint(GetWorld(), PinkTeal_ChaseLocation_Target, 20.f, FColor::White, false, PinkTeal_UpdateTime, -2);
 
 }
 
@@ -637,7 +639,7 @@ void AEnemyAIController::GuardSpawnUpdate(float DeltaTime)
 		SetState(ESmallEnemyAIState::ChasingTarget);
 	}
 
-	DrawDebugPoint(GetWorld(), m_GuardLocation, 30.f, FColor::Blue, false, 0.f, -2);
+	//DrawDebugPoint(GetWorld(), m_GuardLocation, 30.f, FColor::Blue, false, 0.f, -2);
 }
 
 void AEnemyAIController::GuardSpawnBegin()

@@ -18,13 +18,26 @@ static inline FVector GetRandomLocationAroundPoint2D(const FVector& location, co
 	return location + (FVector::ForwardVector.RotateAngleAxis(angle, FVector::UpVector) * length * radius);
 }
 
-static inline float DotInverted_Normal(const float& dot)
+FORCEINLINE float DotInverted_Normal(const float& dot)
 {
 	return (-dot / 2.f) + 0.5f;
 }
 
 /* A common DotGuassian effect. Used with a dot product */
-static inline float DotGuassian(const float& dot, float a = 0.3f, float b = 0.0f)
+FORCEINLINE float DotGuassian(const float& dot, const float& a = 0.3f, const float& b = 0.0f)
 {
-	return FMath::Exp(-(FMath::Pow(dot - b, 2)) / (2.0 * FMath::Pow(a, 2)));
+	return FMath::Exp(-(FMath::Pow(dot - b, 2)) / 
+					(2.0 * FMath::Pow(a, 2)));
+}
+
+FORCEINLINE float Gaussian(const float& x, const float& a = 2.f, const float& b = 1.f)
+{
+	return FMath::Exp(-FMath::Pow(x, a) * b);
+}
+
+FORCEINLINE FVector ReflectionVector(const FVector& n, const FVector& d, const float& reflectionStrength = 1.f)
+{
+	FVector Ortho = FVector::CrossProduct(n, FVector::CrossProduct(d, n));
+	FVector proj = d.ProjectOnTo(Ortho);
+	return n + (proj * reflectionStrength);
 }
