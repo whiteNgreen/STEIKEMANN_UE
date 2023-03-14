@@ -630,6 +630,8 @@ public:
 		int CollectibleCommon{};
 	UPROPERTY(BlueprintReadWrite, Category = "Collectibles")
 		int CollectibleCorruptionCore{};
+	UPROPERTY(BlueprintReadWrite, Category = "Collectibles")
+		int InkFlowerCollectible{};
 
 	/* Array of hazard actors whose collision the player is still within */
 	TArray<AActor*> CloseHazards;

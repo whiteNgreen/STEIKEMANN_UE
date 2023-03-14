@@ -47,6 +47,7 @@ void AInkFlower::OnCollectibleBeginOverlap(UPrimitiveComponent* HitComponent, AA
 		PlayerCollectInk(OtherActor);
 
 		BeakMesh->SetVisibility(false);
+		CollectibleCollider->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 		FTimerHandle h;
 		GetWorldTimerManager().SetTimer(h, [this]() { Destroy(); }, 1.5f, false);
@@ -55,6 +56,7 @@ void AInkFlower::OnCollectibleBeginOverlap(UPrimitiveComponent* HitComponent, AA
 
 void AInkFlower::PlayerCollectInk(AActor* player)
 {
+	Collected();
 }
 
 void AInkFlower::Gen_ReceiveAttack(const FVector& Direction, const float& Strength, EAttackType& AType)

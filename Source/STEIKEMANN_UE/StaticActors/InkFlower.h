@@ -41,6 +41,8 @@ public: // Collectible
 	UFUNCTION()
 		void OnCollectibleBeginOverlap(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& Hit);
 	void PlayerCollectInk(AActor* player);
+	UFUNCTION(BlueprintImplementableEvent)
+		void Collected();
 
 public:// Attack Interface
 	virtual bool CanBeAttacked() override { return bAICanBeDamaged; }
