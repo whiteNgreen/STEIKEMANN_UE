@@ -673,6 +673,9 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 		void UpdateSapCollectible();
 
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
+		void ShowHUD_Timed();
+
 	UFUNCTION(BlueprintImplementableEvent)
 		void Anim_TakeDamage();
 	
