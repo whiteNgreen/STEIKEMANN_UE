@@ -57,6 +57,9 @@ void AInkFlower::OnCollectibleBeginOverlap(UPrimitiveComponent* HitComponent, AA
 void AInkFlower::PlayerCollectInk(AActor* player)
 {
 	Collected();
+	auto p = Cast<ASteikemannCharacter>(player);
+	if (p)
+		p->Pickup_InkFlower();
 }
 
 void AInkFlower::Gen_ReceiveAttack(const FVector& Direction, const float& Strength, EAttackType& AType)
@@ -64,7 +67,5 @@ void AInkFlower::Gen_ReceiveAttack(const FVector& Direction, const float& Streng
 	if (!CanBeAttacked()) return;
 	bAICanBeDamaged = false;
 
-
 	Anim_Open();
-
 }

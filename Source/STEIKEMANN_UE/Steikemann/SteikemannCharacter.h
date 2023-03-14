@@ -660,6 +660,20 @@ public:
 	void PTakeDamage(int damage, const FVector& Direction, int i = 0);
 
 	UFUNCTION(BlueprintImplementableEvent)
+		void Update_WGT_CollectibleCounter();
+
+	void Pickup_InkFlower();
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
+		void UpdateInkCollectible();
+	UFUNCTION(BlueprintImplementableEvent)
+		void GetJournalEntry();
+
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
+		void UpdateHealthWidget();
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
+		void UpdateSapCollectible();
+
+	UFUNCTION(BlueprintImplementableEvent)
 		void Anim_TakeDamage();
 	
 	bool bIsDead{};

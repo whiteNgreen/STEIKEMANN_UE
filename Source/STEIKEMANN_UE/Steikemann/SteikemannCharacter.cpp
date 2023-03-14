@@ -204,11 +204,6 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	/* SHOW COLLECTIBLES */
-	GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Red, FString::Printf(TEXT("Common : %i"), CollectibleCommon), true, FVector2D(1.5f));
-	GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Red, FString::Printf(TEXT("CorruptionCore : %i"), CollectibleCorruptionCore), true, FVector2D(1.5f));
-	GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Red, FString::Printf(TEXT("Health : %i"), Health), true, FVector2D(4));
-
 	SteikeWorldStatics::PlayerLocation = GetActorLocation();
 
 	if (bIsDead) { return; }
@@ -1957,6 +1952,7 @@ void ASteikemannCharacter::ReceiveCollectible(ECollectibleType type)
 	{
 	case ECollectibleType::Common:
 		CollectibleCommon++;
+		UpdateSapCollectible();
 		break;
 	case ECollectibleType::Health:
 		GainHealth(1);
@@ -1972,6 +1968,7 @@ void ASteikemannCharacter::ReceiveCollectible(ECollectibleType type)
 void ASteikemannCharacter::GainHealth(int amount)
 {
 	Health = FMath::Clamp(Health += amount, 0, MaxHealth);
+	UpdateHealthWidget();
 }
 
 void ASteikemannCharacter::PTakeDamage(int damage, AActor* otheractor, int i/* = 0*/)
@@ -2013,6 +2010,8 @@ void ASteikemannCharacter::PTakeDamage(int damage, AActor* otheractor, int i/* =
 
 	// Animation
 	Anim_TakeDamage();
+
+	UpdateHealthWidget();
 }
 
 void ASteikemannCharacter::PTakeDamage(int damage, const FVector& Direction, int i)
@@ -2036,6 +2035,14 @@ void ASteikemannCharacter::PTakeDamage(int damage, const FVector& Direction, int
 
 	// Animation
 	Anim_TakeDamage();
+
+	UpdateHealthWidget();
+}
+
+void ASteikemannCharacter::Pickup_InkFlower()
+{
+	InkFlowerCollectible++;
+	UpdateInkCollectible();
 }
 
 void ASteikemannCharacter::Death()
@@ -2065,6 +2072,7 @@ void ASteikemannCharacter::Respawn()
 
 	/* Reset player */
 	Health = MaxHealth;
+	UpdateHealthWidget();
 	bIsDead = false;
 	bPlayerCanTakeDamage = true;
 	m_EMovementInputState = EMovementInput::Open;
