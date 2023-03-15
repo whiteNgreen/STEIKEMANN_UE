@@ -1972,6 +1972,9 @@ void ASteikemannCharacter::GainHealth(int amount)
 {
 	Health = FMath::Clamp(Health += amount, 0, MaxHealth);
 	UpdateHealthWidget();
+
+	// Hair Material Change
+	HealthHairColor(Health);
 }
 
 void ASteikemannCharacter::PTakeDamage(int damage, AActor* otheractor, int i/* = 0*/)
@@ -2015,6 +2018,12 @@ void ASteikemannCharacter::PTakeDamage(int damage, AActor* otheractor, int i/* =
 	Anim_TakeDamage();
 
 	UpdateHealthWidget();
+
+	// Taking damage Visual Effects
+	TakeDamage_Impl();
+
+	// Hair Material Change
+	HealthHairColor(Health);
 }
 
 void ASteikemannCharacter::PTakeDamage(int damage, const FVector& Direction, int i)
@@ -2040,12 +2049,26 @@ void ASteikemannCharacter::PTakeDamage(int damage, const FVector& Direction, int
 	Anim_TakeDamage();
 
 	UpdateHealthWidget();
+
+	// Taking damage Visual Effects
+	TakeDamage_Impl();
+
+	// Hair Material Change
+	HealthHairColor(Health);
 }
 
 void ASteikemannCharacter::Pickup_InkFlower()
 {
 	InkFlowerCollectible++;
 	UpdateInkCollectible();
+}
+
+void ASteikemannCharacter::CheckForNewJournalEntry()
+{
+	if (InkFlowerCollectible >= 3) {
+		GetJournalEntry();
+		InkFlowerCollectible = 0;
+	}
 }
 
 void ASteikemannCharacter::ShowHUD_Timed_Pure()
@@ -2081,6 +2104,7 @@ void ASteikemannCharacter::Respawn()
 	/* Reset player */
 	Health = MaxHealth;
 	UpdateHealthWidget();
+	HealthHairColor(Health);
 	bIsDead = false;
 	bPlayerCanTakeDamage = true;
 	m_EMovementInputState = EMovementInput::Open;

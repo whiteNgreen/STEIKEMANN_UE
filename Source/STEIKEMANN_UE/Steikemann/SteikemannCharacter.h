@@ -633,6 +633,9 @@ public:
 	UPROPERTY(BlueprintReadWrite, Category = "Collectibles")
 		int InkFlowerCollectible{};
 
+	UPROPERTY(BlueprintReadWrite, Category = "Collectibles")
+		int JournalEntries{ 0 };
+
 	/* Array of hazard actors whose collision the player is still within */
 	TArray<AActor*> CloseHazards;
 
@@ -643,7 +646,7 @@ public:
 
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health & Damage", meta = (UIMin = "1", UIMax = "10"))
-		int Health{ 4 };
+		int Health{ 3 };
 	int MaxHealth{};
 
 	FTimerHandle THDamageBuffer;
@@ -660,11 +663,18 @@ public:
 	void PTakeDamage(int damage, const FVector& Direction, int i = 0);
 
 	UFUNCTION(BlueprintImplementableEvent)
+		void HealthHairColor(int hp);
+	UFUNCTION(BlueprintImplementableEvent)
+		void TakeDamage_Impl();
+
+	UFUNCTION(BlueprintImplementableEvent)
 		void Update_WGT_CollectibleCounter();
 
 	void Pickup_InkFlower();
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 		void UpdateInkCollectible();
+	UFUNCTION(BlueprintCallable)
+		void CheckForNewJournalEntry();
 	UFUNCTION(BlueprintImplementableEvent)
 		void GetJournalEntry();
 
