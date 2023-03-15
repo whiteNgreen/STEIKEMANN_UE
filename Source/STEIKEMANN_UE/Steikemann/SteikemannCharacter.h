@@ -643,7 +643,7 @@ public:
 
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health & Damage", meta = (UIMin = "1", UIMax = "10"))
-		int Health{ 3 };
+		int Health{ 4 };
 	int MaxHealth{};
 
 	FTimerHandle THDamageBuffer;
@@ -675,6 +675,7 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 		void ShowHUD_Timed();
+	void ShowHUD_Timed_Pure();
 
 	UFUNCTION(BlueprintImplementableEvent)
 		void Anim_TakeDamage();

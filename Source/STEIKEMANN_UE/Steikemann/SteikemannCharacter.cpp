@@ -440,7 +440,7 @@ void ASteikemannCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ASteikemannCharacter::JumpRelease).bConsumeInput = true;
 
 	/* -- HUD -- */
-	PlayerInputComponent->BindAction("ShowHUD", IE_Pressed, this, &ASteikemannCharacter::ShowHUD_Timed);
+	PlayerInputComponent->BindAction("ShowHUD", IE_Pressed, this, &ASteikemannCharacter::ShowHUD_Timed_Pure);
 
 	/* -- SLIDE -- */
 	PlayerInputComponent->BindAction("Slide", IE_Pressed, this, &ASteikemannCharacter::Click_RightFacebutton);
@@ -2046,6 +2046,11 @@ void ASteikemannCharacter::Pickup_InkFlower()
 {
 	InkFlowerCollectible++;
 	UpdateInkCollectible();
+}
+
+void ASteikemannCharacter::ShowHUD_Timed_Pure()
+{
+	ShowHUD_Timed();
 }
 
 void ASteikemannCharacter::Death()
