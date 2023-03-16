@@ -665,6 +665,8 @@ public:
 	UFUNCTION(BlueprintImplementableEvent)
 		void HealthHairColor(int hp);
 	UFUNCTION(BlueprintImplementableEvent)
+		void GainHealth_Impl();
+	UFUNCTION(BlueprintImplementableEvent)
 		void TakeDamage_Impl();
 
 	UFUNCTION(BlueprintImplementableEvent)
@@ -967,6 +969,8 @@ public:
 	FPostAttackBuffer Delegate_PostAttackBuffer;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|SmackAttack|GrappleSmack")
 		float GrappleSmack_HeightMultiplier{ 2.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|SmackAttack|GrappleSmack", meta = (UIMin = "0.0", UIMax = "1.0"))
+		float GrappleSmack_MaxHeight{ 0.7f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|SmackAttack|GrappleSmack", meta = (UIMin = "0.0", UIMax = "1.0"))
 		float GrappleSmack_MinHeight{ 0.3f };
 	void PostAttack_GrappleSmack(EPostAttackType& type);

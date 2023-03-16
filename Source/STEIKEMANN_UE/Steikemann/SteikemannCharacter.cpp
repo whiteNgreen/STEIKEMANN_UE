@@ -2786,7 +2786,7 @@ void ASteikemannCharacter::Do_SmackAttack_Pure(IAttackInterface* OtherInterface,
 				FVector cam = GetControlRotation().Vector();
 				Direction = cam.GetSafeNormal2D();
 				//float z = FMath::Clamp(SMath::SimpleGaussian(cam.Z * GrappleSmack_HeightMultiplier, 2.f, 1.f, 0.f, -1.f), GrappleSmack_MinHeight, 1.f);
-				float z = FMath::Clamp(SMath::SimpleGaussian(((InputVectorRaw.X + cam.Z)/2.f) * GrappleSmack_HeightMultiplier, 2.f, 1.f, 0.f, -1.f), GrappleSmack_MinHeight, 1.f);
+				float z = FMath::Clamp(SMath::SimpleGaussian(((InputVectorRaw.X + cam.Z) / 2.f) * GrappleSmack_HeightMultiplier, GrappleSmack_MaxHeight, 1.f, 0.f, -1.f), GrappleSmack_MinHeight, GrappleSmack_MaxHeight);
 				Direction *= 1.f - z;
 				Direction.Z = z;
 				Direction.Normalize();
