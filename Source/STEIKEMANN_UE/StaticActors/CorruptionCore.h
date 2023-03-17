@@ -39,6 +39,11 @@ public:
 	void ReceiveDamage(int damage);
 	void Death();
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		TArray<class ACorruptionTendril*> ConnectedTendrils;
+	//UFUNCTION(BlueprintImplementableEvent)
+		void DestroyConnectedTendrils();
+
 	UPROPERTY(EditAnywhere)
 		TSubclassOf<AActor> SpawnedCollectible;
 

@@ -2,6 +2,7 @@
 
 
 #include "../StaticActors/CorruptionCore.h"
+#include "CorruptionTendril.h"
 #include "NiagaraFunctionLibrary.h"
 #include "../StaticActors/GrappleTarget.h"
 #include "Components/CapsuleComponent.h"
@@ -68,6 +69,9 @@ void ACorruptionCore::Death()
 	FVector Loc = GetActorLocation() + FVector(0,0,200);
 	GetWorld()->SpawnActor<AActor>(SpawnedCollectible, Loc, FRotator());
 
+	//
+	DestroyConnectedTendrils();
+
 	/* Destroy object after 10 seconds */
 	auto func = [this]() {
 		Destroy();
@@ -75,4 +79,11 @@ void ACorruptionCore::Death()
 	FTimerDelegate FDelegate;
 	FDelegate.BindLambda(func);
 	GetWorldTimerManager().SetTimer(FTHDestruction, FDelegate, 5.f, false);
+}
+
+void ACorruptionCore::DestroyConnectedTendrils()
+{
+	for (auto& it : ConnectedTendrils) {
+		it->DestroyTendril_Start();
+	}
 }
