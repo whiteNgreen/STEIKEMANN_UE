@@ -2,7 +2,6 @@
 
 
 #include "../StaticActors/CorruptionCore.h"
-#include "CorruptionTendril.h"
 #include "NiagaraFunctionLibrary.h"
 #include "../StaticActors/GrappleTarget.h"
 #include "Components/CapsuleComponent.h"

@@ -15,6 +15,8 @@ class STEIKEMANN_UE_API ACorruptionTendril : public ABaseStaticActor
 	GENERATED_BODY()
 
 public:
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
+		void TendrilPulse_Start();
 	UFUNCTION(BlueprintImplementableEvent)
 		void DestroyTendril_Start();
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
