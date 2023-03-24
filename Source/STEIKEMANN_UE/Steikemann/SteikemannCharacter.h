@@ -636,14 +636,12 @@ public:
 	UPROPERTY(BlueprintReadWrite, Category = "Collectibles")
 		int JournalEntries{ 0 };
 
-	/* Array of hazard actors whose collision the player is still within */
-	TArray<AActor*> CloseHazards;
-
 	UFUNCTION()
 		void OnCapsuleComponentBeginOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 	UFUNCTION()
 		void OnCapsuleComponentEndOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
-
+	UFUNCTION()
+		void OnCapsuleComponentHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health & Damage", meta = (UIMin = "1", UIMax = "10"))
 		int Health{ 3 };
@@ -661,6 +659,7 @@ public:
 	void GainHealth(int amount);
 	void PTakeDamage(int damage, AActor* otheractor, int i = 0);
 	void PTakeDamage(int damage, const FVector& Direction, int i = 0);
+	bool PTakeRepeatDamage();
 
 	UFUNCTION(BlueprintImplementableEvent)
 		void HealthHairColor(int hp);

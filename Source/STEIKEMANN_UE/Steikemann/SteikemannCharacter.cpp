@@ -113,6 +113,7 @@ void ASteikemannCharacter::BeginPlay()
 	PlayerController = Cast<APlayerController>(GetController());
 	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &ASteikemannCharacter::OnCapsuleComponentBeginOverlap);
 	GetCapsuleComponent()->OnComponentEndOverlap.AddDynamic(this, &ASteikemannCharacter::OnCapsuleComponentEndOverlap);
+	GetCapsuleComponent()->OnComponentHit.AddDynamic(this, &ASteikemannCharacter::OnCapsuleComponentHit);
 	MaxHealth = Health;
 	StartTransform = GetActorTransform();
 	//m_BaseGravityZ = MovementComponent->GetGravityZ();
@@ -1998,15 +1999,9 @@ void ASteikemannCharacter::PTakeDamage(int damage, AActor* otheractor, int i/* =
 			SetActorRotation(FRotator(0, (-direction).Rotation().Yaw, 0));
 	}
 
-	FTimerHandle TH;
-	TimerManager.SetTimer(TH, 
-		[this, otheractor, i]()
-		{ 
-			for (auto& it : CloseHazards) {
-				PTakeDamage(1, otheractor, i+1);
-				return;
-		}
-		bPlayerCanTakeDamage = true; 
+	TimerManager.SetTimer(THDamageBuffer, [this](){
+			bPlayerCanTakeDamage = true; 
+			PTakeRepeatDamage();
 		}, 
 		DamageInvincibilityTime, false);
 
@@ -2035,8 +2030,7 @@ void ASteikemannCharacter::PTakeDamage(int damage, const FVector& Direction, int
 	if (Health == 0) { Death(); }
 
 	m_EMovementInputState = EMovementInput::Locked;
-	FTimerHandle TH;
-	TimerManager.SetTimer(TH, [this]() { bPlayerCanTakeDamage = true; }, DamageInvincibilityTime, false);
+	TimerManager.SetTimer(THDamageBuffer, [this]() { bPlayerCanTakeDamage = true; PTakeRepeatDamage(); }, DamageInvincibilityTime, false);
 	FTimerHandle Move;
 	TimerManager.SetTimer(Move, [this]() { m_EMovementInputState = EMovementInput::Open; }, DamageInvincibilityTime / 2.f, false);
 	
@@ -2055,6 +2049,28 @@ void ASteikemannCharacter::PTakeDamage(int damage, const FVector& Direction, int
 
 	// Hair Material Change
 	HealthHairColor(Health);
+}
+
+bool ASteikemannCharacter::PTakeRepeatDamage()
+{
+	TArray<FHitResult> Hits;
+	FCollisionQueryParams Params("", false, this);
+	double width = GetCapsuleComponent()->GetScaledCapsuleRadius();
+	FCollisionShape box = FCollisionShape::MakeBox(FVector(width, width, 10.0));
+	if (!GetWorld()->SweepMultiByChannel(Hits, GetActorLocation(), GetActorLocation() + (FVector::DownVector * GetCapsuleComponent()->GetScaledCapsuleHalfHeight()), FQuat(1.f, 0.f, 0.f, 0.f), ECC_WorldStatic, box, Params))
+		return false;
+
+	for (const auto& Hit : Hits)
+	{
+		IGameplayTagAssetInterface* itag = Cast<IGameplayTagAssetInterface>(Hit.GetActor());
+		if (!itag) continue;
+
+		if (itag->HasMatchingGameplayTag(Tag::EnvironmentHazard())) {
+			PTakeDamage(1, Hit.GetActor());
+			return true;
+		}
+	}
+	return false;
 }
 
 void ASteikemannCharacter::Pickup_InkFlower()
@@ -2107,9 +2123,9 @@ void ASteikemannCharacter::Respawn()
 	HealthHairColor(Health);
 	bIsDead = false;
 	bPlayerCanTakeDamage = true;
+	TimerManager.ClearTimer(THDamageBuffer);
 	m_EMovementInputState = EMovementInput::Open;
 	m_EGroundState = EGroundState::GROUND_Walk;
-	CloseHazards.Empty();
 	EnableInput(GetPlayerController());
 	GetMoveComponent()->Velocity *= 0;
 	CancelAnimation();
@@ -2287,13 +2303,6 @@ void ASteikemannCharacter::OnCapsuleComponentBeginOverlap(UPrimitiveComponent* O
 		collectible->Destruction();
 	}
 
-	/* Environmental Hazard collision */
-	if (tags.HasTag(Tag::EnvironmentHazard())) {
-		CloseHazards.Add(OtherActor);
-		if (bPlayerCanTakeDamage)
-			PTakeDamage(1, OtherActor);
-	}
-
 	/* Add checkpoint, overrides previous checkpoint */
 	if (tags.HasTag(Tag::PlayerRespawn())) {
 		Checkpoint = Cast<APlayerRespawn>(OtherActor);
@@ -2324,10 +2333,17 @@ void ASteikemannCharacter::OnCapsuleComponentEndOverlap(UPrimitiveComponent* Ove
 				m_PogoTarget = nullptr;
 		}
 	}
+}
 
-	/* Environmental Hazard END collision */
-	if (tags.HasTag(Tag::EnvironmentHazard())) {
-		CloseHazards.Remove(OtherActor);
+void ASteikemannCharacter::OnCapsuleComponentHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+{
+	IGameplayTagAssetInterface* itag = Cast<IGameplayTagAssetInterface>(OtherActor);
+	if (!itag) { return; }
+
+	/* Environmental Hazard collision */
+	if (itag->HasMatchingGameplayTag(Tag::EnvironmentHazard())) {
+		if (bPlayerCanTakeDamage)
+			PTakeDamage(1, OtherActor);
 	}
 }
 
