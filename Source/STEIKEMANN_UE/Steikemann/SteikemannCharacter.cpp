@@ -97,7 +97,8 @@ ASteikemannCharacter::ASteikemannCharacter(const FObjectInitializer& ObjectIniti
 
 	WallDetector = CreateDefaultSubobject<UWallDetectionComponent>(TEXT("WallDetector"));
 
-	TlComp_Attack_SMACK = CreateDefaultSubobject<UTimelineComponent>("TlComp_AttackTurn");
+	TLComp_Attack_SMACK = CreateDefaultSubobject<UTimelineComponent>("TLComp_AttackTurn");
+	TLComp_AirFriction = CreateDefaultSubobject<UTimelineComponent>("TLComp_AirFriction");
 }
 
 // Called when the game starts or when spawned
@@ -116,7 +117,6 @@ void ASteikemannCharacter::BeginPlay()
 	GetCapsuleComponent()->OnComponentHit.AddDynamic(this, &ASteikemannCharacter::OnCapsuleComponentHit);
 	MaxHealth = Health;
 	StartTransform = GetActorTransform();
-	//m_BaseGravityZ = MovementComponent->GetGravityZ();
 	ResetState();
 
 	// Camera
@@ -142,11 +142,14 @@ void ASteikemannCharacter::BeginPlay()
 
 	// TimelineComponents
 	FOnTimelineFloatStatic floatStatic;
-	floatStatic.BindUObject(this, &ASteikemannCharacter::TlCurve_AttackTurn);
-	TlComp_Attack_SMACK->AddInterpFloat(Curve_AttackTurnStrength, floatStatic);
+	floatStatic.BindUObject(this, &ASteikemannCharacter::TlCurve_AttackTurn);		// Attack Turn and Movement
+	TLComp_Attack_SMACK->AddInterpFloat(Curve_AttackTurnStrength, floatStatic);
 	floatStatic.BindUObject(this, &ASteikemannCharacter::TlCurve_AttackMovement);
-	TlComp_Attack_SMACK->AddInterpFloat(Curve_AttackMovementStrength, floatStatic);
-	
+	TLComp_Attack_SMACK->AddInterpFloat(Curve_AttackMovementStrength, floatStatic);
+		
+	floatStatic.BindUObject(GetMoveComponent().Get(), &USteikemannCharMovementComponent::AirFrictionMultiplier);	// Air Friction
+	TLComp_AirFriction->AddInterpFloat(Curve_AirFrictionMultiplier, floatStatic);
+
 	/* Attack Collider */
 	AttackCollider->OnComponentBeginOverlap.AddDynamic(this, &ASteikemannCharacter::OnAttackColliderBeginOverlap);
 	AttackColliderScale = AttackCollider->GetRelativeScale3D();
@@ -802,6 +805,7 @@ void ASteikemannCharacter::GH_Launch_Dynamic(IGrappleTargetInterface* IGrapple, 
 	m_EGrappleState = EGrappleState::Post_Launch;
 	GetMoveComponent()->m_GravityMode = EGravityMode::Default;
 	IGrapple->HookedPure(GetActorLocation(), OnGround, false);
+	TLComp_AirFriction->PlayFromStart();
 
 	// Animations
 	Anim_Grapple_End_Pure();
@@ -845,6 +849,7 @@ void ASteikemannCharacter::GH_Launch_Static()
 	Direction.Normalize();
 
 	GetMoveComponent()->AddImpulse(Direction * LaunchStrength, true);
+	TLComp_AirFriction->PlayFromStart();
 
 	// Animations
 	Anim_Grapple_End_Pure();
@@ -864,6 +869,7 @@ void ASteikemannCharacter::GH_Launch_Static_StuckEnemy()
 
 	Velocity.Z = (z / GrappleHook_Time_ToStuckEnemy) + (0.5 * m_BaseGravityZ * GrappleHook_Time_ToStuckEnemy * -1.f);
 	GetMoveComponent()->AddImpulse(Velocity, true);
+	TLComp_AirFriction->PlayFromStart();
 
 	// When grapple hooking to stuck enemy, set a wall jump activation timer 
 	m_WallState = EOnWallState::WALL_Leave;
@@ -1548,6 +1554,7 @@ void ASteikemannCharacter::Jump()
 				}
 				GetMoveComponent()->Jump(JumpStrength);
 				Anim_Activate_Jump();
+				TLComp_AirFriction->PlayFromStart();
 				break;
 			}
 			if (CanDoubleJump())
@@ -1563,6 +1570,7 @@ void ASteikemannCharacter::Jump()
 			{
 				m_EState = EState::STATE_InAir;
 				m_WallState = EOnWallState::WALL_Leave;
+				TLComp_AirFriction->PlayFromStart();
 				GetMoveComponent()->LedgeJump(m_InputVector, JumpStrength);
 				GetMoveComponent()->m_GravityMode = EGravityMode::LerpToDefault;
 				TimerManager.SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, 0.5f, false);
@@ -1582,6 +1590,7 @@ void ASteikemannCharacter::Jump()
 			TimerManager.SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, OnWall_Reset_OnWallJump_Timer, false);
 			GetMoveComponent()->WallJump(m_InputVector, JumpStrength);
 			Anim_Activate_Jump();//Anim_Activate_WallJump
+			TLComp_AirFriction->PlayFromStart();
 			break;
 		}
 		case EState::STATE_Attacking:
@@ -1612,6 +1621,7 @@ void ASteikemannCharacter::Jump_OnGround()
 	JumpCurrentCount++;
 	GetMoveComponent()->Jump(JumpStrength);
 	Anim_Activate_Jump();
+	TLComp_AirFriction->PlayFromStart();
 	m_EState = EState::STATE_InAir;
 
 	FTimerHandle h;
@@ -1625,6 +1635,7 @@ void ASteikemannCharacter::Jump_DoubleJump()
 	GetMoveComponent()->DoubleJump(m_InputVector.GetSafeNormal(), JumpStrength * DoubleJump_MultiplicationFactor);
 	GetMoveComponent()->StartJumpHeightHold();
 	Anim_Activate_DoubleJump();//Anim DoubleJump
+	TLComp_AirFriction->PlayFromStart();
 
 	RotateActorYawToVector(m_InputVector);
 }
@@ -1886,6 +1897,15 @@ void ASteikemannCharacter::PB_EnterPogoState(float time)
 	TimerManager.SetTimer(TH_Pogo, [this](){ m_EAirState = EAirState::AIR_Freefall;  }, time, false);
 }
 
+
+bool ASteikemannCharacter::ShroomBounce(FVector direction, float strength)
+{
+	if (!Super::ShroomBounce(direction, strength)) 
+		return false;
+
+	TLComp_AirFriction->PlayFromStart();
+	return true;
+}
 
 void ASteikemannCharacter::Click_RightFacebutton()
 {
@@ -2583,7 +2603,7 @@ void ASteikemannCharacter::AttackSmack_Start_Ground_Pure()
 	RotateToAttack();
 
 	if (!IsFalling())
-		TlComp_Attack_SMACK->PlayFromStart();
+		TLComp_Attack_SMACK->PlayFromStart();
 }
 
 void ASteikemannCharacter::AttackSmack_Grapple_Pure()
@@ -2605,7 +2625,7 @@ void ASteikemannCharacter::ComboAttack_Pure()
 	(AttackComboCount++ % 2 == 0) ? combo = 2 : combo = 1;
 	ComboAttack(combo);
 	if (!IsFalling())
-		TlComp_Attack_SMACK->PlayFromStart();
+		TLComp_Attack_SMACK->PlayFromStart();
 }
 
 void ASteikemannCharacter::Stop_Attack()
@@ -2785,7 +2805,7 @@ void ASteikemannCharacter::Do_SmackAttack_Pure(IAttackInterface* OtherInterface,
 {
 	// Burde sjekke om den kan bli angrepet i det hele tatt. 
 	const bool b{ OtherInterface->GetCanBeSmackAttacked() };
-	TlComp_Attack_SMACK->Stop();
+	TLComp_Attack_SMACK->Stop();
 
 	if (b)
 	{

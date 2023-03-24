@@ -255,10 +255,16 @@ void USteikemannCharMovementComponent::AirFriction2D(FVector input)
 	float in = input.Length();
 	float x = SMath::Gaussian(in, 5.f, 4.f, 0.f, 0.4f);
 	FVector vel2D = FVector(Velocity.X, Velocity.Y, 0.f);
-	AddForce(-vel2D * AirFriction2D_Strength * Mass * x);
+	AddForce(-vel2D * AirFriction2D_Strength * AirFriction2D_Multiplier * Mass * x);
 
-	PRINTPAR("Input X: %f", in);
-	PRINTPAR("AirFriction Input X: %f", x);
+	//PRINTPAR("Input X: %f", in);
+	//PRINTPAR("AirFriction Input X: %f", x);
+	//PRINTPAR("AirFriction :::: %f", AirFriction2D_Strength * AirFriction2D_Multiplier * Mass * x);
+}
+
+void USteikemannCharMovementComponent::AirFrictionMultiplier(float value)
+{
+	AirFriction2D_Multiplier = value;
 }
 
 void USteikemannCharMovementComponent::PB_Launch_Active(FVector direction, float strength)

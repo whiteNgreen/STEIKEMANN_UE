@@ -449,6 +449,10 @@ public:
 	FPostLockedMovement PostLockedMovementDelegate;
 	void LockMovementForPeriod(float time, TFunction<void()> lambdaCall = nullptr);
 
+	class UTimelineComponent* TLComp_AirFriction;
+	UPROPERTY(EditAnywhere)
+		UCurveFloat* Curve_AirFrictionMultiplier{ nullptr };
+
 	bool bActivateJump{};
 	UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
 		bool bJumping{};
@@ -616,6 +620,7 @@ public: // Animation
 #pragma region Bounce
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		class UBouncyShroomActorComponent* BounceComp;
+	bool ShroomBounce(FVector direction, float strength) override;
 #pragma endregion					//Bounce
 #pragma region Right Facebutton
 	bool bPressedSlide{};	
@@ -1021,7 +1026,7 @@ public:
 	void TlCurve_AttackMovement_IMPL(float value);
 
 	/// TIMELINE *** SMACK ATTACK ***
-	class UTimelineComponent* TlComp_Attack_SMACK;
+	class UTimelineComponent* TLComp_Attack_SMACK;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
 		UCurveFloat* Curve_AttackTurnStrength;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")

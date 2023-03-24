@@ -106,6 +106,9 @@ public:
 		float AirFriction2D_Strength{ 1.f };
 
 	void AirFriction2D(FVector input);
+	float AirFriction2D_Multiplier{ 1.f };
+	UFUNCTION()
+		void AirFrictionMultiplier(float value);
 #pragma endregion			//InAir
 #pragma region Pogo
 public:
