@@ -103,6 +103,8 @@ public:
 #pragma region InAir
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|FreeFall")
+		float AirFriction2D_NoInputStrength{ 0.f };
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|FreeFall")
 		float AirFriction2D_Strength{ 1.f };
 
 	void AirFriction2D(FVector input);

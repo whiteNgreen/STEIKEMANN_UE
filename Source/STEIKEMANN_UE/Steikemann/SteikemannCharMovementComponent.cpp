@@ -253,7 +253,7 @@ void USteikemannCharMovementComponent::DeactivateJumpMechanics()
 void USteikemannCharMovementComponent::AirFriction2D(FVector input)
 {
 	float in = input.Length();
-	float x = SMath::Gaussian(in, 5.f, 4.f, 0.f, 0.4f);
+	float x = SMath::Gaussian(in, 5.f, 4.f, 0.f, AirFriction2D_NoInputStrength);
 	FVector vel2D = FVector(Velocity.X, Velocity.Y, 0.f);
 	AddForce(-vel2D * AirFriction2D_Strength * AirFriction2D_Multiplier * Mass * x);
 
