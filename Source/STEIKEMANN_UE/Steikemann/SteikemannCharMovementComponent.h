@@ -102,10 +102,22 @@ public:
 #pragma endregion			//Jump
 #pragma region InAir
 public:
+	/**
+	* The strength of the airfriction when the player holds input
+	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|FreeFall")
 		float AirFriction2D_NoInputStrength{ 0.f };
+	/**
+	* The max strength of the passive airfriction when the player releases input
+	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|FreeFall")
 		float AirFriction2D_Strength{ 1.f };
+	/**
+	* Strength of the air friction when the player puts on the "brakes"
+	* by putting input in the opposite direction
+	*/
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|FreeFall")
+		float NegativeAirFriction2D_Strength{ 2.f };
 
 	void AirFriction2D(FVector input);
 	float AirFriction2D_Multiplier{ 1.f };

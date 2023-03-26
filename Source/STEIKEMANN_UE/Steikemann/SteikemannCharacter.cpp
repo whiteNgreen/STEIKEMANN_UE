@@ -2678,7 +2678,6 @@ void ASteikemannCharacter::EndAttackBufferPeriod()
 void ASteikemannCharacter::PostAttack_GrappleSmack(EPostAttackType& type)
 {
 	type = EPostAttackType::GrappleSmack;
-	PRINTLONG(3.f, "POST ATTACK:: GrappleSmack");
 }
 
 void ASteikemannCharacter::BufferDelegate_Attack(void(ASteikemannCharacter::* func)())
@@ -2847,11 +2846,6 @@ void ASteikemannCharacter::Do_SmackAttack_Pure(IAttackInterface* OtherInterface,
 				Direction.Z = z;
 				Direction.Normalize();
 				AdditionalStrength = SMath::SimpleGaussian(FMath::Min(z, z - GrappleSmack_MinHeight), 3.f, 1.7f, 0.f, -0.7f);
-				
-				PRINTPARLONG(3.f, "Direction Z: %f", z);
-				PRINTPARLONG(3.f, "AdditionalStrength Z: %f", AdditionalStrength);
-
-				DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + Direction * 200.f, FColor::Red, false, 3.f, 0, 5.f);
 			}
 		}
 		else

@@ -150,20 +150,9 @@ void USteikemannCharMovementComponent::Jump(const FVector& direction, const floa
 
 void USteikemannCharMovementComponent::DoubleJump(const FVector& Direction, const float& JumpStrength)
 {
-	/* Direction is input (2D) */
-
-	//FVector Dir = Direction; Dir.Normalize();
-
 	/* If input is nearly Zero do regular jump */
 	if (Direction.IsNearlyZero()) 
 	{
-		//PRINTLONG("ZERO : DOUBLE JUMP");
-		Jump(JumpStrength);
-		return;
-	}
-	if (FVector::DotProduct(Direction, Velocity.GetSafeNormal2D()) > 0.8)
-	{
-		//PRINTLONG("SIMILAR : DOUBLE JUMP");
 		Jump(JumpStrength);
 		return;
 	}
@@ -234,7 +223,7 @@ void USteikemannCharMovementComponent::StopJump()
 void USteikemannCharMovementComponent::StartJumpHeightHold()
 {
 	bJumpHeightHold = true;
-	GetCharOwner()->GetWorldTimerManager().SetTimer(TH_JumpHold, this, &USteikemannCharMovementComponent::StopJumpHeightHold, GetCharOwner()->Jump_HeightHoldTimer);
+	GetCharOwner()->TimerManager.SetTimer(TH_JumpHold, this, &USteikemannCharMovementComponent::StopJumpHeightHold, GetCharOwner()->Jump_HeightHoldTimer);
 }
 
 void USteikemannCharMovementComponent::StopJumpHeightHold()
@@ -252,14 +241,18 @@ void USteikemannCharMovementComponent::DeactivateJumpMechanics()
 
 void USteikemannCharMovementComponent::AirFriction2D(FVector input)
 {
+	// Passive AirFriction
 	float in = input.Length();
 	float x = SMath::Gaussian(in, 5.f, 4.f, 0.f, AirFriction2D_NoInputStrength);
 	FVector vel2D = FVector(Velocity.X, Velocity.Y, 0.f);
-	AddForce(-vel2D * AirFriction2D_Strength * AirFriction2D_Multiplier * Mass * x);
+	FVector PassiveForce = -vel2D * AirFriction2D_Strength * AirFriction2D_Multiplier * Mass * x;
 
-	//PRINTPAR("Input X: %f", in);
-	//PRINTPAR("AirFriction Input X: %f", x);
-	//PRINTPAR("AirFriction :::: %f", AirFriction2D_Strength * AirFriction2D_Multiplier * Mass * x);
+	// Active AirFriction -- "Brakes"
+	float dot = FVector::DotProduct(input, Velocity.GetSafeNormal2D());
+	float negativeInputDirectionStrength = SMath::Gaussian(dot, 6.f, 2, -1.f);
+	FVector ActiveForce = -vel2D * negativeInputDirectionStrength * NegativeAirFriction2D_Strength * Mass;
+
+	AddForce(PassiveForce + ActiveForce);
 }
 
 void USteikemannCharMovementComponent::AirFrictionMultiplier(float value)
@@ -278,8 +271,6 @@ void USteikemannCharMovementComponent::PB_Launch_Active(FVector direction, float
 
 void USteikemannCharMovementComponent::Initial_OnWall_Hang(const Wall::WallData& wall, float time)
 {
-	//PRINTLONG("ON WALL HANG");
-
 	m_WallJumpData = wall;
 	m_WallState = EOnWallState::WALL_Hang;
 
@@ -287,8 +278,7 @@ void USteikemannCharMovementComponent::Initial_OnWall_Hang(const Wall::WallData&
 	m_GravityScaleOverride_InterpSpeed = 1.f / time;
 	m_GravityMode = EGravityMode::LerpToNone;
 
-	//FTimerHandle h;
-	GetCharOwner()->GetWorldTimerManager().SetTimer(TH_WallHang, [this]()
+	GetCharOwner()->TimerManager.SetTimer(TH_WallHang, [this]()
 		{
 			m_GravityMode = EGravityMode::LerpToDefault;
 			m_WallState = EOnWallState::WALL_Drag;
@@ -360,14 +350,14 @@ void USteikemannCharMovementComponent::CancelOnWall()
 {
 	m_WallState = EOnWallState::WALL_None;
 	m_GravityMode = EGravityMode::Default;
-	GetCharOwner()->GetWorldTimerManager().ClearTimer(TH_WallHang);
+	GetCharOwner()->TimerManager.ClearTimer(TH_WallHang);
 }
 
 void USteikemannCharMovementComponent::ExitWall_Air()
 {
 	m_GravityMode = EGravityMode::LerpToDefault;
 	m_WallState = EOnWallState::WALL_None;
-	GetCharacterOwner()->GetWorldTimerManager().ClearTimer(TH_WallHang);
+	GetCharOwner()->TimerManager.ClearTimer(TH_WallHang);
 	Velocity *= 0.f;
 }
 
