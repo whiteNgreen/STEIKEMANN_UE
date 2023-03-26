@@ -47,18 +47,20 @@ void AEnemySpawner::BeginPlay()
 		SpawnData->IdleLocation = IdlePoint->GetComponentLocation();
 	}
 
-	Async(EAsyncExecution::TaskGraphMainThread, [this]() { BeginActorSpawn(&AEnemySpawner::SpawnActor); });
+	if (GetWorld())
+		BeginActorSpawn(&AEnemySpawner::SpawnActor); 
 }
 
 // Called every frame
 void AEnemySpawner::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	TimerManager.Tick(DeltaTime);
 }
 
 void AEnemySpawner::BeginActorSpawn(void(AEnemySpawner::* spawnFunction)())
 {
-	GetWorldTimerManager().SetTimer(TH_BeginSpawnAction, this, spawnFunction, Timer_BeginSpawnAction, false);
+	TimerManager.SetTimer(TH_BeginSpawnAction, this, spawnFunction, Timer_BeginSpawnAction, false);
 }
 
 void AEnemySpawner::BeginActorRespawn()
@@ -93,10 +95,9 @@ void AEnemySpawner::SpawnActor()
 	asyncSpawn = Async(EAsyncExecution::TaskGraphMainThread, [this]() {
 		SpawnAubergineDog(TypeIndex);
 		if (m_SpawnIndex < m_SpawnAmount)
-			GetWorldTimerManager().SetTimer(TH_SpawnTimer, this, &AEnemySpawner::SpawnActor, Timer_SpawnIterator);
+			TimerManager.SetTimer(TH_SpawnTimer, this, &AEnemySpawner::SpawnActor, Timer_SpawnIterator);
 		});
 }
-
 
 
 void AEnemySpawner::DetermineActorsToRespawn(TArray<ASmallEnemy*>& actorsToRespawn)
@@ -118,7 +119,7 @@ void AEnemySpawner::RespawnActors(TArray<ASmallEnemy*>& actorsToRespawn)
 	m_ActorsToDestroy = actorsToRespawn;
 
 	if (actorsToRespawn.Num() == 0) {
-		GetWorldTimerManager().SetTimer(FTHCanBeDamaged, [this]() { bAICanBeDamaged = true; }, CanBeAttackedTimer, false);
+		TimerManager.SetTimer(FTHCanBeDamaged, [this]() { bAICanBeDamaged = true; }, CanBeAttackedTimer, false);
 		return;
 	}
 	RespawnActor();
@@ -132,11 +133,11 @@ void AEnemySpawner::RespawnActor()
 	SpawnAubergineDog(type);
 	m_SpawnIndex++;
 	if (m_SpawnIndex < m_SpawnAmount) {
-		GetWorldTimerManager().SetTimer(TH_SpawnTimer, this, &AEnemySpawner::RespawnActor, Timer_SpawnIterator);
+		TimerManager.SetTimer(TH_SpawnTimer, this, &AEnemySpawner::RespawnActor, Timer_SpawnIterator);
 	}
 
 	if (m_SpawnIndex >= m_SpawnAmount) {
-		GetWorldTimerManager().SetTimer(FTHCanBeDamaged, [this]() { bAICanBeDamaged = true; }, CanBeAttackedTimer, false);
+		TimerManager.SetTimer(FTHCanBeDamaged, [this]() { bAICanBeDamaged = true; }, CanBeAttackedTimer, false);
 
 		for (auto& it : m_ActorsToDestroy) {
 			it->Destroy();
@@ -189,6 +190,7 @@ void AEnemySpawner::SpawnAubergineDog(int& index)
 
 ASmallEnemy* AEnemySpawner::SpawnCharacter()
 {
+	if (!GetWorld()) return nullptr;
 	float yaw = RandomFloat(0, 360.f);
 	float pitch = RandomFloat(PitchRange.X, PitchRange.Y);
 	FRotator rot(0.f, yaw, 0.f);

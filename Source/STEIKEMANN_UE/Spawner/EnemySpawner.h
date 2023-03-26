@@ -68,7 +68,7 @@ public: // Variables
 	int TypeIndex{};
 	TSharedPtr<EDogPack> m_AuberginePack;
 	TSharedPtr<SpawnPointData> SpawnData;
-
+	FTimerManager TimerManager;
 
 	/* Time between getting attacked */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
