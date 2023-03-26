@@ -582,6 +582,8 @@ public:
 	
 private: // Within Collision bools
 	bool bPB_Groundpound_PredeterminedPogoHit{};
+	bool bPB_Groundpound_LaunchNextFrame{};
+	AActor* PB_Groundpound_TargetActor{ nullptr };
 
 	FTimerHandle TH_PB_ExitHandle; // Timer handle holding exit time. For validating buffering of PB_Active inputs
 	FTimerHandle TH_Pogo;

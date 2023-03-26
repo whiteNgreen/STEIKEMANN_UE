@@ -1795,7 +1795,7 @@ void ASteikemannCharacter::PB_Launch_Active()
 
 bool ASteikemannCharacter::PB_Groundpound_IMPL(AActor* OtherActor)
 {
-	if (!PB_ValidTargetDistance(OtherActor->GetActorLocation()))
+	if (!PB_ValidTargetDistance(OtherActor->GetActorLocation()) && !bPB_Groundpound_LaunchNextFrame)
 		return false;
 
 	if (IAttackInterface* IAttack = Cast<IAttackInterface>(OtherActor))
@@ -1823,6 +1823,24 @@ void ASteikemannCharacter::PB_Launch_Groundpound()
 bool ASteikemannCharacter::PB_Groundpound_Predeterminehit()
 {
 	FCollisionQueryParams Params("", false, this);
+
+	// Air Target
+	float capWidth{ 1.5f };
+	FCollisionShape Cap = FCollisionShape::MakeCapsule(GetCapsuleComponent()->GetScaledCapsuleRadius() * capWidth, GetCapsuleComponent()->GetScaledCapsuleHalfHeight() * capWidth);
+	TArray<FHitResult> AirHits;
+	bool air = GetWorld()->SweepMultiByChannel(AirHits, GetActorLocation(), GetActorLocation(), FQuat(1.f, 0.f, 0.f, 0.f), ECC_PogoCollision, Cap, Params);
+	if (air) {
+		for (const auto& Hit : AirHits) {
+			if (IGameplayTagAssetInterface* tag = Cast<IGameplayTagAssetInterface>(Hit.GetActor())) {
+				if (tag->HasMatchingGameplayTag(Tag::Enemy())) {
+					bPB_Groundpound_LaunchNextFrame = true;
+					PB_Groundpound_TargetActor = Hit.GetActor();
+					return true;
+				}
+			}
+		}
+	}
+
 	// Ground
 	FHitResult GroundHit;
 	bool ground = GetWorld()->LineTraceSingleByChannel(GroundHit, GetActorLocation() + FVector(0,0, 150.f), GetActorLocation() - FVector(0, 0, 1000.f), ECC_WorldStatic, Params);
@@ -1894,6 +1912,8 @@ void ASteikemannCharacter::PB_Pogo()
 void ASteikemannCharacter::PB_EnterPogoState(float time)
 {
 	m_EAirState = EAirState::AIR_Pogo;
+	bPB_Groundpound_LaunchNextFrame = false;
+	bPB_Groundpound_PredeterminedPogoHit = false;
 	TimerManager.SetTimer(TH_Pogo, [this](){ m_EAirState = EAirState::AIR_Freefall;  }, time, false);
 }
 
@@ -2885,7 +2905,12 @@ void ASteikemannCharacter::Do_GroundPound()
 
 void ASteikemannCharacter::Launch_GroundPound()
 {
-	GetMoveComponent()->GP_Launch(GP_VisualLaunchStrength);
+	float strength = GP_VisualLaunchStrength;
+	if (bPB_Groundpound_LaunchNextFrame && PB_Groundpound_TargetActor) {
+		PB_Groundpound_IMPL(PB_Groundpound_TargetActor);
+		strength = 0.f;
+	}
+	GetMoveComponent()->GP_Launch(strength);
 }
 
 void ASteikemannCharacter::Start_GroundPound()
