@@ -48,8 +48,16 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawn")
 		TSubclassOf<ACollectible> SpawnedCollectible;
 
+public:
+	UFUNCTION(BlueprintCallable)
+		void SpawnCollectibles();
+
+	UFUNCTION(BlueprintCallable)
+		void InitRandomSeed();
+	UFUNCTION(BlueprintCallable)
+		FVector GetRandomBoxLocation(UBoxComponent* box);
+
 private:
-	void SpawnCollectibles();
 	void SplineSpawnCollectibles();
 	void BoxSpawnCollectibles();
 

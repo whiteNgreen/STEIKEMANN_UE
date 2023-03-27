@@ -28,6 +28,27 @@ void ACollectibleSpawner::SpawnCollectibles()
 	}
 }
 
+void ACollectibleSpawner::InitRandomSeed()
+{
+	srand(RandomSeed);
+}
+
+FVector ACollectibleSpawner::GetRandomBoxLocation(UBoxComponent* box)
+{
+	FVector actorloc{ GetActorLocation() };
+	FVector extent{ box->GetScaledBoxExtent() };
+	FVector zero = FVector(actorloc.X - extent.X, actorloc.Y - extent.Y, actorloc.Z);
+	float Z = GetActorLocation().Z;
+
+	FVector vec{ zero }; // zero is at the top left corner of the spawn box
+	vec.X += (rand() % ((int)extent.X * 2) + 0);
+	vec.Y += (rand() % ((int)extent.Y * 2) + 0);
+	FVector tospawn = vec - actorloc;	// find vector from actor zero to spawnpoint
+	tospawn = tospawn.RotateAngleAxis(GetActorRotation().Yaw, FVector::UpVector);	// rotate tospawn vector
+	vec = actorloc + tospawn;	// location is actor location + tospawn
+	return vec;
+}
+
 void ACollectibleSpawner::SplineSpawnCollectibles()
 {
 	USplineComponent* spline = Cast<USplineComponent>(SpawnerComponent);
@@ -105,7 +126,7 @@ float ACollectibleSpawner::TraceZLocation(FVector& loc, bool& traceSuccess, int 
 void ACollectibleSpawner::BeginPlay()
 {
 	Super::BeginPlay();
-	SpawnCollectibles();
+	//SpawnCollectibles();
 }
 
 // Called every frame

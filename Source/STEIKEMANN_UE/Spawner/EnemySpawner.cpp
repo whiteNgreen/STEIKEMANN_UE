@@ -47,8 +47,10 @@ void AEnemySpawner::BeginPlay()
 		SpawnData->IdleLocation = IdlePoint->GetComponentLocation();
 	}
 
-	if (GetWorld())
-		BeginActorSpawn(&AEnemySpawner::SpawnActor); 
+	Async(EAsyncExecution::TaskGraphMainThread, [this]() {
+		if (GetWorld())
+		BeginActorSpawn(&AEnemySpawner::SpawnActor);
+		});
 }
 
 // Called every frame
@@ -89,6 +91,7 @@ void AEnemySpawner::CheckSpawningActorClass()
 
 void AEnemySpawner::SpawnActor()
 {
+	if (!GetWorld()) return;
 	static TFuture<void> asyncSpawn;
 	if (TypeIndex >= 3) TypeIndex = 0;
 	m_SpawnIndex++;

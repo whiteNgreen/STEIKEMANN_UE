@@ -19,7 +19,7 @@ public:
 	ABaseStaticActor();
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Root")
-		USceneComponent* Root { nullptr };
+		USceneComponent* Root{ nullptr };
 
 	UPROPERTY(BlueprintReadWrite, Category = "GameplayTags")
 		FGameplayTagContainer GTagContainer;
