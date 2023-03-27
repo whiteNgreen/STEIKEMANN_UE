@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "Base/BaseStaticActor.h"
 #include "../Interfaces/AttackInterface.h"
+#include "CorruptionTendril.h"
 
 
 #include "CorruptionCore.generated.h"
@@ -38,6 +39,10 @@ public:
 
 	void ReceiveDamage(int damage);
 	void Death();
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		TArray<ACorruptionTendril*> ConnectedTendrils;
+	void DestroyConnectedTendrils();
 
 	UPROPERTY(EditAnywhere)
 		TSubclassOf<AActor> SpawnedCollectible;

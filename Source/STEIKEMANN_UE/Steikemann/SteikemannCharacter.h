@@ -449,6 +449,10 @@ public:
 	FPostLockedMovement PostLockedMovementDelegate;
 	void LockMovementForPeriod(float time, TFunction<void()> lambdaCall = nullptr);
 
+	class UTimelineComponent* TLComp_AirFriction;
+	UPROPERTY(EditAnywhere)
+		UCurveFloat* Curve_AirFrictionMultiplier{ nullptr };
+
 	bool bActivateJump{};
 	UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
 		bool bJumping{};
@@ -578,6 +582,8 @@ public:
 	
 private: // Within Collision bools
 	bool bPB_Groundpound_PredeterminedPogoHit{};
+	bool bPB_Groundpound_LaunchNextFrame{};
+	AActor* PB_Groundpound_TargetActor{ nullptr };
 
 	FTimerHandle TH_PB_ExitHandle; // Timer handle holding exit time. For validating buffering of PB_Active inputs
 	FTimerHandle TH_Pogo;
@@ -616,6 +622,7 @@ public: // Animation
 #pragma region Bounce
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		class UBouncyShroomActorComponent* BounceComp;
+	bool ShroomBounce(FVector direction, float strength) override;
 #pragma endregion					//Bounce
 #pragma region Right Facebutton
 	bool bPressedSlide{};	
@@ -636,14 +643,12 @@ public:
 	UPROPERTY(BlueprintReadWrite, Category = "Collectibles")
 		int JournalEntries{ 0 };
 
-	/* Array of hazard actors whose collision the player is still within */
-	TArray<AActor*> CloseHazards;
-
 	UFUNCTION()
 		void OnCapsuleComponentBeginOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 	UFUNCTION()
 		void OnCapsuleComponentEndOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
-
+	UFUNCTION()
+		void OnCapsuleComponentHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health & Damage", meta = (UIMin = "1", UIMax = "10"))
 		int Health{ 3 };
@@ -661,6 +666,7 @@ public:
 	void GainHealth(int amount);
 	void PTakeDamage(int damage, AActor* otheractor, int i = 0);
 	void PTakeDamage(int damage, const FVector& Direction, int i = 0);
+	bool PTakeRepeatDamage();
 
 	UFUNCTION(BlueprintImplementableEvent)
 		void HealthHairColor(int hp);
@@ -1022,7 +1028,7 @@ public:
 	void TlCurve_AttackMovement_IMPL(float value);
 
 	/// TIMELINE *** SMACK ATTACK ***
-	class UTimelineComponent* TlComp_Attack_SMACK;
+	class UTimelineComponent* TLComp_Attack_SMACK;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
 		UCurveFloat* Curve_AttackTurnStrength;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|Movement")
