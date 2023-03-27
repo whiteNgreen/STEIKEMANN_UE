@@ -66,6 +66,20 @@ void ASmallEnemy::BeginPlay()
 	FOnTimelineFloatStatic FloatBind;
 	FloatBind.BindUObject(this, &ASmallEnemy::Tl_Smacked);
 	TlComp_Smacked->AddInterpFloat(Curve_NSTrail, FloatBind);
+
+	// Special Start Conditions
+	if (bStartStuckToWall) 
+	{
+		m_State = EEnemyState::STATE_OnWall;
+		m_WallState = EWall::WALL_Stuck;
+		PlayerPogoDetection->SetSphereRadius(PB_SphereRadius_Stuck);
+
+		// AI
+		Incapacitate(EAIIncapacitatedType::StuckToWall);
+
+		StickToWall();
+		Gravity_Tick(0.f);
+	}
 }
 
 // Called every frame
@@ -112,27 +126,28 @@ void ASmallEnemy::Tick(float DeltaTime)
 			break;
 		}
 
-		// Gravity State
-		auto i = GetCharacterMovement();
-		switch (m_GravityState)
-		{
-		case EGravityState::Default:
-			i->GravityScale = m_GravityScale;
-			break;
-		case EGravityState::LerpToDefault:
-			break;
-		case EGravityState::None:
-			i->GravityScale = 0.f;
-			break;
-		case EGravityState::LerpToNone:
-			break;
-		case EGravityState::ForcedNone:
-			i->GravityScale = 0.f;
-			i->Velocity *= 0.f;
-			break;
-		default:
-			break;
-		}
+		Gravity_Tick(DeltaTime);
+		//// Gravity State
+		//auto i = GetCharacterMovement();
+		//switch (m_GravityState)
+		//{
+		//case EGravityState::Default:
+		//	i->GravityScale = m_GravityScale;
+		//	break;
+		//case EGravityState::LerpToDefault:
+		//	break;
+		//case EGravityState::None:
+		//	i->GravityScale = 0.f;
+		//	break;
+		//case EGravityState::LerpToNone:
+		//	break;
+		//case EGravityState::ForcedNone:
+		//	i->GravityScale = 0.f;
+		//	i->Velocity *= 0.f;
+		//	break;
+		//default:
+		//	break;
+		//}
 
 		EndTick(DeltaTime);
 	}
@@ -268,6 +283,31 @@ void ASmallEnemy::Landed(const FHitResult& Hit)
 	m_State = EEnemyState::STATE_OnGround;
 	m_Anim->bIsLaunchedInAir = false;
 	NS_Stop_Trail();
+}
+
+void ASmallEnemy::Gravity_Tick(float DeltaTime)
+{
+	// Gravity State
+	auto i = GetCharacterMovement();
+	switch (m_GravityState)
+	{
+	case EGravityState::Default:
+		i->GravityScale = m_GravityScale;
+		break;
+	case EGravityState::LerpToDefault:
+		break;
+	case EGravityState::None:
+		i->GravityScale = 0.f;
+		break;
+	case EGravityState::LerpToNone:
+		break;
+	case EGravityState::ForcedNone:
+		i->GravityScale = 0.f;
+		i->Velocity *= 0.f;
+		break;
+	default:
+		break;
+	}
 }
 
 void ASmallEnemy::EnableGravity()

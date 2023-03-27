@@ -65,8 +65,8 @@ void ACorruptionCore::Death()
 	Mesh->SetHiddenInGame(true, true);
 
 	/* Spawn collectible */
-	FVector Loc = GetActorLocation() + FVector(0,0,200);
-	GetWorld()->SpawnActor<AActor>(SpawnedCollectible, Loc, FRotator());
+	//FVector Loc = GetActorLocation() + FVector(0,0,200);
+	//GetWorld()->SpawnActor<AActor>(SpawnedCollectible, Loc, FRotator());
 
 	//
 	DestroyConnectedTendrils();

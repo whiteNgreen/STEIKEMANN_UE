@@ -101,6 +101,9 @@ public:	// Components
 	UNiagaraComponent* NComp_AirTrailing;
 
 	AEnemyAIController* m_AI{ nullptr };
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SpecialStart")
+		bool bStartStuckToWall{};
 #pragma endregion //Base
 
 #pragma region Animation
@@ -173,6 +176,7 @@ public:	// STATES
 
 	virtual void Landed(const FHitResult& Hit) override;
 
+	void Gravity_Tick(float DeltaTime);
 	void EnableGravity();
 	void DisableGravity();
 
