@@ -224,28 +224,28 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		if (m_GamepadCameraInput.Length() > 1.f)
 			m_GamepadCameraInput.Normalize();
 	}
-	switch (m_EState)
-	{
-	case EState::STATE_OnGround:
-		PRINT("STATE_OnGround");
-		break;
-	case EState::STATE_InAir:
-		PRINT("STATE_InAir");
-		break;
-	case EState::STATE_OnWall:
-		PRINT("STATE_OnWall");
-		break;
-	case EState::STATE_Attacking:
-		PRINT("STATE_Attacking");
-		break;
-	case EState::STATE_Grappling:
-		PRINT("STATE_Grappling");
-		break;
-	default:
-		break;
-	}
-	PRINTPAR("Attack State :: %i", m_EAttackState);
-	PRINTPAR("Grapple State :: %i", m_EGrappleState);
+	//switch (m_EState)
+	//{
+	//case EState::STATE_OnGround:
+	//	PRINT("STATE_OnGround");
+	//	break;
+	//case EState::STATE_InAir:
+	//	PRINT("STATE_InAir");
+	//	break;
+	//case EState::STATE_OnWall:
+	//	PRINT("STATE_OnWall");
+	//	break;
+	//case EState::STATE_Attacking:
+	//	PRINT("STATE_Attacking");
+	//	break;
+	//case EState::STATE_Grappling:
+	//	PRINT("STATE_Grappling");
+	//	break;
+	//default:
+	//	break;
+	//}
+	//PRINTPAR("Attack State :: %i", m_EAttackState);
+	//PRINTPAR("Grapple State :: %i", m_EGrappleState);
 	//PRINTPAR("Grapple Type  :: %i", m_EGrappleType);
 	//PRINTPAR("Smack Attack State :: %i", m_ESmackAttackState);
 	//PRINTPAR("Air State :: %i", m_EAirState);
@@ -1460,6 +1460,24 @@ void ASteikemannCharacter::TurnAtRate(float rate)
 {
 	m_GamepadCameraInputRAW.Y = rate;
 	if (m_PromptState == EPromptState::InPrompt) return;
+	switch (m_EState)	// No camera turns for controller during certain actions
+	{
+	case EState::STATE_None:
+		break;
+	case EState::STATE_OnGround:
+		break;
+	case EState::STATE_InAir:
+		break;
+	case EState::STATE_OnWall:
+		break;
+	case EState::STATE_Attacking:
+		break;
+	case EState::STATE_Grappling:
+		if (m_EGrappleType == EGrappleType::Dynamic_Ground) return;
+		break;
+	default:
+		break;
+	}
 	AddControllerYawInput(rate * TurnRate * GetWorld()->GetDeltaSeconds());
 }
 
@@ -1467,6 +1485,24 @@ void ASteikemannCharacter::LookUpAtRate(float rate)
 {
 	m_GamepadCameraInputRAW.X = rate;
 	if (m_PromptState == EPromptState::InPrompt) return;
+	switch (m_EState)	// No camera turns for controller during certain actions
+	{
+	case EState::STATE_None:
+		break;
+	case EState::STATE_OnGround:
+		break;
+	case EState::STATE_InAir:
+		break;
+	case EState::STATE_OnWall:
+		break;
+	case EState::STATE_Attacking:
+		break;
+	case EState::STATE_Grappling:
+		if (m_EGrappleType == EGrappleType::Dynamic_Ground) return;
+		break;
+	default:
+		break;
+	}
 	AddControllerPitchInput(rate * TurnRate * GetWorld()->GetDeltaSeconds());
 }
 
