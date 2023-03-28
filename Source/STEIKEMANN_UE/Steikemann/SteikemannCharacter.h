@@ -528,13 +528,6 @@ public:
 		void CancelAnimation();
 	void CancelAnimationMontageIfMoving(TFunction<void()> lambdaCall);
 #pragma endregion			//Basic_Movement
-#pragma region Roll
-	UFUNCTION(BlueprintImplementableEvent)
-		void Roll_IMPL();
-	void Roll(FVector direction);
-	UFUNCTION(BlueprintCallable)
-		void Roll_End();
-#pragma endregion					//Roll
 #pragma region Pogo
 private:
 	EPogoType m_EPogoType = EPogoType::POGO_None;
@@ -625,7 +618,7 @@ public: // Animation
 	bool ShroomBounce(FVector direction, float strength) override;
 #pragma endregion					//Bounce
 #pragma region Right Facebutton
-	bool bPressedSlide{};	
+	bool bPressedCancelButton{};	
 	void Click_RightFacebutton();
 	void UnClick_RightFacebutton();
 #pragma endregion		//Right Facebutton
@@ -826,6 +819,7 @@ public:	// Launch Functions
 	void GH_Stop(EState newstate);
 	void GH_Stop();
 
+	void PullDynamicTargetOffWall();
 	
 public:	// Animation functions
 	UFUNCTION(BlueprintImplementableEvent)

@@ -446,9 +446,9 @@ void ASteikemannCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	/* -- HUD -- */
 	PlayerInputComponent->BindAction("ShowHUD", IE_Pressed, this, &ASteikemannCharacter::ShowHUD_Timed_Pure);
 
-	/* -- SLIDE -- */
-	PlayerInputComponent->BindAction("Slide", IE_Pressed, this, &ASteikemannCharacter::Click_RightFacebutton);
-	PlayerInputComponent->BindAction("Slide", IE_Released, this, &ASteikemannCharacter::UnClick_RightFacebutton);
+	/* -- CancelButton -- */
+	PlayerInputComponent->BindAction("CancelButton", IE_Pressed, this, &ASteikemannCharacter::Click_RightFacebutton);
+	PlayerInputComponent->BindAction("CancelButton", IE_Released, this, &ASteikemannCharacter::UnClick_RightFacebutton);
 	
 
 	/* -- GRAPPLEHOOK -- */
@@ -658,7 +658,15 @@ void ASteikemannCharacter::RightTriggerClick()
 	switch (m_EState)
 	{
 	case EState::STATE_None:		break;
-	case EState::STATE_OnGround:	break;
+	case EState::STATE_OnGround:	
+		if (bPressedCancelButton)
+		{
+			if (!GrappledActor.IsValid()) return;
+			Active_GrappledActor = GrappledActor;
+			PullDynamicTargetOffWall();
+			return;
+		}
+		break;
 	case EState::STATE_InAir:		break;
 	case EState::STATE_OnWall:		
 		CancelOnWall();
@@ -893,6 +901,25 @@ void ASteikemannCharacter::GH_Stop(EState newstate)
 void ASteikemannCharacter::GH_Stop()
 {
 	GH_Stop(EState::STATE_None);
+}
+
+void ASteikemannCharacter::PullDynamicTargetOffWall()
+{
+	if (!Active_GrappledActor.IsValid()) return;
+	IGrappleTargetInterface* IGrapple = Cast<IGrappleTargetInterface>(Active_GrappledActor);
+	if (!IGrapple) return;
+	IGrapple->PullFree_Pure(GetActorLocation());
+
+	TimerManager.ClearTimer(TH_Grapplehook_Start);
+	TimerManager.ClearTimer(TH_Grapplehook_Pre_Launch);
+	TimerManager.ClearTimer(TH_Grapplehook_End_Launch);
+
+	GetMoveComponent()->m_GravityMode = EGravityMode::Default;
+	GH_Stop();
+
+	m_EMovementInputState = EMovementInput::Locked;
+	FTimerHandle h;
+	TimerManager.SetTimer(h, [this]() { m_EMovementInputState = EMovementInput::Open; }, GH_PostPullingTargetFreeTime, false);
 }
 
 FVector ASteikemannCharacter::GH_GetTargetLocation() const
@@ -1455,7 +1482,6 @@ void ASteikemannCharacter::LockMovementForPeriod(float time, TFunction<void()> l
 void ASteikemannCharacter::Landed(const FHitResult& Hit)
 {
 	Super::Landed(Hit);
-	Roll_End();
 	if (bIsDead)
 	{
 		DeathDelegate_Land.Execute();
@@ -1678,18 +1704,6 @@ void ASteikemannCharacter::CancelAnimationMontageIfMoving(TFunction<void()> lamb
 		StopAnimMontage();
 	if (lambdaCall)
 		lambdaCall;
-}
-
-void ASteikemannCharacter::Roll(FVector direction)
-{
-	m_EGroundState = EGroundState::GROUND_Roll;
-	RotateActorYawToVector(direction);
-	Roll_IMPL();
-}
-
-void ASteikemannCharacter::Roll_End()
-{
-	m_EGroundState = EGroundState::GROUND_Walk;
 }
 
 bool ASteikemannCharacter::PB_TargetBeneath()
@@ -1937,12 +1951,6 @@ void ASteikemannCharacter::Click_RightFacebutton()
 	case EState::STATE_None:
 		break;
 	case EState::STATE_OnGround:
-		if (m_EGroundState == EGroundState::GROUND_Walk) {
-			FVector dir = m_InputVector;
-			if (m_InputVector.SizeSquared() < 0.5f)
-				dir = GetControlRotation().Vector().GetUnsafeNormal2D();
-			Roll(dir);
-		}
 		break;
 	case EState::STATE_InAir:
 		break;
@@ -1952,42 +1960,22 @@ void ASteikemannCharacter::Click_RightFacebutton()
 		return;
 	case EState::STATE_Grappling:
 	{
-		// Pull dynamic target free from being stuck
 		if (m_EGrappleState == EGrappleState::Pre_Launch && m_EGrappleType == EGrappleType::Static_StuckEnemy_Ground)
-		{
-			if (!Active_GrappledActor.IsValid()) return;
-			IGrappleTargetInterface* IGrapple = Cast<IGrappleTargetInterface>(Active_GrappledActor);
-			if (!IGrapple) return;
-			IGrapple->PullFree_Pure(GetActorLocation());
-
-			TimerManager.ClearTimer(TH_Grapplehook_Start);
-			TimerManager.ClearTimer(TH_Grapplehook_Pre_Launch);
-			TimerManager.ClearTimer(TH_Grapplehook_End_Launch);
-
-			GetMoveComponent()->m_GravityMode = EGravityMode::Default;
-			GH_Stop();
-
-			m_EMovementInputState = EMovementInput::Locked;
-			FTimerHandle h;
-			TimerManager.SetTimer(h, [this]() { m_EMovementInputState = EMovementInput::Open; }, GH_PostPullingTargetFreeTime, false);
-			return;
-		}
+			PullDynamicTargetOffWall();
 		return;
 	}
 	default:
 		break;
 	}
-	return;	// Remomve Slide mechanic
 
-	if (bPressedSlide) { return; }
+	if (bPressedCancelButton) { return; }
 
-	bPressedSlide = true;
-
+	bPressedCancelButton = true;
 }
 
 void ASteikemannCharacter::UnClick_RightFacebutton()
 {
-	bPressedSlide = false;
+	bPressedCancelButton = false;
 }
 
 void ASteikemannCharacter::ReceiveCollectible(ECollectibleType type)
@@ -2828,27 +2816,28 @@ void ASteikemannCharacter::Do_SmackAttack_Pure(IAttackInterface* OtherInterface,
 
 	if (b)
 	{
-		EPostAttackType attackEffect;
+		//EPostAttackType attackEffect;
 		FVector Direction{ OtherActor->GetActorLocation() - GetActorLocation() };
 		Direction = Direction.GetSafeNormal2D();
+		Direction = GetControlRotation().Vector().GetSafeNormal2D();
 		float AdditionalStrength{ 1.f };
 
-		if (Delegate_PostAttackBuffer.IsBound()) 
-		{
-			Delegate_PostAttackBuffer.Execute(attackEffect);
-			if (attackEffect == EPostAttackType::GrappleSmack) 
-			{
-				FVector cam = GetControlRotation().Vector();
-				Direction = cam.GetSafeNormal2D();
-				//float z = FMath::Clamp(SMath::SimpleGaussian(cam.Z * GrappleSmack_HeightMultiplier, 2.f, 1.f, 0.f, -1.f), GrappleSmack_MinHeight, 1.f);
-				float z = FMath::Clamp(SMath::SimpleGaussian(((InputVectorRaw.X + cam.Z) / 2.f) * GrappleSmack_HeightMultiplier, GrappleSmack_MaxHeight, 1.f, 0.f, -1.f), GrappleSmack_MinHeight, GrappleSmack_MaxHeight);
-				Direction *= 1.f - z;
-				Direction.Z = z;
-				Direction.Normalize();
-				AdditionalStrength = SMath::SimpleGaussian(FMath::Min(z, z - GrappleSmack_MinHeight), 3.f, 1.7f, 0.f, -0.7f);
-			}
-		}
-		else
+		//if (Delegate_PostAttackBuffer.IsBound()) 
+		//{
+		//	Delegate_PostAttackBuffer.Execute(attackEffect);
+		//	if (attackEffect == EPostAttackType::GrappleSmack) 
+		//	{
+		//		FVector cam = GetControlRotation().Vector();
+		//		Direction = cam.GetSafeNormal2D();
+		//		//float z = FMath::Clamp(SMath::SimpleGaussian(cam.Z * GrappleSmack_HeightMultiplier, 2.f, 1.f, 0.f, -1.f), GrappleSmack_MinHeight, 1.f);
+		//		float z = FMath::Clamp(SMath::SimpleGaussian(((InputVectorRaw.X + cam.Z) / 2.f) * GrappleSmack_HeightMultiplier, GrappleSmack_MaxHeight, 1.f, 0.f, -1.f), GrappleSmack_MinHeight, GrappleSmack_MaxHeight);
+		//		Direction *= 1.f - z;
+		//		Direction.Z = z;
+		//		Direction.Normalize();
+		//		AdditionalStrength = SMath::SimpleGaussian(FMath::Min(z, z - GrappleSmack_MinHeight), 3.f, 1.7f, 0.f, -0.7f);
+		//	}
+		//}
+		//else
 		{
 			float angle{};
 			if (m_InputVector.IsNearlyZero())
@@ -2857,8 +2846,10 @@ void ASteikemannCharacter::Do_SmackAttack_Pure(IAttackInterface* OtherInterface,
 				Direction = (Direction + (m_InputVector * SmackDirection_InputMultiplier) + (GetControlRotation().Vector().GetSafeNormal2D() * SmackDirection_CameraMultiplier)).GetSafeNormal2D();
 			}
 			angle = FMath::DegreesToRadians(SmackUpwardAngle);
-			angle = angle + (angle * (InputVectorRaw.X * SmackAttack_InputAngleMultiplier));
+			angle = angle + (angle * (((InputVectorRaw.X + InputVectorRaw.Length()) / 2.f) * SmackAttack_InputAngleMultiplier));
 			Direction = (cosf(angle) * Direction) + (sinf(angle) * FVector::UpVector);
+
+			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + Direction, FColor::Red, true);
 		}
 		OtherInterface->Receive_SmackAttack_Pure(Direction, SmackAttackStrength * AdditionalStrength + (SmackAttackStrength * (InputVectorRaw.X * SmackAttack_InputStrengthMultiplier)));
 	}

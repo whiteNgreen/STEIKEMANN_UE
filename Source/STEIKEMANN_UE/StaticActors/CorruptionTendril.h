@@ -23,5 +23,5 @@ public:
 		void DestroyTendril_End();
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		class ACorruptionWall* ConnectedWall{ nullptr };
+		TArray<class ACorruptionWall*> ConnectedWalls;
 };
