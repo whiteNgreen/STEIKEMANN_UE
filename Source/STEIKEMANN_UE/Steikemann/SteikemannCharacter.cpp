@@ -835,7 +835,7 @@ void ASteikemannCharacter::GH_PreLaunch()
 {
 	m_EState = EState::STATE_Grappling;
 	m_EGrappleState = EGrappleState::Pre_Launch;
-	GetMoveComponent()->m_GravityMode = EGravityMode::ForcedNone;
+	GetMoveComponent()->m_GravityMode = EGravityMode::ForcedNone;	// Fredrik hadde en crash her når han lekte med infinite grapple på static target
 	GetMoveComponent()->DeactivateJumpMechanics();
 	RotateActorYawToVector(Active_GrappledActor->GetActorLocation() - GetActorLocation());
 }
