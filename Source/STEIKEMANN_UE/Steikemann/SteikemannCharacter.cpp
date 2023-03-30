@@ -224,35 +224,47 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		if (m_GamepadCameraInput.Length() > 1.f)
 			m_GamepadCameraInput.Normalize();
 	}
-	//switch (m_EState)
-	//{
-	//case EState::STATE_OnGround:
-	//	PRINT("STATE_OnGround");
-	//	break;
-	//case EState::STATE_InAir:
-	//	PRINT("STATE_InAir");
-	//	break;
-	//case EState::STATE_OnWall:
-	//	PRINT("STATE_OnWall");
-	//	break;
-	//case EState::STATE_Attacking:
-	//	PRINT("STATE_Attacking");
-	//	break;
-	//case EState::STATE_Grappling:
-	//	PRINT("STATE_Grappling");
-	//	break;
-	//default:
-	//	break;
-	//}
+
+	switch (m_EState)
+	{
+	case EState::STATE_OnGround:
+		PRINT("STATE_OnGround");
+		break;
+	case EState::STATE_InAir:
+		PRINT("STATE_InAir");
+		break;
+	case EState::STATE_OnWall:
+		PRINT("STATE_OnWall");
+		break;
+	case EState::STATE_Attacking:
+		PRINT("STATE_Attacking");
+		break;
+	case EState::STATE_Grappling:
+		PRINT("STATE_Grappling");
+		break;
+	default:
+		break;
+	}
 	//PRINTPAR("Attack State :: %i", m_EAttackState);
-	//PRINTPAR("Grapple State :: %i", m_EGrappleState);
-	//PRINTPAR("Grapple Type  :: %i", m_EGrappleType);
+	PRINTPAR("Grapple State :: %i", m_EGrappleState);
+	PRINTPAR("Grapple Type  :: %i", m_EGrappleType);
 	//PRINTPAR("Smack Attack State :: %i", m_ESmackAttackState);
 	//PRINTPAR("Air State :: %i", m_EAirState);
-	//PRINTPAR("Ground State :: %i", m_EGroundState);
+	PRINTPAR("Ground State :: %i", m_EGroundState);
 	//PRINTPAR("Pogo Type :: %i", m_EPogoType);
 	//PRINTPAR("Jump Count = %i", JumpCurrentCount);
 	//PRINTPAR("MovementInputState = %i", m_EMovementInputState);
+	switch (m_EInputType)
+	{
+	case EInputType::MouseNKeyboard:
+		PRINT("Input Mode: MouseNKeyboard");
+		break;
+	case EInputType::Gamepad:
+		PRINT("Input Mode: Gamepad");
+		break;
+	default:
+		break;
+	}
 
 	/*		Resets Rotation Pitch and Roll		*/
 	if (IsFalling() || GetMoveComponent()->IsWalking()) {
@@ -404,8 +416,10 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	
 	/* --------------- CAMERA -------------------- */
 	if (m_EState == EState::STATE_Grappling) {
-		if (m_EGrappleType == EGrappleType::Dynamic_Ground)
+		if (m_EGrappleType == EGrappleType::Dynamic_Ground) {
+			GH_ShowGrappleSmackCurveIndicator(DeltaTime, 0.f);
 			GrappleDynamicGuideCamera(GrappledActor.Get(), DeltaTime);
+		}
 		else if (Is_GH_StaticTarget() && m_EGrappleState == EGrappleState::Pre_Launch)
 			GuideCamera_StaticGrapple(DeltaTime);
 	}
@@ -426,7 +440,6 @@ void ASteikemannCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 
 	check(PlayerInputComponent);
 	
-
 	/* Basic Movement */
 		/* Movement control */
 			/* Gamepad and Keyboard */
@@ -744,7 +757,7 @@ void ASteikemannCharacter::GH_SetGrappleType(IGameplayTagAssetInterface* ITag, I
 		return;
 	}
 
-		// Player on Ground
+		// Player on Ground -- Grapplehooking enemies to the player
 	if (m_EState == EState::STATE_OnGround)
 	{
 		GH_PreLaunch();
@@ -757,6 +770,7 @@ void ASteikemannCharacter::GH_SetGrappleType(IGameplayTagAssetInterface* ITag, I
 			TFunc_GrappleLaunchFunction.Reset();
 			return;
 		};
+
 
 		TimerManager.SetTimer(TH_GrappleHold, [this]() { TFunc_GrappleLaunchFunction(); }, GH_GrapplingEnemyHold, false);
 		return;
@@ -895,12 +909,31 @@ void ASteikemannCharacter::GH_Stop(EState newstate)
 	m_EState = newstate;
 	m_EGrappleState = EGrappleState::None;
 	m_EGrappleType = EGrappleType::None;
+
 	SetDefaultState();
 }
 
 void ASteikemannCharacter::GH_Stop()
 {
 	GH_Stop(EState::STATE_None);
+}
+
+void ASteikemannCharacter::GH_Cancel()
+{
+	TFunc_GrappleLaunchFunction.Reset();
+	IGrappleTargetInterface* iGrapple = Cast<IGrappleTargetInterface>(Active_GrappledActor);
+	if (iGrapple)
+		iGrapple->UnHookedPure();
+
+	GH_Stop();
+	TimerManager.ClearTimer(TH_GrappleHold);
+	TimerManager.ClearTimer(TH_Grapplehook_Start);
+	TimerManager.ClearTimer(TH_Grapplehook_Pre_Launch);
+	TimerManager.ClearTimer(TH_Grapplehook_End_Launch);
+	GetMoveComponent()->m_GravityMode = EGravityMode::Default;
+
+	if (GetMoveComponent()->IsWalking())
+		JumpCurrentCount = 0;
 }
 
 void ASteikemannCharacter::PullDynamicTargetOffWall()
@@ -936,6 +969,60 @@ FVector ASteikemannCharacter::GH_GetTargetLocation() const
 void ASteikemannCharacter::StartAnimLerp_ControlRig()
 {
 	bGH_LerpControlRig = true;
+}
+
+void ASteikemannCharacter::GH_ShowGrappleSmackCurveIndicator(float DeltaTime, float DrawTime)
+{
+	if (!Active_GrappledActor.IsValid()) return;
+
+	/**
+	* Showing the initial Impulse
+	*/ 
+	FVector Direction{ Active_GrappledActor->GetActorLocation() - GetActorLocation() };
+	Direction = Direction.GetSafeNormal2D();
+	Direction = GetControlRotation().Vector().GetSafeNormal2D();
+	float AdditionalStrength{ 1.f };
+	float angle{};
+	if (m_InputVector.IsNearlyZero())
+		Direction = (Direction + (GetActorForwardVector() * SmackDirection_InputMultiplier)).GetSafeNormal2D();
+	else {
+		Direction = (Direction + (m_InputVector * SmackDirection_InputMultiplier) + (GetControlRotation().Vector().GetSafeNormal2D() * SmackDirection_CameraMultiplier)).GetSafeNormal2D();
+	}
+	angle = FMath::DegreesToRadians(SmackUpwardAngle);
+	angle = angle + (angle * (((InputVectorRaw.X + InputVectorRaw.Length()) / 2.f) * SmackAttack_InputAngleMultiplier));
+	Direction = (cosf(angle) * Direction) + (sinf(angle) * FVector::UpVector);
+	float strength = (SmackAttackStrength * AdditionalStrength + (SmackAttackStrength * (InputVectorRaw.X * SmackAttack_InputStrengthMultiplier)));
+	//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + Direction * strength * DeltaTime, FColor::Red, false, DrawTime, -1, 6.f);
+
+
+	/**
+	* Showing the curve the grappled enemy will fall along
+	*/
+	FVector Velocity = Direction * strength;
+	FVector Gravity = FVector(0.f, 0.f, GetWorld()->GetGravityZ() * 4.f);
+	float time = DeltaTime;
+	FVector start = GetActorLocation();
+	FVector end = start + Velocity * DeltaTime;
+	for (; time < 4.f; time += DeltaTime)
+	{
+		if (GH_ShowGrappleSmackImpactIndicator(start, end, DrawTime)) break;
+		DrawDebugLine(GetWorld(), start, end, FColor::Blue, false, DrawTime, -1, 6.f);
+		Velocity += Gravity * DeltaTime;
+		start = end;
+		end += Velocity * DeltaTime;
+	}
+}
+
+bool ASteikemannCharacter::GH_ShowGrappleSmackImpactIndicator(FVector start, FVector end, float DrawTime)
+{
+	FHitResult Hit;
+	FCollisionQueryParams Params("", false, this);
+	if (GetWorld()->LineTraceSingleByChannel(Hit, start, end, ECC_Visibility, Params))
+	{
+		DrawDebugPoint(GetWorld(), Hit.ImpactPoint, 20.f, FColor::Orange, false, DrawTime);
+		return true;
+	}
+	return false;
 }
 
 void ASteikemannCharacter::Anim_Grapple_End_Pure()
@@ -1665,6 +1752,13 @@ void ASteikemannCharacter::Jump()
 			{
 				Jump_DoubleJump();
 			}
+			if (m_EGrappleState == EGrappleState::Pre_Launch)
+			{
+				if (m_EGrappleType == EGrappleType::Dynamic_Ground) {
+					GH_Cancel();
+					Jump_OnGround();
+				}
+			}
 			break;
 		}
 		default:
@@ -1996,8 +2090,13 @@ void ASteikemannCharacter::Click_RightFacebutton()
 		return;
 	case EState::STATE_Grappling:
 	{
-		if (m_EGrappleState == EGrappleState::Pre_Launch && m_EGrappleType == EGrappleType::Static_StuckEnemy_Ground)
-			PullDynamicTargetOffWall();
+		if (m_EGrappleState == EGrappleState::Pre_Launch)
+		{
+			if (m_EGrappleType == EGrappleType::Static_StuckEnemy_Ground)
+				PullDynamicTargetOffWall();
+			if (m_EGrappleType == EGrappleType::Dynamic_Ground)
+				GH_Cancel();
+		}
 		return;
 	}
 	default:

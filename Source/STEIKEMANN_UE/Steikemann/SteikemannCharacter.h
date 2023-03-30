@@ -27,6 +27,14 @@ DECLARE_DELEGATE_OneParam(FPostAttackBuffer, EPostAttackType& PostAttackType);
 //class UNiagaraComponent;
 class USoundBase;
 
+
+UENUM(BlueprintType)
+enum class EInputType : uint8
+{
+	MouseNKeyboard,
+	Gamepad
+};
+
 UENUM()
 enum class EMovementInput : int8
 {
@@ -158,6 +166,11 @@ public:
 	/* Input vector rotated to match the playercontrollers rotation */
 	UPROPERTY(BlueprintReadOnly)
 		FVector m_InputVector;
+
+	UPROPERTY(BlueprintReadWrite)
+		EInputType m_EInputType;
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
+		void ChangedInputType();
 
 	/* Camera input value for gamepad */
 	UPROPERTY(BlueprintReadOnly)
@@ -807,6 +820,7 @@ public:
 		bool Is_GH_PreLaunch() const { return IsGrappling() && m_EGrappleState == EGrappleState::Pre_Launch; }
 	UFUNCTION(BlueprintCallable)
 		bool Is_GH_StaticTarget() const;
+
 public:	// Launch Functions
 	void GH_PreLaunch();
 	void GH_PreLaunch_Static(void(ASteikemannCharacter::* LaunchFunction)(), IGrappleTargetInterface* IGrapple);
@@ -818,6 +832,7 @@ public:	// Launch Functions
 
 	void GH_Stop(EState newstate);
 	void GH_Stop();
+	void GH_Cancel();
 
 	void PullDynamicTargetOffWall();
 	
@@ -836,6 +851,10 @@ public:	// Animation functions
 	FVector GH_GetTargetLocation() const;
 	bool bGH_LerpControlRig{};
 	virtual void StartAnimLerp_ControlRig() override;
+
+public: // Aiming Visual Aid 
+	void GH_ShowGrappleSmackCurveIndicator(float DeltaTime, float DrawTime);
+	bool GH_ShowGrappleSmackImpactIndicator(FVector start, FVector end, float DrawTime);
 
 public:
 	UPROPERTY(BlueprintReadOnly)

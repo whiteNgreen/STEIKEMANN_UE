@@ -516,6 +516,8 @@ void ASmallEnemy::HookedPure(const FVector InstigatorLocation, bool OnGround, bo
 void ASmallEnemy::UnHookedPure()
 {
 	Execute_UnHooked(this);
+	Incapacitate(EAIIncapacitatedType::None);
+	m_GravityState = EGravityState::Default;
 }
 
 void ASmallEnemy::PullFree_Pure(const FVector InstigatorLocation)
