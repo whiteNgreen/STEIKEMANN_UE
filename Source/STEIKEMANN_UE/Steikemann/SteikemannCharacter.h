@@ -166,6 +166,9 @@ public:
 	/* Input vector rotated to match the playercontrollers rotation */
 	UPROPERTY(BlueprintReadOnly)
 		FVector m_InputVector;
+	/* Mouse Movement Input */
+	UPROPERTY(BlueprintReadOnly)
+		FVector m_MouseMovementInput;
 
 	UPROPERTY(BlueprintReadWrite)
 		EInputType m_EInputType;
@@ -392,7 +395,9 @@ public:
 		// decrepid? -- not in use
 	float GuideCameraPitchAdjustmentLookAt(FVector LookatLocation, float MinDistance, float MaxDistance, float PitchAtMin, float PitchAtMax, float ZdiffMultiplier);	
 
-	void GrappleDynamicGuideCamera(AActor* target, float deltatime);
+	void GrappleDynamicGuideCamera_Gamepad(AActor* target, float deltatime);
+	void GrappleDynamicGuideCamera_MNK(AActor* target, float deltatime);
+
 
 	/* Default camera guide towards movement direction 
 		* Runs the entire time but should not be noticable until the player has started moving a certain amount of time */
@@ -455,6 +460,8 @@ public:
 	void MoveRight(float value);
 	virtual void AddControllerYawInput(float Val) override;
 	virtual void AddControllerPitchInput(float Val) override;
+	void Mouse_AddControllerYawInput(float Val);
+	void Mouse_AddControllerPitchInput(float Val);
 	void TurnAtRate(float rate);
 	void LookUpAtRate(float rate);
 
@@ -852,8 +859,12 @@ public:	// Animation functions
 	bool bGH_LerpControlRig{};
 	virtual void StartAnimLerp_ControlRig() override;
 
-public: // Aiming Visual Aid 
-	void GH_ShowGrappleSmackCurveIndicator(float DeltaTime, float DrawTime);
+public: // Aiming and Visual Aid 
+	//FVector 
+	FVector GH_GrappleSmackAiming_MNK(AActor* Target);
+	void GH_ShowGrappleSmackCurveIndicator_Gamepad(float DeltaTime, float DrawTime);
+	void GH_ShowGrappleSmackCurveIndicator_MNK(float DeltaTime, float DrawTime);
+	void GH_ShowGrappleSmackCurve(float DeltaTime, FVector Direction, float SmackStrength, float DrawTime);
 	bool GH_ShowGrappleSmackImpactIndicator(FVector start, FVector end, float DrawTime);
 
 public:
