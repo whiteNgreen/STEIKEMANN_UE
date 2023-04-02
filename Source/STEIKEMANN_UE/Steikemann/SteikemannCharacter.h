@@ -396,7 +396,7 @@ public:
 	float GuideCameraPitchAdjustmentLookAt(FVector LookatLocation, float MinDistance, float MaxDistance, float PitchAtMin, float PitchAtMax, float ZdiffMultiplier);	
 
 	void GrappleDynamicGuideCamera_Gamepad(AActor* target, float deltatime);
-	void GrappleDynamicGuideCamera_MNK(AActor* target, float deltatime);
+	void GrappleDynamicGuideCamera(AActor* target, float deltatime);
 
 
 	/* Default camera guide towards movement direction 
@@ -860,10 +860,25 @@ public:	// Animation functions
 	virtual void StartAnimLerp_ControlRig() override;
 
 public: // Aiming and Visual Aid 
-	//FVector 
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|DynamicGround")
+		FVector2D GH_GrappleSmackAiming_Gamepad_Multiplier = FVector2D(1.f);
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|DynamicGround")
+		FVector2D GH_GrappleSmackAiming_MNK_Multiplier = FVector2D(1.f);
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|DynamicGround")
+		FVector2D GH_GrappleSmackAiming_MNK_CameraWeight = FVector2D(1.f);
+	FVector2D GH_GrappleSmackAimingVector;
+
+	UFUNCTION(BlueprintImplementableEvent)
+		void GH_GrappleDynamic_Start();
+	UFUNCTION(BlueprintImplementableEvent)
+		void GH_GrappleDynamic_End();
+	UFUNCTION(BlueprintImplementableEvent)
+		void GH_AimIndicator_LocationDirection(FVector Location, FVector Normal, FVector Direction, FVector CameraDirection);
+
 	FVector GH_GrappleSmackAiming_MNK(AActor* Target);
 	void GH_ShowGrappleSmackCurveIndicator_Gamepad(float DeltaTime, float DrawTime);
-	void GH_ShowGrappleSmackCurveIndicator_MNK(float DeltaTime, float DrawTime);
+	void GH_ShowGrappleSmackCurveIndicator(float DeltaTime, float DrawTime);
 	void GH_ShowGrappleSmackCurve(float DeltaTime, FVector Direction, float SmackStrength, float DrawTime);
 	bool GH_ShowGrappleSmackImpactIndicator(FVector start, FVector end, float DrawTime);
 

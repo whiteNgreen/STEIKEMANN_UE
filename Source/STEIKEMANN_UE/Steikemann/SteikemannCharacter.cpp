@@ -225,6 +225,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		m_GamepadCameraInput.Normalize();
 
 	PRINTPAR("MouseMovement = %s", *m_MouseMovementInput.ToString());
+	PRINTPAR("GH_GrappleSmackAimingVector_MNK = %s", *GH_GrappleSmackAimingVector.ToString());
 
 	switch (m_EState)
 	{
@@ -420,13 +421,22 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		if (m_EGrappleType == EGrappleType::Dynamic_Ground) {
 			if (m_EInputType == EInputType::MouseNKeyboard)
 			{
-				GH_ShowGrappleSmackCurveIndicator_MNK(DeltaTime, 0.f);
-				GrappleDynamicGuideCamera_MNK(GrappledActor.Get(), DeltaTime);
+				GH_GrappleSmackAimingVector.X = FMath::Clamp(GH_GrappleSmackAimingVector.X + m_MouseMovementInput.X * GH_GrappleSmackAiming_MNK_Multiplier.X, GrappleDynamic_MinPitch, GrappleDynamic_MaxPitch);
+				GH_GrappleSmackAimingVector.Y = FMath::Clamp(GH_GrappleSmackAimingVector.Y + m_MouseMovementInput.Y * GH_GrappleSmackAiming_MNK_Multiplier.Y, -1.f, 1.f);
+
+				GH_ShowGrappleSmackCurveIndicator(DeltaTime, 0.f);
+				GrappleDynamicGuideCamera(GrappledActor.Get(), DeltaTime);
 			}
 			else 
 			{
-				GH_ShowGrappleSmackCurveIndicator_Gamepad(DeltaTime, 0.f);
-				GrappleDynamicGuideCamera_Gamepad(GrappledActor.Get(), DeltaTime);
+				GH_GrappleSmackAimingVector.X = FMath::Clamp(GH_GrappleSmackAimingVector.X + InputVectorRaw.X * GH_GrappleSmackAiming_Gamepad_Multiplier.X, GrappleDynamic_MinPitch, GrappleDynamic_MaxPitch);
+				GH_GrappleSmackAimingVector.Y = FMath::Clamp(GH_GrappleSmackAimingVector.Y + InputVectorRaw.Y * GH_GrappleSmackAiming_Gamepad_Multiplier.Y, -1.f, 1.f);
+
+				GH_ShowGrappleSmackCurveIndicator(DeltaTime, 0.f);
+				GrappleDynamicGuideCamera(GrappledActor.Get(), DeltaTime);
+
+				//GH_ShowGrappleSmackCurveIndicator_Gamepad(DeltaTime, 0.f);
+				//GrappleDynamicGuideCamera_Gamepad(GrappledActor.Get(), DeltaTime);
 			}
 		}
 		else if (Is_GH_StaticTarget() && m_EGrappleState == EGrappleState::Pre_Launch)
@@ -711,6 +721,7 @@ void ASteikemannCharacter::RightTriggerClick()
 		GrappledEnemy = Active_GrappledActor;
 	JumpCurrentCount = 1;	// Reset DoubleJump
 	GC_StaticGrapple_Alpha = GC_StaticGrapple_StartSpeed;
+	GH_GrappleSmackAimingVector = FVector2D(0.f);
 
 	// GRAPPLING STARTS HERE
 	GH_SetGrappleType(ITag, IGrapple);
@@ -773,6 +784,7 @@ void ASteikemannCharacter::GH_SetGrappleType(IGameplayTagAssetInterface* ITag, I
 		IGrapple->HookedPure();
 		IGrapple->HookedPure(GetActorLocation(), true, true);
 		m_EGrappleType = EGrappleType::Dynamic_Ground;
+		GH_GrappleDynamic_Start();
 
 		TFunc_GrappleLaunchFunction = [this, IGrapple]() {
 			GH_Launch_Dynamic(IGrapple, true);
@@ -833,6 +845,7 @@ void ASteikemannCharacter::GH_PreLaunch_Dynamic(IGrappleTargetInterface* IGrappl
 
 void ASteikemannCharacter::GH_Launch_Dynamic(IGrappleTargetInterface* IGrapple, bool OnGround)
 {
+	GH_GrappleDynamic_End();
 	m_EGrappleState = EGrappleState::Post_Launch;
 	GetMoveComponent()->m_GravityMode = EGravityMode::Default;
 	IGrapple->HookedPure(GetActorLocation(), OnGround, false);
@@ -940,7 +953,7 @@ void ASteikemannCharacter::GH_Cancel()
 	TimerManager.ClearTimer(TH_Grapplehook_Pre_Launch);
 	TimerManager.ClearTimer(TH_Grapplehook_End_Launch);
 	GetMoveComponent()->m_GravityMode = EGravityMode::Default;
-
+	GH_GrappleDynamic_End();
 	if (GetMoveComponent()->IsWalking())
 		JumpCurrentCount = 0;
 }
@@ -984,22 +997,17 @@ FVector ASteikemannCharacter::GH_GrappleSmackAiming_MNK(AActor* Target)
 {
 	if (!Target) return FVector();
 	FVector GrappledActorDirection = FVector(Target->GetActorLocation() - GetActorLocation()).GetSafeNormal2D();
-	FVector ControllerDir = GetControlRotation().Vector();
-	FVector ControllerDir2D = ControllerDir.GetSafeNormal2D();
 
-	float YawDot = FVector::DotProduct(GrappledActorDirection, ControllerDir2D);
-	float angle = FMath::Min(FMath::RadiansToDegrees(acos(YawDot)), GrappleDynamic_MaxYaw);
-	float YawDir = FVector::DotProduct(FVector::CrossProduct(FVector::UpVector, GrappledActorDirection), ControllerDir2D);
-	if (YawDir < 0.f) angle *= -1.f;
-	FVector Direction = GrappledActorDirection.RotateAngleAxis(angle, FVector::UpVector);
+	FVector Direction = GrappledActorDirection.RotateAngleAxis(GrappleDynamic_MaxYaw * GH_GrappleSmackAimingVector.Y, FVector::UpVector);
 
-	float Pitch = FMath::Clamp(ControllerDir.Z, GrappleDynamic_MinPitch, GrappleDynamic_MaxPitch);
+	float Pitch = FMath::Clamp(GH_GrappleSmackAimingVector.X, GrappleDynamic_MinPitch, GrappleDynamic_MaxPitch);
 	float PitchAngle = asinf(Pitch);
 	Direction = (cosf(PitchAngle) * Direction) + (sinf(PitchAngle) * FVector::UpVector);
 
 	return Direction;
 }
 
+// Decrepid
 void ASteikemannCharacter::GH_ShowGrappleSmackCurveIndicator_Gamepad(float DeltaTime, float DrawTime)
 {
 	if (!Active_GrappledActor.IsValid()) return;
@@ -1024,12 +1032,12 @@ void ASteikemannCharacter::GH_ShowGrappleSmackCurveIndicator_Gamepad(float Delta
 	GH_ShowGrappleSmackCurve(DeltaTime, Direction, strength, DrawTime);
 }
 
-void ASteikemannCharacter::GH_ShowGrappleSmackCurveIndicator_MNK(float DeltaTime, float DrawTime)
+void ASteikemannCharacter::GH_ShowGrappleSmackCurveIndicator(float DeltaTime, float DrawTime)
 {
 	if (!Active_GrappledActor.IsValid()) return;
 
 	FVector Direction = GH_GrappleSmackAiming_MNK(Active_GrappledActor.Get());
-	DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + Direction * SmackAttackStrength, FColor::Red, false, DrawTime, 0, 4.f);
+	//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + Direction * SmackAttackStrength, FColor::Red, false, DrawTime, 0, 4.f);
 
 	GH_ShowGrappleSmackCurve(DeltaTime, Direction, SmackAttackStrength + (SmackAttackStrength * SmackAttack_InputStrengthMultiplier), DrawTime);
 }
@@ -1047,7 +1055,7 @@ void ASteikemannCharacter::GH_ShowGrappleSmackCurve(float DeltaTime, FVector Dir
 	for (; time < 4.f; time += DeltaTime)
 	{
 		if (GH_ShowGrappleSmackImpactIndicator(start, end, DrawTime)) break;
-		DrawDebugLine(GetWorld(), start, end, FColor::Blue, false, DrawTime, -1, 6.f);
+		//DrawDebugLine(GetWorld(), start, end, FColor::Blue, false, DrawTime, -1, 6.f);
 		Velocity += Gravity * DeltaTime;
 		start = end;
 		end += Velocity * DeltaTime;
@@ -1060,7 +1068,8 @@ bool ASteikemannCharacter::GH_ShowGrappleSmackImpactIndicator(FVector start, FVe
 	FCollisionQueryParams Params("", false, this);
 	if (GetWorld()->LineTraceSingleByChannel(Hit, start, end, ECC_Visibility, Params))
 	{
-		DrawDebugPoint(GetWorld(), Hit.ImpactPoint, 20.f, FColor::Orange, false, DrawTime);
+		//DrawDebugPoint(GetWorld(), Hit.ImpactPoint, 20.f, FColor::Orange, false, DrawTime);
+		GH_AimIndicator_LocationDirection(Hit.ImpactPoint, Hit.ImpactNormal, FVector(start - end).GetSafeNormal(), FVector(Hit.ImpactPoint - Camera->GetComponentLocation()).GetSafeNormal());
 		return true;
 	}
 	return false;
@@ -1374,7 +1383,6 @@ void ASteikemannCharacter::GrappleDynamicGuideCamera_Gamepad(AActor* target, flo
 
 	FVector grappled = target->GetActorLocation();
 	grappled.Z = GetActorLocation().Z;
-	//FVector toGrapple = (grappled - GetActorLocation()) - FVector(0, 0, GuideCameraPitchAdjustmentLookAt(grappled, GrappleDynamic_Pitch_DistanceMIN, GrappleHookRange, GrappleDynamic_Pitch_MIN, GrappleDynamic_Pitch_MAX, GrappleDynamic_ZdiffMultiplier));
 	FVector toGrapple = (grappled - GetActorLocation()).GetSafeNormal();
 	FVector toGrapple2D = toGrapple.GetSafeNormal2D();
 	
@@ -1406,7 +1414,7 @@ void ASteikemannCharacter::GrappleDynamicGuideCamera_Gamepad(AActor* target, flo
 	GuideCameraTowardsVector(defaultDir, alphaX * GrappleDynamic_DefaultAlpha);
 }
 
-void ASteikemannCharacter::GrappleDynamicGuideCamera_MNK(AActor* target, float deltatime)
+void ASteikemannCharacter::GrappleDynamicGuideCamera(AActor* target, float deltatime)
 {
 	if (!target) return;
 
@@ -1416,17 +1424,8 @@ void ASteikemannCharacter::GrappleDynamicGuideCamera_MNK(AActor* target, float d
 	// Default Guide towards grappled target
 	FVector defaultDir = toGrapple2D;
 	defaultDir.Z = GrappleDynamic_DefaultPitch;
-
-	GuideCameraTowardsVector(defaultDir, /*GrappleDynamic_DefaultAlpha*/0.1f);
-
-	//FVector BaseDirection = FVector(target->GetActorLocation() - GetActorLocation()).GetSafeNormal2D();
-	//FVector Direction = GetControlRotation().Vector();
-
-	//float yawdot = FVector::DotProduct(Direction.GetSafeNormal2D(), BaseDirection);
-	//float yawangle = FMath::Clamp(FMath::RadiansToDegrees(acos(yawdot)), -GrappleDynamic_MaxYaw, GrappleDynamic_MaxYaw);
-	//FVector NewDirection = BaseDirection.RotateAngleAxis(yawangle, FVector::UpVector);
-
-	//GuideCameraTowardsVector(NewDirection, .05);
+	FVector AimDirection = GH_GrappleSmackAiming_MNK(target);
+	GuideCameraTowardsVector(defaultDir + (AimDirection.GetSafeNormal2D() * GH_GrappleSmackAiming_MNK_CameraWeight.Y) + (FVector(0,0,AimDirection.Z * GH_GrappleSmackAiming_MNK_CameraWeight.X)), 0.1f);
 }
 
 void ASteikemannCharacter::GuideCamera_Movement(float DeltaTime)
@@ -1609,6 +1608,25 @@ void ASteikemannCharacter::Mouse_AddControllerYawInput(float Val)
 {
 	if (m_EInputType != EInputType::MouseNKeyboard) return;
 	m_MouseMovementInput.Y = Val;
+	switch (m_EState)
+	{
+	case EState::STATE_None:
+		break;
+	case EState::STATE_OnGround:
+		break;
+	case EState::STATE_InAir:
+		break;
+	case EState::STATE_OnWall:
+		break;
+	case EState::STATE_Attacking:
+		break;
+	case EState::STATE_Grappling:
+		if (m_EGrappleType == EGrappleType::Dynamic_Ground)
+			return;
+		break;
+	default:
+		break;
+	}
 	AddControllerYawInput(Val);
 }
 
@@ -1616,6 +1634,25 @@ void ASteikemannCharacter::Mouse_AddControllerPitchInput(float Val)
 {
 	if (m_EInputType != EInputType::MouseNKeyboard) return;
 	m_MouseMovementInput.X = Val;
+	switch (m_EState)
+	{
+	case EState::STATE_None:
+		break;
+	case EState::STATE_OnGround:
+		break;
+	case EState::STATE_InAir:
+		break;
+	case EState::STATE_OnWall:
+		break;
+	case EState::STATE_Attacking:
+		break;
+	case EState::STATE_Grappling:
+		if (m_EGrappleType == EGrappleType::Dynamic_Ground)
+			return;
+		break;
+	default:
+		break;
+	}
 	AddControllerPitchInput(Val);
 }
 
@@ -3031,10 +3068,9 @@ void ASteikemannCharacter::Do_SmackAttack_Pure(IAttackInterface* OtherInterface,
 	if (b)
 	{
 		//EPostAttackType attackEffect;
-		FVector Direction{ OtherActor->GetActorLocation() - GetActorLocation() };
-		Direction = Direction.GetSafeNormal2D();
-		Direction = GetControlRotation().Vector().GetSafeNormal2D();
-
+		//FVector Direction{ OtherActor->GetActorLocation() - GetActorLocation() };
+		//Direction = Direction.GetSafeNormal2D();
+		//Direction = GetControlRotation().Vector().GetSafeNormal2D();
 		//if (Delegate_PostAttackBuffer.IsBound()) 
 		//{
 		//	Delegate_PostAttackBuffer.Execute(attackEffect);
@@ -3051,26 +3087,27 @@ void ASteikemannCharacter::Do_SmackAttack_Pure(IAttackInterface* OtherInterface,
 		//	}
 		//}
 		//else
-		if (m_EInputType == EInputType::MouseNKeyboard){
-			Direction = GH_GrappleSmackAiming_MNK(OtherActor);
+		//if (m_EInputType == EInputType::MouseNKeyboard)
+		{
+			FVector Direction = GH_GrappleSmackAiming_MNK(OtherActor);
 			OtherInterface->Receive_SmackAttack_Pure(Direction, SmackAttackStrength + (SmackAttackStrength * SmackAttack_InputStrengthMultiplier));
 			return;
 		}
-		else
-		{
-			float angle{};
-			if (m_InputVector.IsNearlyZero())
-				Direction = (Direction + (GetActorForwardVector() * SmackDirection_InputMultiplier)).GetSafeNormal2D();
-			else {
-				Direction = (Direction + (m_InputVector * SmackDirection_InputMultiplier) + (GetControlRotation().Vector().GetSafeNormal2D() * SmackDirection_CameraMultiplier)).GetSafeNormal2D();
-			}
-			angle = FMath::DegreesToRadians(SmackUpwardAngle);
-			angle = angle + (angle * (((InputVectorRaw.X + InputVectorRaw.Length()) / 2.f) * SmackAttack_InputAngleMultiplier));
-			Direction = (cosf(angle) * Direction) + (sinf(angle) * FVector::UpVector);
+		//else
+		//{
+		//	float angle{};
+		//	if (m_InputVector.IsNearlyZero())
+		//		Direction = (Direction + (GetActorForwardVector() * SmackDirection_InputMultiplier)).GetSafeNormal2D();
+		//	else {
+		//		Direction = (Direction + (m_InputVector * SmackDirection_InputMultiplier) + (GetControlRotation().Vector().GetSafeNormal2D() * SmackDirection_CameraMultiplier)).GetSafeNormal2D();
+		//	}
+		//	angle = FMath::DegreesToRadians(SmackUpwardAngle);
+		//	angle = angle + (angle * (((InputVectorRaw.X + InputVectorRaw.Length()) / 2.f) * SmackAttack_InputAngleMultiplier));
+		//	Direction = (cosf(angle) * Direction) + (sinf(angle) * FVector::UpVector);
 
-			DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + Direction, FColor::Red, true);
-			OtherInterface->Receive_SmackAttack_Pure(Direction, SmackAttackStrength + (SmackAttackStrength * (InputVectorRaw.X * SmackAttack_InputStrengthMultiplier)));
-		}
+		//	DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + Direction, FColor::Red, true);
+		//	OtherInterface->Receive_SmackAttack_Pure(Direction, SmackAttackStrength + (SmackAttackStrength * (InputVectorRaw.X * SmackAttack_InputStrengthMultiplier)));
+		//}
 	}
 }
 
