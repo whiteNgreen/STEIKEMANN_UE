@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "../AbstractClasses/AbstractCharacter.h"
+#include "SteikePlayerController.h"
+
 #include "../Interfaces/GrappleTargetInterface.h"
 #include "../Interfaces/AttackInterface.h"
 #include "../Interfaces/CameraGuideInterface.h"
@@ -14,6 +16,7 @@
 #include "GameplayTagAssetInterface.h"
 #include "../StaticActors/Collectible.h"
 #include "../WallDetectionComponent.h"
+
 
 #include "SteikemannCharacter.generated.h"
 
@@ -28,12 +31,6 @@ DECLARE_DELEGATE_OneParam(FPostAttackBuffer, EPostAttackType& PostAttackType);
 class USoundBase;
 
 
-UENUM(BlueprintType)
-enum class EInputType : uint8
-{
-	MouseNKeyboard,
-	Gamepad
-};
 
 UENUM()
 enum class EMovementInput : int8
@@ -159,6 +156,10 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	UPROPERTY(BlueprintReadOnly)
+		ASteikePlayerController* SteikePlayerController{ nullptr };
+	UPROPERTY(BlueprintReadWrite)
+		EInputType m_EInputType;
 
 	/* The Raw InputVector */
 	UPROPERTY(BlueprintReadOnly)
@@ -170,10 +171,6 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		FVector m_MouseMovementInput;
 
-	UPROPERTY(BlueprintReadWrite)
-		EInputType m_EInputType;
-	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
-		void ChangedInputType();
 
 	/* Camera input value for gamepad */
 	UPROPERTY(BlueprintReadOnly)
