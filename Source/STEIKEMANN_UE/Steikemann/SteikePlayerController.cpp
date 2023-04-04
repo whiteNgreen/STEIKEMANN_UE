@@ -10,7 +10,7 @@
 
 void ASteikePlayerController::CheckInputType(FKey key)
 {
-	PRINTPARLONG(2.f, "Key: %s", *key.GetDisplayName().ToString());
+	//PRINTPARLONG(2.f, "Key: %s", *key.GetDisplayName().ToString());
 	EInputType NewInputType = EInputType::MouseNKeyboard;
 	if (key.IsGamepadKey()) {
 		NewInputType = EInputType::Gamepad;
@@ -25,14 +25,6 @@ void ASteikePlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
-	//if (IsLocalPlayerController())
-	//{
-	//	TSharedRef<FNavigationConfig> Navigation = MakeShared<FNavigationConfig>();
-	//	Navigation->bKeyNavigation = false;
-	//	Navigation->bTabNavigation = false;
-	//	Navigation->bAnalogNavigation = false;
-	//	FSlateApplication::Get().SetNavigationConfig(Navigation);
-	//}
 }
 
 void ASteikePlayerController::OnPossess(APawn* pawn)

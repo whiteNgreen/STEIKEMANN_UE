@@ -224,49 +224,49 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	if (m_GamepadCameraInput.Length() > 1.f)
 		m_GamepadCameraInput.Normalize();
 
-	PRINTPAR("MouseMovement = %s", *m_MouseMovementInput.ToString());
-	PRINTPAR("GH_GrappleSmackAimingVector_MNK = %s", *GH_GrappleSmackAimingVector.ToString());
+	//PRINTPAR("MouseMovement = %s", *m_MouseMovementInput.ToString());
+	//PRINTPAR("GH_GrappleSmackAimingVector_MNK = %s", *GH_GrappleSmackAimingVector.ToString());
 
-	switch (m_EState)
-	{
-	case EState::STATE_OnGround:
-		PRINT("STATE_OnGround");
-		break;
-	case EState::STATE_InAir:
-		PRINT("STATE_InAir");
-		break;
-	case EState::STATE_OnWall:
-		PRINT("STATE_OnWall");
-		break;
-	case EState::STATE_Attacking:
-		PRINT("STATE_Attacking");
-		break;
-	case EState::STATE_Grappling:
-		PRINT("STATE_Grappling");
-		break;
-	default:
-		break;
-	}
+	//switch (m_EState)
+	//{
+	//case EState::STATE_OnGround:
+	//	PRINT("STATE_OnGround");
+	//	break;
+	//case EState::STATE_InAir:
+	//	PRINT("STATE_InAir");
+	//	break;
+	//case EState::STATE_OnWall:
+	//	PRINT("STATE_OnWall");
+	//	break;
+	//case EState::STATE_Attacking:
+	//	PRINT("STATE_Attacking");
+	//	break;
+	//case EState::STATE_Grappling:
+	//	PRINT("STATE_Grappling");
+	//	break;
+	//default:
+	//	break;
+	//}
 	//PRINTPAR("Attack State :: %i", m_EAttackState);
-	PRINTPAR("Grapple State :: %i", m_EGrappleState);
-	PRINTPAR("Grapple Type  :: %i", m_EGrappleType);
+	//PRINTPAR("Grapple State :: %i", m_EGrappleState);
+	//PRINTPAR("Grapple Type  :: %i", m_EGrappleType);
 	//PRINTPAR("Smack Attack State :: %i", m_ESmackAttackState);
 	//PRINTPAR("Air State :: %i", m_EAirState);
-	PRINTPAR("Ground State :: %i", m_EGroundState);
+	//PRINTPAR("Ground State :: %i", m_EGroundState);
 	//PRINTPAR("Pogo Type :: %i", m_EPogoType);
 	//PRINTPAR("Jump Count = %i", JumpCurrentCount);
 	//PRINTPAR("MovementInputState = %i", m_EMovementInputState);
-	switch (m_EInputType)
-	{
-	case EInputType::MouseNKeyboard:
-		PRINT("Input Mode: MouseNKeyboard");
-		break;
-	case EInputType::Gamepad:
-		PRINT("Input Mode: Gamepad");
-		break;
-	default:
-		break;
-	}
+	//switch (m_EInputType)
+	//{
+	//case EInputType::MouseNKeyboard:
+	//	PRINT("Input Mode: MouseNKeyboard");
+	//	break;
+	//case EInputType::Gamepad:
+	//	PRINT("Input Mode: Gamepad");
+	//	break;
+	//default:
+	//	break;
+	//}
 
 	/*		Resets Rotation Pitch and Roll		*/
 	if (IsFalling() || GetMoveComponent()->IsWalking()) {
@@ -1375,7 +1375,6 @@ float ASteikemannCharacter::GuideCameraPitchAdjustmentLookAt(FVector LookatLocat
 
 void ASteikemannCharacter::GrappleDynamicGuideCamera_Gamepad(AActor* target, float deltatime)
 {
-	PRINT("GrappleDynamicCameraGuide _ GAMEPAD");
 	if (!target) return;
 
 	FVector input = InputVectorRaw;
@@ -1785,7 +1784,6 @@ void ASteikemannCharacter::Jump()
 	{
 		bJumpClick = true;
 		bJumping = true;
-
 		FTimerHandle h;
 		switch (m_EState)	// TODO: Go to Sub-States eg: OnGround->Idle|Running|Slide
 		{
@@ -2184,6 +2182,7 @@ bool ASteikemannCharacter::ShroomBounce(FVector direction, float strength)
 		return false;
 
 	TLComp_AirFriction->PlayFromStart();
+	JumpCurrentCount = 1;
 	return true;
 }
 
@@ -2806,6 +2805,7 @@ void ASteikemannCharacter::Click_Attack()
 	}
 	case EState::STATE_InAir:
 	{
+		AttackSmack_Start_Ground_Pure();
 		break;
 	}
 	case EState::STATE_OnWall:
