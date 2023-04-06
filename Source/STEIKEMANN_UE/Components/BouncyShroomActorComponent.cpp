@@ -9,7 +9,7 @@
 #include "GameFrameWork/CharacterMovementComponent.h"
 #include "../GameplayTags.h"
 #include "../StaticActors/BouncyShroom.h"
-#include "../AbstractClasses/AbstractCharacter.h"
+#include "BaseClasses/AbstractClasses/AbstractCharacter.h"
 
 // Sets default values for this component's properties
 UBouncyShroomActorComponent::UBouncyShroomActorComponent()

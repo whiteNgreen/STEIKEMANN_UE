@@ -10,7 +10,7 @@
 #include "GameFrameWork/CharacterMovementComponent.h"
 #include "../GameplayTags.h"
 #include "../StaticActors/WaterPuddle.h"
-#include "../AbstractClasses/AbstractCharacter.h"
+#include "BaseClasses/AbstractClasses/AbstractCharacter.h"
 
 // Sets default values for this component's properties
 UBaseCharWaterFloatComponent::UBaseCharWaterFloatComponent()

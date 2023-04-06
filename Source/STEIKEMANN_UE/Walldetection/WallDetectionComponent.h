@@ -4,42 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "DebugMacros.h"
-#include "STEIKEMANN_UE.h"
+//#include "DebugMacros.h"
+#include "WallDetection_EnS.h"
+#include "../STEIKEMANN_UE.h"
 #include "WallDetectionComponent.generated.h"
 
-#define ECC_PlayerWallDetection ECC_GameTraceChannel3 
-#define ECC_EnemyWallDetection ECC_GameTraceChannel4
 
-namespace Wall {
-	struct WallData
-	{
-		bool valid;
-		FVector Location;
-		FVector Normal;
-	};
-	
-	struct LedgeData
-	{
-		FVector Location;
-		FVector TraceLocation;
-		FVector ActorLocation;
-	};
-}
-
-
-UENUM()
-enum class EOnWallState : int8
-{
-	WALL_None,
-
-	WALL_Hang,
-	WALL_Drag,
-	
-	WALL_Ledgegrab,
-	
-	WALL_Leave
-};
 
 UCLASS( ClassGroup = (Custom), meta = (BlueprintSpawnableComponent) )
 class STEIKEMANN_UE_API UWallDetectionComponent : public UActorComponent

@@ -12,6 +12,14 @@
 				"Engine",
 				"AIModule"
 			]
+		},
+		{
+			"Name": "BaseClasses",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"Engine"
+			]
 		}
 	],
 	"Plugins": [

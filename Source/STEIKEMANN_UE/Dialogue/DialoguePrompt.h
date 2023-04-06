@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "../Steikemann/SteikemannCharacter.h"
 #include "DialoguePrompt.generated.h"
 
 UENUM(BlueprintType)
@@ -14,6 +13,11 @@ enum class ECameraLerp : uint8
 	First,
 	Second
 };
+
+/* Forward Declarations */
+class UCameraComponent;
+class UBoxComponent;
+class ASteikemannCharacter;
 
 UCLASS()
 class STEIKEMANN_UE_API ADialoguePrompt : public AActor
@@ -25,7 +29,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		USceneComponent* Prompt;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		class UBoxComponent* Volume;
+		UBoxComponent* Volume;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		UCameraComponent* Camera_One;

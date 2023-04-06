@@ -5,7 +5,8 @@
 #include "CoreMinimal.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "../DebugMacros.h"
-#include "../WallDetectionComponent.h"
+//#include "../WallDetectionComponent.h"
+#include "../Walldetection/WallDetection_EnS.h"
 #include "SteikemannCharMovementComponent.generated.h"
 
 /**

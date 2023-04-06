@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "../Enemies/SmallEnemy.h"
+#include "SmallEnemy.h"
 #include "EnemyAIController.h"
 #include "EnemyAnimInstance.h"
 #include "../Spawner/EnemySpawner.h"
@@ -11,8 +11,12 @@
 #include "Components/CapsuleComponent.h"
 #include "Gameframework/CharacterMovementComponent.h"
 #include "../GameplayTags.h"
-#include "../Steikemann/SteikemannCharacter.h"
+//#include "../Steikemann/SteikemannCharacter.h"
 #include "../Components/BouncyShroomActorComponent.h"
+
+#include "GameplayTagAssetInterface.h"
+#include "../WallDetection/WallDetectionComponent.h"
+#include "Components/TimelineComponent.h"
 
 #include "../WorldStatics/SteikeWorldStatics.h"
 
@@ -87,9 +91,6 @@ void ASmallEnemy::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	FVector playerLoc = SteikeWorldStatics::PlayerLocation;
-	
-	//static TIMER tim;
-	//tim.Start();
 
 	if (FVector::DistSquared(GetActorLocation(), playerLoc) < _Statics_PlayerDistaceToActive)
 	{
@@ -127,36 +128,9 @@ void ASmallEnemy::Tick(float DeltaTime)
 		}
 
 		Gravity_Tick(DeltaTime);
-		//// Gravity State
-		//auto i = GetCharacterMovement();
-		//switch (m_GravityState)
-		//{
-		//case EGravityState::Default:
-		//	i->GravityScale = m_GravityScale;
-		//	break;
-		//case EGravityState::LerpToDefault:
-		//	break;
-		//case EGravityState::None:
-		//	i->GravityScale = 0.f;
-		//	break;
-		//case EGravityState::LerpToNone:
-		//	break;
-		//case EGravityState::ForcedNone:
-		//	i->GravityScale = 0.f;
-		//	i->Velocity *= 0.f;
-		//	break;
-		//default:
-		//	break;
-		//}
 
 		EndTick(DeltaTime);
 	}
-	//else
-		//PRINT("InActive");
-
-	// TAKING TIME
-	//tim.Print("Doggo tick single");
-	//tim.Print_Average("Doggo tick average");
 }
 
 void ASmallEnemy::Anim_Attacked_Pure(FVector direction)

@@ -5,16 +5,11 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Base/BaseStaticActor.h"
+#include "EnS/StaticActors_EnS.h"
 
 #include "Collectible.generated.h"
 
-UENUM()
-enum class ECollectibleType : uint8
-{
-	Common,
-	Health,
-	CorruptionCore
-};
+
 
 UCLASS()
 class STEIKEMANN_UE_API ACollectible : public ABaseStaticActor

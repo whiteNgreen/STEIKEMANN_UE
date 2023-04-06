@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "../Components/BaseCharWaterFloatComponent.h"
+//#include "../Components/BaseCharWaterFloatComponent.h"
 
 // Particles
 #include "NiagaraFunctionLibrary.h"
@@ -15,7 +15,7 @@
 #include "AbstractCharacter.generated.h"
 
 UCLASS(Abstract)
-class STEIKEMANN_UE_API AAbstractCharacter : public ACharacter
+class BASECLASSES_API AAbstractCharacter : public ACharacter
 {
 	GENERATED_BODY()
 
@@ -42,7 +42,7 @@ class UNiagaraSystem;
 class UNiagaraComponent;
 
 UCLASS(Abstract)
-class STEIKEMANN_UE_API ABaseCharacter : public AAbstractCharacter
+class BASECLASSES_API ABaseCharacter : public AAbstractCharacter
 {
 	GENERATED_BODY()
 

@@ -4,19 +4,20 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "../AbstractClasses/AbstractCharacter.h"
+#include "BaseClasses/AbstractClasses/AbstractCharacter.h"
 #include "SteikePlayerController.h"
 
 #include "../Interfaces/GrappleTargetInterface.h"
 #include "../Interfaces/AttackInterface.h"
 #include "../Interfaces/CameraGuideInterface.h"
-#include "../DebugMacros.h"
+//#include "../DebugMacros.h"
 #include "Camera/CameraShakeBase.h"
 #include "SteikeAnimInstance.h"
 #include "GameplayTagAssetInterface.h"
-#include "../StaticActors/Collectible.h"
-#include "../WallDetectionComponent.h"
-
+//#include "../StaticActors/Collectible.h"
+//#include "../WallDetectionComponent.h"
+#include "../Walldetection/WallDetection_EnS.h"
+#include "../StaticActors/EnS/StaticActors_EnS.h"
 
 #include "SteikemannCharacter.generated.h"
 
@@ -28,8 +29,9 @@ DECLARE_DELEGATE_OneParam(FPostAttackBuffer, EPostAttackType& PostAttackType);
 
 //class UNiagaraSystem;
 //class UNiagaraComponent;
+/* Forward Declarations */
 class USoundBase;
-
+class UWallDetectionComponent;
 
 
 UENUM()

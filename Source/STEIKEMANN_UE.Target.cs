@@ -10,5 +10,6 @@ public class STEIKEMANN_UETarget : TargetRules
 		Type = TargetType.Game;
 		DefaultBuildSettings = BuildSettingsVersion.V2;
 		ExtraModuleNames.AddRange( new string[] { "STEIKEMANN_UE" } );
-	}
+		ExtraModuleNames.AddRange( new string[] { "BaseClasses" } );
+    }
 }

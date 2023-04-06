@@ -9,11 +9,11 @@
 #include "SmallEnemy.h"
 #include "../Spawner/EnemySpawner.h"
 #include "../Steikemann/SteikemannCharacter.h"
-#include "../StaticVariables.h"
+#include "BaseClasses/StaticVariables.h"
 
-#include "BehaviorTree/BehaviorTree.h"
-#include "BehaviorTree/BehaviorTreeComponent.h"
-#include "BehaviorTree/BlackboardComponent.h"
+//#include "BehaviorTree/BehaviorTree.h"
+//#include "BehaviorTree/BehaviorTreeComponent.h"
+//#include "BehaviorTree/BlackboardComponent.h"
 #include "Perception/PawnSensingComponent.h"
 
 AEnemyAIController::AEnemyAIController()

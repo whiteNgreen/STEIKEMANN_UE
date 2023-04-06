@@ -1,9 +1,9 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "../AbstractClasses/AbstractCharacter.h"
-#include "../DebugMacros.h"
+#include "AbstractCharacter.h"
 #include "GameFrameWork/CharacterMovementComponent.h"
+//#include "../DebugMacros.h"
 // Base components
 #include "../StaticVariables.h"
 

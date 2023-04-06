@@ -4,16 +4,16 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "../AbstractClasses/AbstractCharacter.h"
+#include "BaseClasses/AbstractClasses/AbstractCharacter.h"
 #include "../Interfaces/AttackInterface.h"
 #include "../Interfaces/GrappleTargetInterface.h"
-#include "../DebugMacros.h"
-#include "GameplayTagAssetInterface.h"
-#include "../WallDetectionComponent.h"
-#include "Components/TimelineComponent.h"
-//#include "../GameplayTags.h"
-#include "EnemyAIController.h"
-
+#include "EnemyClasses_Enums.h"
+#include "../WallDetection/WallDetection_EnS.h"
+//#include "../DebugMacros.h"
+//#include "GameplayTagAssetInterface.h"
+//#include "../WallDetectionComponent.h"
+//#include "Components/TimelineComponent.h"
+//#include "EnemyAIController.h"
 #include "SmallEnemy.generated.h"
 
 DECLARE_DELEGATE(FIncapacitatedLandDelegation)
@@ -22,47 +22,15 @@ DECLARE_DELEGATE(FIncapacitatedCollision)
 /************************ ENUMS *****************************/
 
 
-UENUM()
-enum class EGravityState : int8
-{
-	Default,
-	LerpToDefault,
-
-	None,
-	LerpToNone,
-	ForcedNone
-};
-// State
-UENUM()
-enum class EEnemyState : int8
-{
-	STATE_None,
-
-	STATE_OnGround,
-	STATE_InAir,
-		STATE_Launched,
-
-	STATE_OnWall
-};
-// Wall Mechanic
-UENUM()
-enum class EWall : int8
-{
-	WALL_None,
-
-	WALL_Stuck,
-
-	WALL_Leaving
-};
 
 
-struct SpawnPointData
-{
-	FVector Location;
-	FVector IdleLocation;
-	float Radius_Min;
-	float Radius_Max;
-};
+/* Forward Declarations */
+class UTimelineComponent;
+class AEnemyAIController;
+class UWallDetectionComponent;
+class USphereComponent;
+class UBoxComponent;
+
 
 UCLASS()
 class STEIKEMANN_UE_API ASmallEnemy : public ABaseCharacter,
@@ -90,8 +58,6 @@ public:	// Components
 		UBoxComponent* BoxComp_Chomp;
 
 	// Timelines
-	//UPROPERTY(BlueprintReadOnly)
-	//	UTimelineComponent* TlComp_Scooped{ nullptr };
 	UPROPERTY(BlueprintReadOnly)
 		UTimelineComponent* TlComp_Smacked{ nullptr };
 

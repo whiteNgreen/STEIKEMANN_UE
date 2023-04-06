@@ -3,6 +3,7 @@
 
 #include "../Steikemann/SteikemannCharacter.h"
 #include "../Steikemann/SteikemannCharMovementComponent.h"
+#include "../DebugMacros.h"
 #include "DrawDebugHelpers.h"
 
 // Kismet GameplayStatics
@@ -19,6 +20,7 @@
 #include "Components/SphereComponent.h"
 #include "Components/TimelineComponent.h"
 #include "../Components/BouncyShroomActorComponent.h"
+#include "../WallDetection/WallDetectionComponent.h"
 
 // Camera
 #include "Camera/CameraComponent.h"
@@ -33,13 +35,14 @@
 #include "../WorldStatics/SteikeWorldStatics.h"
 
 // Steikemann
-#include "../StaticVariables.h"
+#include "BaseClasses/StaticVariables.h"
 #include "../GameplayTags.h"
 #include "../StaticActors/Collectible.h"
 #include "../StaticActors/PlayerRespawn.h"
 #include "../Dialogue/DialoguePrompt.h"
-#include "../Spawner/EnemySpawner.h"
-#include "../Enemies/SmallEnemy.h"
+//#include "../Spawner/EnemySpawner.h"
+#include "../StaticActors/Collectible.h"
+//#include "../Enemies/SmallEnemy.h"
 
 // Sets default values
 ASteikemannCharacter::ASteikemannCharacter(const FObjectInitializer& ObjectInitializer)

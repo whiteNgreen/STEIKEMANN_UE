@@ -4,54 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "AIController.h"
-#include "../GameplayTags.h"
-#include "../StaticVariables.h"
+//#include "../GameplayTags.h"
+#include "EnemyClasses_Enums.h"
+//#include "BaseClasses/StaticVariables.h"
 #include "EnemyAIController.generated.h"
 
 DECLARE_MULTICAST_DELEGATE(FSensedPawnsDelegate)
 
-UENUM(BlueprintType)
-enum class EDogType : uint8
-{
-	Red,
-	Pink,
-	Teal
-};
-
-UENUM(BlueprintType)
-enum class ESmallEnemyAIState : uint8
-{
-	RecentlySpawned,
-	Idle,
-	Alerted,
-	ChasingTarget,
-	GuardSpawn,
-	Attack,
-
-	Incapacitated,
-	
-	None
-};
-UENUM(BlueprintType)
-enum class EIdleState : uint8
-{
-	MoveTo_GuardLocation,
-	Guard,
-
-	Sleeping,
-	MovingTo_SleepLocation,
-
-	None
-};
-
-UENUM(BlueprintType)
-enum class EAIIncapacitatedType : uint8
-{
-	None,
-	Stunned,
-	Grappled,
-	StuckToWall
-};
 
 
 /**

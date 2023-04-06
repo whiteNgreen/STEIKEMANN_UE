@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "Animation/AnimNotifies/AnimNotify.h"
 #include "../DebugMacros.h"
-#include "../AbstractClasses/AbstractCharacter.h"
+#include "BaseClasses/AbstractClasses/AbstractCharacter.h"
 #include "ANColliderActivation.generated.h"
 
 UENUM()
