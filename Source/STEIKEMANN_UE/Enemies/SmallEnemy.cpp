@@ -11,8 +11,8 @@
 #include "Components/CapsuleComponent.h"
 #include "Gameframework/CharacterMovementComponent.h"
 #include "../GameplayTags.h"
-//#include "../Steikemann/SteikemannCharacter.h"
 #include "../Components/BouncyShroomActorComponent.h"
+#include "NiagaraComponent.h"
 
 #include "GameplayTagAssetInterface.h"
 #include "../WallDetection/WallDetectionComponent.h"
@@ -130,6 +130,8 @@ void ASmallEnemy::Tick(float DeltaTime)
 		Gravity_Tick(DeltaTime);
 
 		EndTick(DeltaTime);
+
+		PrintState();
 	}
 }
 
@@ -211,6 +213,16 @@ void ASmallEnemy::SleepingEnd()
 	m_Anim->bIsSleeping = false;
 }
 
+void ASmallEnemy::AttackJump()
+{
+	FVector JumpDirection = 
+		(GetActorForwardVector() * (1.f - FMath::Abs(AttackJumpAngle)))
+		+ (FVector::UpVector * AttackJumpAngle);
+
+	GetCharacterMovement()->Velocity *= 0.f;
+	GetCharacterMovement()->AddImpulse(JumpDirection * AttackJumpStrength, true);
+}
+
 void ASmallEnemy::CHOMP_Pure()
 {
 
@@ -253,6 +265,11 @@ void ASmallEnemy::Landed(const FHitResult& Hit)
 
 	if (IncapacitatedCollisionDelegate.ExecuteIfBound())	// HA CAPSULE_HIT DELEGATION FOR DENNE
 		IncapacitatedCollisionDelegate.Unbind();
+
+	if (IsIncapacitated()) {
+		FTimerHandle h;
+		TimerManager.SetTimer(h, this, &ASmallEnemy::RedetermineIncapacitateState, Incapacitated_LandedStunTime);
+	}
 
 	m_State = EEnemyState::STATE_OnGround;
 	m_Anim->bIsLaunchedInAir = false;
@@ -333,6 +350,7 @@ void ASmallEnemy::Chomp_DisableCollision()
 void ASmallEnemy::Incapacitate(const EAIIncapacitatedType& IncapacitateType, float Time/*, const ESmallEnemyAIState& NextState*/)
 {
 	m_AI->IncapacitateAI(IncapacitateType, Time/*, NextState*/);
+	m_AI->Incapacitate_GettingSmacked();
 	Chomp_DisableCollision();
 }
 
@@ -345,6 +363,29 @@ void ASmallEnemy::IncapacitateUndeterminedTime(const EAIIncapacitatedType& Incap
 	IncapacitatedLandDelegation.BindUObject(this, &ASmallEnemy::IncapacitatedLand);
 }
 
+void ASmallEnemy::Post_IncapacitateDetermineState()
+{
+	TArray<FHitResult> Hits;
+	FCollisionQueryParams Params("", false, this);
+	FCollisionShape Capsule = FCollisionShape::MakeCapsule(GetCapsuleComponent()->GetScaledCapsuleRadius(), GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
+	FVector SweepLocation = GetActorLocation() - (FVector::UpVector * 20.f);
+	if (GetWorld()->SweepMultiByChannel(Hits, SweepLocation, SweepLocation, FQuat(1.f, 0, 0, 0), ECC_WorldStatic, Capsule, Params))
+	{
+		if (IncapacitatedLandDelegation.ExecuteIfBound())
+			IncapacitatedLandDelegation.Unbind();
+	}
+}
+
+void ASmallEnemy::RedetermineIncapacitateState()
+{
+	if (GetCharacterMovement()->IsWalking() || m_State == EEnemyState::STATE_OnGround)
+	{
+		m_AI->RedetermineIncapacitateState();
+		IncapacitatedCollisionDelegate.Unbind();
+		IncapacitatedLandDelegation.Unbind();
+	}
+}
+
 void ASmallEnemy::IncapacitatedLand()
 {
 	Incapacitate(EAIIncapacitatedType::Stunned, Incapacitated_LandedStunTime);
@@ -353,7 +394,7 @@ void ASmallEnemy::IncapacitatedLand()
 bool ASmallEnemy::IsIncapacitated() const
 {
 	AEnemyAIController* AI = Cast<AEnemyAIController>(GetController());
-	return AI->m_AIState == ESmallEnemyAIState::Incapacitated;
+	return AI->IsIncapacitated();
 }
 
 void ASmallEnemy::CollisionDelegate()
@@ -548,6 +589,10 @@ void ASmallEnemy::Receive_SmackAttack_Pure(const FVector& Direction, const float
 		Incapacitate(EAIIncapacitatedType::Stunned, 1.5f/* Stun timer */);
 
 		Launched(Direction);
+
+		//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (Direction * Strength), FColor::Red, false, 2.f, 0, 5.f);
+		DRAWLINE(Direction * Strength, 2.f);
+		PRINTPARLONG(2.f, "Launch Strength", Strength);
 	}
 }
 void ASmallEnemy::Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength)
@@ -605,6 +650,32 @@ void ASmallEnemy::Receive_Pogo_GroundPound_Pure()
 
 	// Particles
 	//UNiagaraFunctionLibrary::SpawnSystemAtLocation()
+}
+
+void ASmallEnemy::PrintState()
+{
+	FString s = "State: ";
+	switch (m_State)
+	{
+	case EEnemyState::STATE_None:
+		s += "None";
+		break;
+	case EEnemyState::STATE_OnGround:
+		s += "On Ground";
+		break;
+	case EEnemyState::STATE_InAir:
+		s += "In Air";
+		break;
+	case EEnemyState::STATE_Launched:
+		s += "Launched";
+		break;
+	case EEnemyState::STATE_OnWall:
+		s += "On Wall";
+		break;
+	default:
+		break;
+	}
+	PRINTPAR("%s", *s);
 }
 
 void ASmallEnemy::Launched()

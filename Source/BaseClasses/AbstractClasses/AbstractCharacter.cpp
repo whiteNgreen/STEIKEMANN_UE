@@ -3,6 +3,7 @@
 
 #include "AbstractCharacter.h"
 #include "GameFrameWork/CharacterMovementComponent.h"
+#include "NiagaraComponent.h"
 //#include "../DebugMacros.h"
 // Base components
 #include "../StaticVariables.h"

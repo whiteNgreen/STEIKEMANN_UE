@@ -4,7 +4,6 @@
 #include "../StaticActors/Collectible.h"
 #include "NiagaraFunctionLibrary.h"
 #include "Components/SkeletalmeshComponent.h"
-//#include "../Steikemann/SteikemannCharacter.h"
 
 // Sets default values
 ACollectible::ACollectible()
@@ -48,7 +47,7 @@ void ACollectible::Destruction()
 {
 	Destruction_IMPL();
 	/* Particles and disable mesh + collision */
-	UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), DeathParticles, GetActorLocation());
+	UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), DeathParticles, GetActorLocation());	// SPAWN PARTICLE IN BLUEPRINT TO AVOID NIAGARA INCLUDE
 	Sphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	if (Mesh)
 		Mesh->SetHiddenInGame(true, true);

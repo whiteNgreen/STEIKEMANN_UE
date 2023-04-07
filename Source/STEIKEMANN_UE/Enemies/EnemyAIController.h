@@ -4,9 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "AIController.h"
-//#include "../GameplayTags.h"
 #include "EnemyClasses_Enums.h"
-//#include "BaseClasses/StaticVariables.h"
 #include "EnemyAIController.generated.h"
 
 DECLARE_MULTICAST_DELEGATE(FSensedPawnsDelegate)
@@ -75,12 +73,21 @@ public:	// Functions
 
 
 	// Attacking 
+	/* The distance to the player the AI will initiate Attack */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+		float AttackDistance{ 300.f };
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 		float AttackStateTime{ 1.5f };
-	FTimerHandle TH_Attack;
+	FTimerHandle TH_AttackState;
+	/* Timer from the enemy jumps to the Chomp they do in air */
+	FTimerHandle TH_PreAttack;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+		float JumpToChompTime{ 1.f };
 	void AttackBegin();
 	void AttackEnd();
 	void Attack();
+	void AttackJump();
+	void CancelAttackJump();
 
 	// Setting State
 	void SetState(const ESmallEnemyAIState& state);
@@ -93,7 +100,14 @@ public:	// Functions
 	void IncapacitateAI(const EAIIncapacitatedType& IncapacitateType, float Time/*, const ESmallEnemyAIState& NextState = ESmallEnemyAIState::None*/);
 	void ReDetermineState(const ESmallEnemyAIState& StateOverride = ESmallEnemyAIState::None);
 
-	//void CapacitateAI(float Time, const ESmallEnemyAIState& NextState = ESmallEnemyAIState::None);
+	/* After getting incapacitated by the player, if the player is within this radius
+	 * then the dog will instantly go to chase state */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+		float PostGettingSmackedActivationRange{ 500.f };
+	void Incapacitate_GettingSmacked();
+	void Post_Incapacitate_GettingSmacked();
+	void RedetermineIncapacitateState();
+	bool IsIncapacitated() const;
 
 	
 	// Chase Target
@@ -148,6 +162,7 @@ public: // Variables
 
 	ESmallEnemyAIState m_AIState = ESmallEnemyAIState::None;
 	EAIIncapacitatedType m_AIIncapacitatedType = EAIIncapacitatedType::None;
+	EAIPost_IncapacitatedType m_EAIPost_IncapacitatedType;
 
 	FTimerManager TM_AI;	// ha en egen timer manager istedenfor å bruke World Timer Manager?
 	FTimerHandle TH_IncapacitateTimer;
@@ -173,4 +188,5 @@ public: // Variables
 
 public: // Debugging
 	void PrintState();
+	void Print_SetState(const ESmallEnemyAIState& state);
 };

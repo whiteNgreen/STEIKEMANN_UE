@@ -21,6 +21,7 @@
 #include "Components/TimelineComponent.h"
 #include "../Components/BouncyShroomActorComponent.h"
 #include "../WallDetection/WallDetectionComponent.h"
+#include "NiagaraComponent.h"
 
 // Camera
 #include "Camera/CameraComponent.h"
@@ -2825,10 +2826,12 @@ void ASteikemannCharacter::Click_Attack()
 		/* Buffer Attack if Grappling to Dynamic Target */
 		if (m_EGrappleType == EGrappleType::Dynamic_Ground)
 		{
+			m_ESmackAttackType = ESmackAttackType::GrappleSmack;
 			if (TimerManager.IsTimerActive(TH_BufferAttack)) return;
 
 			GH_DelegateDynamicLaunch();
-			float t = ((TimerManager.IsTimerActive(TH_Grapplehook_End_Launch) ? TimerManager.GetTimerRemaining(TH_Grapplehook_End_Launch) : GrappleHook_PostLaunchTimer) +
+			float t = 
+				((TimerManager.IsTimerActive(TH_Grapplehook_End_Launch) ? TimerManager.GetTimerRemaining(TH_Grapplehook_End_Launch) : GrappleHook_PostLaunchTimer) + 
 				(TimerManager.IsTimerActive(TH_GrappleHold) ? TimerManager.GetTimerRemaining(TH_GrappleHold) : 0.f))
 				- SmackAttack_GH_TimerRemoval;
 			if (t > 0.f) {
@@ -2843,6 +2846,7 @@ void ASteikemannCharacter::Click_Attack()
 	default:
 		break;
 	}
+	m_ESmackAttackType = ESmackAttackType::Regular;
 	return;
 }
 
@@ -2895,8 +2899,10 @@ void ASteikemannCharacter::Stop_Attack()
 	AttackComboCount = 0;
 	AttackContactedActors.Empty();
 	m_EAttackState = EAttackState::None;
+	m_ESmackAttackType = ESmackAttackType::Regular;
 	m_EState = EState::STATE_None;
 	m_EMovementInputState = EMovementInput::Open;
+
 	SetDefaultState();
 }
 
@@ -3070,47 +3076,20 @@ void ASteikemannCharacter::Do_SmackAttack_Pure(IAttackInterface* OtherInterface,
 
 	if (b)
 	{
-		//EPostAttackType attackEffect;
-		//FVector Direction{ OtherActor->GetActorLocation() - GetActorLocation() };
-		//Direction = Direction.GetSafeNormal2D();
-		//Direction = GetControlRotation().Vector().GetSafeNormal2D();
-		//if (Delegate_PostAttackBuffer.IsBound()) 
-		//{
-		//	Delegate_PostAttackBuffer.Execute(attackEffect);
-		//	if (attackEffect == EPostAttackType::GrappleSmack) 
-		//	{
-		//		FVector cam = GetControlRotation().Vector();
-		//		Direction = cam.GetSafeNormal2D();
-		//		//float z = FMath::Clamp(SMath::SimpleGaussian(cam.Z * GrappleSmack_HeightMultiplier, 2.f, 1.f, 0.f, -1.f), GrappleSmack_MinHeight, 1.f);
-		//		float z = FMath::Clamp(SMath::SimpleGaussian(((InputVectorRaw.X + cam.Z) / 2.f) * GrappleSmack_HeightMultiplier, GrappleSmack_MaxHeight, 1.f, 0.f, -1.f), GrappleSmack_MinHeight, GrappleSmack_MaxHeight);
-		//		Direction *= 1.f - z;
-		//		Direction.Z = z;
-		//		Direction.Normalize();
-		//		AdditionalStrength = SMath::SimpleGaussian(FMath::Min(z, z - GrappleSmack_MinHeight), 3.f, 1.7f, 0.f, -0.7f);
-		//	}
-		//}
-		//else
-		//if (m_EInputType == EInputType::MouseNKeyboard)
+		// GrappleSmack
+		if (m_ESmackAttackType == ESmackAttackType::GrappleSmack)
 		{
+			PRINTLONG(2.f, "GrappleSmack");
 			FVector Direction = GH_GrappleSmackAiming_MNK(OtherActor);
 			OtherInterface->Receive_SmackAttack_Pure(Direction, SmackAttackStrength + (SmackAttackStrength * SmackAttack_InputStrengthMultiplier));
 			return;
 		}
-		//else
-		//{
-		//	float angle{};
-		//	if (m_InputVector.IsNearlyZero())
-		//		Direction = (Direction + (GetActorForwardVector() * SmackDirection_InputMultiplier)).GetSafeNormal2D();
-		//	else {
-		//		Direction = (Direction + (m_InputVector * SmackDirection_InputMultiplier) + (GetControlRotation().Vector().GetSafeNormal2D() * SmackDirection_CameraMultiplier)).GetSafeNormal2D();
-		//	}
-		//	angle = FMath::DegreesToRadians(SmackUpwardAngle);
-		//	angle = angle + (angle * (((InputVectorRaw.X + InputVectorRaw.Length()) / 2.f) * SmackAttack_InputAngleMultiplier));
-		//	Direction = (cosf(angle) * Direction) + (sinf(angle) * FVector::UpVector);
 
-		//	DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + Direction, FColor::Red, true);
-		//	OtherInterface->Receive_SmackAttack_Pure(Direction, SmackAttackStrength + (SmackAttackStrength * (InputVectorRaw.X * SmackAttack_InputStrengthMultiplier)));
-		//}
+		PRINTLONG(2.f, "Regular Smack");
+		// Regular Smack
+		FVector Direction = (FVector::UpVector * SmackUpwardAngle) + (GetActorForwardVector().GetSafeNormal2D() * (1.f - FMath::Abs(SmackUpwardAngle)));
+		OtherInterface->Receive_SmackAttack_Pure(Direction, SmackAttackStrength);
+		return;
 	}
 }
 

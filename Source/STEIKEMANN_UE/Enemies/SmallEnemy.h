@@ -9,11 +9,6 @@
 #include "../Interfaces/GrappleTargetInterface.h"
 #include "EnemyClasses_Enums.h"
 #include "../WallDetection/WallDetection_EnS.h"
-//#include "../DebugMacros.h"
-//#include "GameplayTagAssetInterface.h"
-//#include "../WallDetectionComponent.h"
-//#include "Components/TimelineComponent.h"
-//#include "EnemyAIController.h"
 #include "SmallEnemy.generated.h"
 
 DECLARE_DELEGATE(FIncapacitatedLandDelegation)
@@ -121,6 +116,14 @@ public: // Functions
 	void SleepingBegin();
 	void SleepingEnd();
 
+	/* How far aligned with the upvector and the forward vector will the dog jump.
+	 * 1.f is perfectly up, -1.f is down and 0.f is directly forward
+	 * 0.707f is roughly 45 degrees */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chomp")
+		float AttackJumpAngle{ 0.6f };
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chomp")
+		float AttackJumpStrength{ 1200.f };
+	void AttackJump();
 	void CHOMP_Pure();
 	UFUNCTION()
 		void ChompCollisionOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
@@ -157,8 +160,10 @@ public: // Functinos calling AI controller or Functions AI controller calling
 	void Incapacitate(const EAIIncapacitatedType& IncapacitateType, float Time = -1.f/*, const ESmallEnemyAIState& NextState = ESmallEnemyAIState::None*/);
 	void IncapacitateUndeterminedTime(const EAIIncapacitatedType& IncapacitateType, void (ASmallEnemy::* landingfunction)() = nullptr);
 	//void Capacitate(const EAIIncapacitatedType& IncapacitateType, float Time = -1.f, const ESmallEnemyAIState& NextState = ESmallEnemyAIState::None);
-
+	void Post_IncapacitateDetermineState();
+	void RedetermineIncapacitateState();
 	bool IsIncapacitated() const;
+
 	bool IsTargetWithinSpawn(const FVector& target, const float& radiusmulti = 1.f) const;
 
 	void SpottingPlayer_Begin();
@@ -314,4 +319,7 @@ public:
 		class UBouncyShroomActorComponent* BounceComp;
 #pragma endregion // Bounce
 
+	/*  DEBUG  */
+public:
+	void PrintState();
 };

@@ -87,3 +87,10 @@ enum class EAIIncapacitatedType : uint8
 	Grappled,
 	StuckToWall
 };
+UENUM(BlueprintType)
+enum class EAIPost_IncapacitatedType : uint8
+{
+	None,
+	ChasePlayer,
+	ConfusedScreaming
+};

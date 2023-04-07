@@ -7,8 +7,8 @@
 //#include "../Components/BaseCharWaterFloatComponent.h"
 
 // Particles
-#include "NiagaraFunctionLibrary.h"
-#include "NiagaraComponent.h"
+//#include "NiagaraFunctionLibrary.h"
+//#include "NiagaraComponent.h"
 
 #include "../Delegates_Shared.h"
 

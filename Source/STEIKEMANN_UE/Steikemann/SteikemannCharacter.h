@@ -115,8 +115,15 @@ enum class EAttackState : int8
 	,Post_Buffer
 };
 UENUM()
+enum class ESmackAttackType : int8
+{
+	Regular,
+	GrappleSmack
+};
+UENUM()
 enum class EPostAttackType : int8
 {
+	//None,
 	GrappleSmack
 };
 
@@ -992,6 +999,7 @@ public:
 	EAttackState m_EAttackState = EAttackState::None;
 	FTimerHandle TH_BufferAttack;
 	FAttackActionBuffer Delegate_AttackBuffer;
+	ESmackAttackType m_ESmackAttackType = ESmackAttackType::Regular;
 	virtual void AttackContact(AActor* target) override;
 	void AttackContact_Particles(FVector location, FQuat direction);
 
@@ -1095,9 +1103,9 @@ public:
 		float SmackDirection_InputMultiplier	/*UMETA(DisplayName = "Input Multiplier")*/ { 1.f };
 
 	
-	/* The angle from the ground the enemy will be smacked. 0 degrees: Is parallel to the ground. 90 degrees: Is directly upwards */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
-		float SmackUpwardAngle{ 30.f };
+	/* The angle from the ground the enemy will be smacked. 0.0: Is parallel to the ground. 1.0: Is directly upwards */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks", meta = (UIMin = "0.0", UIMax = "1.0"))
+		float SmackUpwardAngle{ 0.5f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
 		float SmackAttackStrength{ 1500.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks", meta = (UIMin = "0", UIMax = "1"))
