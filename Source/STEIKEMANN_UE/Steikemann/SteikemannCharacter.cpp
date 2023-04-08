@@ -3079,13 +3079,11 @@ void ASteikemannCharacter::Do_SmackAttack_Pure(IAttackInterface* OtherInterface,
 		// GrappleSmack
 		if (m_ESmackAttackType == ESmackAttackType::GrappleSmack)
 		{
-			PRINTLONG(2.f, "GrappleSmack");
 			FVector Direction = GH_GrappleSmackAiming_MNK(OtherActor);
 			OtherInterface->Receive_SmackAttack_Pure(Direction, SmackAttackStrength + (SmackAttackStrength * SmackAttack_InputStrengthMultiplier));
 			return;
 		}
 
-		PRINTLONG(2.f, "Regular Smack");
 		// Regular Smack
 		FVector Direction = (FVector::UpVector * SmackUpwardAngle) + (GetActorForwardVector().GetSafeNormal2D() * (1.f - FMath::Abs(SmackUpwardAngle)));
 		OtherInterface->Receive_SmackAttack_Pure(Direction, SmackAttackStrength);

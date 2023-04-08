@@ -14,11 +14,9 @@
 #define PLOG(X) ( UE_LOG(LogTemp, Display, FString::Printf(TEXT(X))) )
 
 
-// DrawDebugLine MACRO
-//#define DLINE_1(A)		( DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + A, FColor::Red, false, 0.f, 0, 6.f) )
-//#define DLINE_2(A,B)	( DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + A, FColor::Red, false,	  B, 0, 6.f) )
-//#define DLINE_3(A,B,C)	( DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + A,			  C, false,	  B, 0, 6.f) )
-#define DRAWLINE(Vec, T) ( DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (Vec), FColor::Red, false, T, 0, 5.f) )
+// DrawDebugLine MACRO from GetActorLocation()
+#define DRAWLINE(Vec, Color, T) ( DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (Vec), Color, false, T, 0, 5.f) )
+#define DRAWPOINT(Vec, T) ( DrawDebugPoint(GetWorld(), Vec, 20.f, FColor::Red, false, T, 0) )
 
 
 /* -- timer macros --

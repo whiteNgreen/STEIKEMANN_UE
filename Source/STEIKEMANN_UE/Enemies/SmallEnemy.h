@@ -210,6 +210,42 @@ private:
 	//Wall::WallData m_WallJumpData;
 
 #pragma endregion	//Wall Mechanics
+#pragma region LaunchedCollision
+public:
+	FTimerHandle TH_FreezeCollisionLaunchCooldown;
+	FTimerHandle TH_CollisionLaunchFreeze;
+	FVector CollisionLaunchVelocity;
+	FVector MeshInitialPosition;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Launched Reflected Collision")
+		float LaunchedCollision_FreezeCooldown{ 0.1f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Launched Reflected Collision")
+		float LaunchedCollision_FreezeBaseTime{ 0.15f };
+	/* CollisionLaunch is strongets when colliding at this velocity and over. 
+	 * And the time length is lower the weaker the incomming velocity is. 
+	 * The calculation uses this velocity as the dividing factor */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Launched Reflected Collision")
+		float LaunchedCollision_FreezeVelocityMultiplier{ 1000.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Launched Reflected Collision")
+		float LaunchedCollision_VelocityMultiplier{ 0.8f };
+public:
+	UTimelineComponent* TlComp_LaunchedCollision;
+	UPROPERTY(EditAnywhere)
+		UCurveVector* Curve_LaunchedCollisionShake;
+	UFUNCTION()
+		void Tl_LaunchedCollision_End();
+	UFUNCTION()
+		void Tl_LaunchedCollisionShake(FVector vector);
+public:
+	UFUNCTION()
+		void OnCapsuleComponentLaunchHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& SweepHit);
+	bool CanReflectCollisionLaunch() const;
+	void ReflectedCollisionLaunch_PreLaunch(FVector SurfaceNormal, FVector SurfaceLocation);
+	void ReflectedCollisionLaunch_Launch();
+
+public:	// Visual effects
+	UFUNCTION(BlueprintImplementableEvent)
+		void LC_SpawnEffect(float Time, float VelocityMultiplier, FVector SurfaceNormal, FVector SurfaceLocation);
+#pragma endregion //LaunchedCollision
 #pragma region GrappleHooked
 public: 
 	bool bCanBeGrappleHooked{ true };

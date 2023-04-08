@@ -35,9 +35,8 @@ bool ABouncyShroom::GetBounceInfo(const FVector actorLocation, const FVector nor
 	
 	if (bReflectDirection){
 		OUT_direction = SMath::ReflectionVector(ShroomDirection, IncommingDirection, ReflectionStrength);
-
-		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + OUT_direction * 100.f, FColor::White, false, 2.f, -1, 8.f);
-		DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + ShroomDirection * 100.f, FColor::Blue, false, 2.f, -1, 8.f);
+		//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + OUT_direction * 100.f, FColor::White, false, 2.f, -1, 8.f);
+		//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + ShroomDirection * 100.f, FColor::Blue, false, 2.f, -1, 8.f);
 	}
 	else {
 		OUT_direction = ShroomDirection;

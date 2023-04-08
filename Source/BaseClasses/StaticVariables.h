@@ -59,6 +59,10 @@ namespace SMath
 		return FMath::Exp(-FMath::Pow(x - TopPlacement, 2) * SharpNess) * BotLevel + TopLevel;
 	}
 
+	FORCEINLINE float InvertedGaussian(float x, float TopSharpness, float BotSharpness) {
+		return FMath::Min(-FMath::Exp(-FMath::Pow(x, BotSharpness) * TopSharpness) + 1.f, 1.f);
+	}
+
 	FORCEINLINE FVector ReflectionVector(const FVector& n, const FVector& d, const float& reflectionStrength = 1.f)
 	{
 		FVector Ortho = FVector::CrossProduct(n, FVector::CrossProduct(d, n));

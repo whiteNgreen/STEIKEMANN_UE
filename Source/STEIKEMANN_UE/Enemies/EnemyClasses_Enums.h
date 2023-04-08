@@ -20,6 +20,7 @@ enum class EEnemyState : int8
 
 	STATE_OnGround,
 	STATE_InAir,
+	STATE_PreLaunched,
 	STATE_Launched,
 
 	STATE_OnWall

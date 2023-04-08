@@ -31,6 +31,7 @@ ASmallEnemy::ASmallEnemy()
 	PlayerPogoDetection->SetupAttachment(RootComponent);
 
 	TlComp_Smacked = CreateDefaultSubobject<UTimelineComponent>("Timeline_Smacked");
+	TlComp_LaunchedCollision = CreateDefaultSubobject<UTimelineComponent>("Timeline LaunchedCollision");
 
 	BoxComp_Chomp = CreateDefaultSubobject<UBoxComponent>("Attack Collider");
 	BoxComp_Chomp->SetupAttachment(GetMesh(), FName("SOCKET_Head"));
@@ -65,11 +66,21 @@ void ASmallEnemy::BeginPlay()
 
 	// Delegates
 	BoxComp_Chomp->OnComponentBeginOverlap.AddDynamic(this, &ASmallEnemy::ChompCollisionOverlap);
+	GetCapsuleComponent()->OnComponentHit.AddDynamic(this, &ASmallEnemy::OnCapsuleComponentLaunchHit);
 
 	// Timeline Components
 	FOnTimelineFloatStatic FloatBind;
 	FloatBind.BindUObject(this, &ASmallEnemy::Tl_Smacked);
 	TlComp_Smacked->AddInterpFloat(Curve_NSTrail, FloatBind);
+
+	FOnTimelineVectorStatic VectorBind;
+	VectorBind.BindUObject(this, &ASmallEnemy::Tl_LaunchedCollisionShake);
+	TlComp_LaunchedCollision->AddInterpVector(Curve_LaunchedCollisionShake, VectorBind);
+	FOnTimelineEventStatic TimelineFinished;
+	TimelineFinished.BindUObject(this, &ASmallEnemy::Tl_LaunchedCollision_End);
+	TlComp_LaunchedCollision->SetTimelineFinishedFunc(TimelineFinished);
+
+	MeshInitialPosition = GetMesh()->GetRelativeLocation();
 
 	// Special Start Conditions
 	if (bStartStuckToWall) 
@@ -450,6 +461,69 @@ void ASmallEnemy::LeaveWall()
 	IncapacitateUndeterminedTime(EAIIncapacitatedType::Grappled, &ASmallEnemy::CollisionDelegate);
 }
 
+void ASmallEnemy::Tl_LaunchedCollision_End()
+{
+	PRINTLONG(2.f, "TIMELINE END");
+	GetMesh()->SetWorldLocation(GetActorLocation() + MeshInitialPosition);
+}
+
+void ASmallEnemy::Tl_LaunchedCollisionShake(FVector vector)
+{
+	GetMesh()->SetWorldLocation(GetActorLocation() + MeshInitialPosition + vector);
+}
+
+void ASmallEnemy::OnCapsuleComponentLaunchHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& SweepHit)
+{
+	if (OtherActor == this) return;
+
+	if (CanReflectCollisionLaunch())
+		ReflectedCollisionLaunch_PreLaunch(SweepHit.ImpactNormal, SweepHit.ImpactPoint);
+}
+bool ASmallEnemy::CanReflectCollisionLaunch() const
+{
+	if (TimerManager.IsTimerActive(TH_CollisionLaunchFreeze)) 
+		return false;
+	if (m_State != EEnemyState::STATE_Launched)
+		return false;
+	return true;
+}
+void ASmallEnemy::ReflectedCollisionLaunch_PreLaunch(FVector SurfaceNormal, FVector SurfaceLocation)
+{
+	if (!GetWorld()) return;
+	m_GravityState = EGravityState::ForcedNone;
+	m_State = EEnemyState::STATE_PreLaunched;
+
+	FVector Velocity = -GetCharacterMovement()->GetLastUpdateVelocity().GetSafeNormal();
+	FVector Proj = Velocity - (FVector::DotProduct(SurfaceNormal, Velocity) * SurfaceNormal);
+	float CurrentVelocitySize = GetCharacterMovement()->GetLastUpdateVelocity().Length();
+	CollisionLaunchVelocity = (Velocity + (Proj * -2.f)) * CurrentVelocitySize;
+
+	TlComp_LaunchedCollision->PlayFromStart();
+	float time = LaunchedCollision_FreezeBaseTime;
+	float Multiplier = (FMath::Min(GetCharacterMovement()->GetLastUpdateVelocity().SquaredLength(), FMath::Square(LaunchedCollision_FreezeVelocityMultiplier)) / FMath::Square(LaunchedCollision_FreezeVelocityMultiplier));
+	Multiplier = SMath::InvertedGaussian(Multiplier, 5.3f, 3.5f);
+	time *= Multiplier;
+
+	if (TimerManager.IsTimerActive(TH_FreezeCollisionLaunchCooldown))
+		ReflectedCollisionLaunch_Launch();
+	else
+	{
+		PRINTPARLONG(2.f, "time = %f", time);
+		PRINTPARLONG(2.f, "Velocity = %f", CurrentVelocitySize);
+		TimerManager.SetTimer(TH_CollisionLaunchFreeze, this, &ASmallEnemy::ReflectedCollisionLaunch_Launch, time);
+		TimerManager.SetTimer(TH_FreezeCollisionLaunchCooldown, LaunchedCollision_FreezeCooldown + time, false);
+	}
+	LC_SpawnEffect(time, FMath::Max(Multiplier, 0.4f), SurfaceNormal, SurfaceLocation);
+}
+
+void ASmallEnemy::ReflectedCollisionLaunch_Launch()
+{
+	m_GravityState = EGravityState::Default;
+	GetCharacterMovement()->Velocity *= 0.f;
+	GetCharacterMovement()->AddImpulse(CollisionLaunchVelocity * LaunchedCollision_VelocityMultiplier + (FVector(0, 0, GetCharacterMovement()->GetGravityZ() * GetWorld()->GetDeltaSeconds())), true);
+	Launched(CollisionLaunchVelocity.GetSafeNormal());
+}
+
 void ASmallEnemy::SpottingPlayer_Begin()
 {
 	m_Anim->bSpottingPlayer = true;
@@ -589,10 +663,6 @@ void ASmallEnemy::Receive_SmackAttack_Pure(const FVector& Direction, const float
 		Incapacitate(EAIIncapacitatedType::Stunned, 1.5f/* Stun timer */);
 
 		Launched(Direction);
-
-		//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (Direction * Strength), FColor::Red, false, 2.f, 0, 5.f);
-		DRAWLINE(Direction * Strength, 2.f);
-		PRINTPARLONG(2.f, "Launch Strength", Strength);
 	}
 }
 void ASmallEnemy::Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength)
