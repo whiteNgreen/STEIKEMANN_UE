@@ -105,7 +105,6 @@ void ASmallEnemy::Tick(float DeltaTime)
 
 	if (FVector::DistSquared(GetActorLocation(), playerLoc) < _Statics_PlayerDistaceToActive)
 	{
-		//PRINT("Dog active");
 		SetDefaultState();
 
 		const bool wall = WallDetector->DetectStickyWall(this, GetActorLocation(), GetActorForwardVector(), m_WallData, ECC_EnemyWallDetection);
@@ -142,7 +141,7 @@ void ASmallEnemy::Tick(float DeltaTime)
 
 		EndTick(DeltaTime);
 
-		PrintState();
+		//PrintState();
 	}
 }
 

@@ -103,6 +103,7 @@ ASteikemannCharacter::ASteikemannCharacter(const FObjectInitializer& ObjectIniti
 
 	TLComp_Attack_SMACK = CreateDefaultSubobject<UTimelineComponent>("TLComp_AttackTurn");
 	TLComp_AirFriction = CreateDefaultSubobject<UTimelineComponent>("TLComp_AirFriction");
+	TLComp_Dash = CreateDefaultSubobject<UTimelineComponent>("TlComp_Dash");
 }
 
 // Called when the game starts or when spawned
@@ -122,6 +123,7 @@ void ASteikemannCharacter::BeginPlay()
 	MaxHealth = Health;
 	StartTransform = GetActorTransform();
 	ResetState();
+	Dash_WalkSpeed_Base = GetMoveComponent()->MaxWalkSpeed;
 
 	// Camera
 	Base_CameraBoomLength = CameraBoom->TargetArmLength;
@@ -153,6 +155,12 @@ void ASteikemannCharacter::BeginPlay()
 		
 	floatStatic.BindUObject(GetMoveComponent().Get(), &USteikemannCharMovementComponent::AirFrictionMultiplier);	// Air Friction
 	TLComp_AirFriction->AddInterpFloat(Curve_AirFrictionMultiplier, floatStatic);
+
+	floatStatic.BindUObject(this, &ASteikemannCharacter::TL_Dash);
+	TLComp_Dash->AddInterpFloat(Curve_DashStrength, floatStatic);
+	FOnTimelineEventStatic EventStatic;
+	EventStatic.BindUObject(this, &ASteikemannCharacter::TL_Dash_End);
+	TLComp_Dash->SetTimelineFinishedFunc(EventStatic);
 
 	/* Attack Collider */
 	AttackCollider->OnComponentBeginOverlap.AddDynamic(this, &ASteikemannCharacter::OnAttackColliderBeginOverlap);
@@ -228,6 +236,8 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	if (m_GamepadCameraInput.Length() > 1.f)
 		m_GamepadCameraInput.Normalize();
 
+	PRINTPAR("Walkspeed = %f", GetMoveComponent()->MaxWalkSpeed);
+	DRAWLINE(GetMoveComponent()->Velocity, FColor::Red, 0.f);
 	//PRINTPAR("MouseMovement = %s", *m_MouseMovementInput.ToString());
 	//PRINTPAR("GH_GrappleSmackAimingVector_MNK = %s", *GH_GrappleSmackAimingVector.ToString());
 
@@ -695,6 +705,7 @@ void ASteikemannCharacter::RightTriggerClick()
 	{
 	case EState::STATE_None:		break;
 	case EState::STATE_OnGround:	
+		TL_Dash_End();
 		if (bPressedCancelButton)
 		{
 			if (!GrappledActor.IsValid()) return;
@@ -1897,6 +1908,7 @@ void ASteikemannCharacter::Jump_OnGround()
 	Anim_Activate_Jump();
 	TLComp_AirFriction->PlayFromStart();
 	m_EState = EState::STATE_InAir;
+	TL_Dash_End();
 
 	FTimerHandle h;
 	TimerManager.SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, OnWallActivation_PostJumpingOnGround, false);
@@ -2180,6 +2192,44 @@ void ASteikemannCharacter::PB_EnterPogoState(float time)
 }
 
 
+void ASteikemannCharacter::Dash_Start()
+{
+	m_EGroundState = EGroundState::GROUND_Dash;
+	TLComp_Dash->PlayFromStart();
+	TimerManager.SetTimer(TH_Dash, TLComp_Dash->GetTimelineLength(), false);
+}
+
+void ASteikemannCharacter::TL_Dash(float value)
+{
+	GetMoveComponent()->MaxWalkSpeed = Dash_WalkSpeed_Base + (Dash_WalkSpeed_Add * value);
+	FRotator Rot = m_InputVector.Rotation();
+	FVector NewVel = FVector::ForwardVector * GetMoveComponent()->Velocity.Length();
+	GetMoveComponent()->Velocity = NewVel.RotateAngleAxis(Rot.Yaw, FVector::UpVector);
+}
+
+void ASteikemannCharacter::TL_Dash_End()
+{
+	TLComp_Dash->Stop();
+	GetMoveComponent()->MaxWalkSpeed = Dash_WalkSpeed_Base;
+	m_EGroundState = EGroundState::GROUND_Walk;
+}
+
+bool ASteikemannCharacter::Can_Dash_Start() const
+{
+	switch (m_EGroundState)
+	{
+	case EGroundState::GROUND_Walk:		return true;
+	case EGroundState::GROUND_Roll:		return false;
+	case EGroundState::GROUND_Dash:		
+		if (TimerManager.GetTimerElapsed(TH_Dash) / TLComp_Dash->GetTimelineLength() > Dash_StartAgainPercentage)
+			return true;
+		break;
+	default:
+		break;
+	}
+	return false;
+}
+
 bool ASteikemannCharacter::ShroomBounce(FVector direction, float strength)
 {
 	if (!Super::ShroomBounce(direction, strength)) 
@@ -2200,6 +2250,8 @@ void ASteikemannCharacter::Click_RightFacebutton()
 	case EState::STATE_None:
 		break;
 	case EState::STATE_OnGround:
+		if (Can_Dash_Start())
+			Dash_Start();
 		break;
 	case EState::STATE_InAir:
 		break;
@@ -2805,6 +2857,7 @@ void ASteikemannCharacter::Click_Attack()
 	case EState::STATE_OnGround:
 	{
 		AttackSmack_Start_Ground_Pure();
+		TL_Dash_End();
 		break;
 	}
 	case EState::STATE_InAir:

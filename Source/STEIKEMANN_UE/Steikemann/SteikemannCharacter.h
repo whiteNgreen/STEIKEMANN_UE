@@ -59,7 +59,8 @@ UENUM()
 enum class EGroundState : int8
 {
 	GROUND_Walk,
-	GROUND_Roll
+	GROUND_Roll,
+	GROUND_Dash
 };
 UENUM()
 enum class EAirState : int8
@@ -638,6 +639,24 @@ public: // Animation
 		void Anim_Pogo_Active();
 
 #pragma endregion					//Pogo
+#pragma region Dash
+	float Dash_WalkSpeed_Base{};
+	FTimerHandle TH_Dash;
+	/* How much speed is added to the base walkspeed? */
+	UPROPERTY(EditAnywhere, Category = "Movement|Dash")
+		float Dash_WalkSpeed_Add{ 200.f };
+	UPROPERTY(EditAnywhere, Category = "Movement|Dash")
+		float Dash_StartAgainPercentage{ 0.5f };
+	
+	void Dash_Start();
+	UTimelineComponent* TLComp_Dash;
+	UPROPERTY(EditAnywhere, Category = "Movement|Dash")
+		UCurveFloat* Curve_DashStrength;
+	UFUNCTION()
+		void TL_Dash(float value);
+	void TL_Dash_End();
+	bool Can_Dash_Start() const;
+#pragma endregion //Dash
 #pragma region Bounce
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		class UBouncyShroomActorComponent* BounceComp;
