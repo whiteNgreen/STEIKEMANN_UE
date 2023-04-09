@@ -172,6 +172,11 @@ void ASmallEnemy::DisableCollisions()
 {
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
+void ASmallEnemy::DisableCollisions(float time)
+{
+	DisableCollisions();
+	TimerManager.SetTimer(TH_DisabledCollision, this, &ASmallEnemy::EnableCollisions, time);
+}
 void ASmallEnemy::EnableCollisions()
 {
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
@@ -209,9 +214,14 @@ FGameplayTag ASmallEnemy::SensingPawn(APawn* pawn)
 
 void ASmallEnemy::Alert(const APawn& instigator)
 {
-	SleepingEnd();
-	m_AI->SetState(ESmallEnemyAIState::ChasingTarget);
-	Anim_Startled();
+	const bool alerted = m_AI->AlertedByPack();
+	
+	// Anim
+	if (alerted)
+	{
+		SleepingEnd();
+		Anim_Startled();
+	}
 }
 
 void ASmallEnemy::SleepingBegin()
@@ -236,9 +246,13 @@ void ASmallEnemy::AttackJump()
 
 void ASmallEnemy::CHOMP_Pure()
 {
-
-
 	Anim_CHOMP();
+}
+
+void ASmallEnemy::Cancel_CHOMP()
+{
+	Deactivate_AttackCollider();
+	Anim_Attacked();
 }
 
 void ASmallEnemy::SetDefaultState()
@@ -274,8 +288,11 @@ void ASmallEnemy::Landed(const FHitResult& Hit)
 	if (IncapacitatedLandDelegation.ExecuteIfBound())
 		IncapacitatedLandDelegation.Unbind();
 
-	if (IncapacitatedCollisionDelegate.ExecuteIfBound())	// HA CAPSULE_HIT DELEGATION FOR DENNE
-		IncapacitatedCollisionDelegate.Unbind();
+	//if (IncapacitatedCollisionDelegate.ExecuteIfBound())	// HA CAPSULE_HIT DELEGATION FOR DENNE
+	//	IncapacitatedCollisionDelegate.Unbind();
+
+	if (Delegate_LaunchedLand.ExecuteIfBound(Hit))
+		Delegate_LaunchedLand.Unbind();
 
 	if (IsIncapacitated()) {
 		FTimerHandle h;
@@ -328,11 +345,15 @@ void ASmallEnemy::ChompCollisionOverlap(UPrimitiveComponent* OverlappedComponent
 	auto iTag = Cast<IGameplayTagAssetInterface>(OtherActor);
 	if (!iTag) return;
 
-	if (iTag->HasMatchingGameplayTag(Tag::Player()) && OtherComp->IsA(UCapsuleComponent::StaticClass()))
+	if (OtherComp->IsA(UCapsuleComponent::StaticClass()))
 	{
 		auto IAttack = Cast<IAttackInterface>(OtherActor);
-		IAttack->Receive_SmackAttack_Pure(FVector(OtherActor->GetActorLocation() - GetActorLocation()).GetSafeNormal(), 1000.f);
-
+		if (iTag->HasMatchingGameplayTag(Tag::Player())) {
+			IAttack->Receive_SmackAttack_Pure(FVector(OtherActor->GetActorLocation() - GetActorLocation()).GetSafeNormal2D(), 0.f);
+		}
+		if (iTag->HasMatchingGameplayTag(Tag::Enemy())) {
+			ChompingAnotherEnemy(IAttack, OtherActor);
+		}
 		AttackContactDelegate.Broadcast(OtherActor);
 	}
 }
@@ -475,6 +496,12 @@ void ASmallEnemy::Tl_LaunchedCollisionShake(FVector vector)
 void ASmallEnemy::OnCapsuleComponentLaunchHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& SweepHit)
 {
 	if (OtherActor == this) return;
+	if (IGameplayTagAssetInterface* ITag = Cast<IGameplayTagAssetInterface>(OtherActor))
+	{
+		if (ITag->HasMatchingGameplayTag(Tag::Player()))	return;
+		if (ITag->HasMatchingGameplayTag(Tag::Enemy()))		return;
+	}
+
 
 	if (CanReflectCollisionLaunch())
 		ReflectedCollisionLaunch_PreLaunch(SweepHit.ImpactNormal, SweepHit.ImpactPoint);
@@ -493,23 +520,16 @@ void ASmallEnemy::ReflectedCollisionLaunch_PreLaunch(FVector SurfaceNormal, FVec
 	m_GravityState = EGravityState::ForcedNone;
 	m_State = EEnemyState::STATE_PreLaunched;
 
-	FVector Velocity = -GetCharacterMovement()->GetLastUpdateVelocity().GetSafeNormal();
-	FVector Proj = Velocity - (FVector::DotProduct(SurfaceNormal, Velocity) * SurfaceNormal);
-	float CurrentVelocitySize = GetCharacterMovement()->GetLastUpdateVelocity().Length();
-	CollisionLaunchVelocity = (Velocity + (Proj * -2.f)) * CurrentVelocitySize;
-
+	CollisionLaunchDirection = GetCollisionDirection(SurfaceNormal);
+	float time{};
+	float Multiplier{};
+	GetCollisionTime(time, Multiplier);
 	TlComp_LaunchedCollision->PlayFromStart();
-	float time = LaunchedCollision_FreezeBaseTime;
-	float Multiplier = (FMath::Min(GetCharacterMovement()->GetLastUpdateVelocity().SquaredLength(), FMath::Square(LaunchedCollision_FreezeVelocityMultiplier)) / FMath::Square(LaunchedCollision_FreezeVelocityMultiplier));
-	Multiplier = SMath::InvertedGaussian(Multiplier, 5.3f, 3.5f);
-	time *= Multiplier;
 
 	if (TimerManager.IsTimerActive(TH_FreezeCollisionLaunchCooldown))
 		ReflectedCollisionLaunch_Launch();
 	else
 	{
-		PRINTPARLONG(2.f, "time = %f", time);
-		PRINTPARLONG(2.f, "Velocity = %f", CurrentVelocitySize);
 		TimerManager.SetTimer(TH_CollisionLaunchFreeze, this, &ASmallEnemy::ReflectedCollisionLaunch_Launch, time);
 		TimerManager.SetTimer(TH_FreezeCollisionLaunchCooldown, LaunchedCollision_FreezeCooldown + time, false);
 	}
@@ -520,8 +540,50 @@ void ASmallEnemy::ReflectedCollisionLaunch_Launch()
 {
 	m_GravityState = EGravityState::Default;
 	GetCharacterMovement()->Velocity *= 0.f;
-	GetCharacterMovement()->AddImpulse(CollisionLaunchVelocity * LaunchedCollision_VelocityMultiplier + (FVector(0, 0, GetCharacterMovement()->GetGravityZ() * GetWorld()->GetDeltaSeconds())), true);
-	Launched(CollisionLaunchVelocity.GetSafeNormal());
+	GetCharacterMovement()->AddImpulse(CollisionLaunchDirection * LaunchedCollision_VelocityMultiplier + (FVector(0, 0, GetCharacterMovement()->GetGravityZ() * GetWorld()->GetDeltaSeconds())), true);
+	Launched(CollisionLaunchDirection.GetSafeNormal());
+}
+
+void ASmallEnemy::LaunchedLandCollision_PreLaunch(FVector SurfaceNormal, FVector SurfaceLocation)
+{
+	if (!GetWorld()) return;
+	m_GravityState = EGravityState::ForcedNone;
+	m_State = EEnemyState::STATE_PreLaunched;
+
+	CollisionLaunchDirection = GetCollisionDirection(SurfaceNormal);
+	float time{};
+	float Multiplier{};
+	GetCollisionTime(time, Multiplier);
+	TlComp_LaunchedCollision->PlayFromStart();
+
+	TimerManager.SetTimer(TH_CollisionLaunchFreeze, this, &ASmallEnemy::LaunchedLandCollision_Launch, time);
+	TimerManager.SetTimer(TH_FreezeCollisionLaunchCooldown, LaunchedCollision_FreezeCooldown + time, false);
+
+	LC_SpawnEffect(time, FMath::Max(Multiplier, 0.4f), SurfaceNormal, SurfaceLocation);
+}
+
+void ASmallEnemy::LaunchedLandCollision_Launch()
+{
+	m_GravityState = EGravityState::Default;
+	GetCharacterMovement()->Velocity *= 0.f;
+	GetCharacterMovement()->AddImpulse(CollisionLaunchDirection * LaunchedGroundCollision_VelocityMultiplier + (FVector(0, 0, GetCharacterMovement()->GetGravityZ() * GetWorld()->GetDeltaSeconds())), true);
+	Launched(CollisionLaunchDirection.GetSafeNormal());
+}
+
+FVector ASmallEnemy::GetCollisionDirection(const FVector& SurfaceNormal)
+{
+	FVector Velocity = -GetCharacterMovement()->GetLastUpdateVelocity().GetSafeNormal();
+	FVector Proj = Velocity - (FVector::DotProduct(SurfaceNormal, Velocity) * SurfaceNormal);
+	float CurrentVelocitySize = GetCharacterMovement()->GetLastUpdateVelocity().Length();
+	return (Velocity + (Proj * -2.f)) * CurrentVelocitySize;
+}
+
+void ASmallEnemy::GetCollisionTime(float& OUT_Time, float& OUT_Multiplier)
+{
+	OUT_Time = LaunchedCollision_FreezeBaseTime;
+	OUT_Multiplier = (FMath::Min(GetCharacterMovement()->GetLastUpdateVelocity().SquaredLength(), FMath::Square(LaunchedCollision_FreezeVelocityMultiplier)) / FMath::Square(LaunchedCollision_FreezeVelocityMultiplier));
+	OUT_Multiplier = SMath::InvertedGaussian(OUT_Multiplier, 5.3f, 3.5f);
+	OUT_Time *= OUT_Multiplier;
 }
 
 void ASmallEnemy::SpottingPlayer_Begin()
@@ -531,6 +593,22 @@ void ASmallEnemy::SpottingPlayer_Begin()
 void ASmallEnemy::SpottingPlayer_End()
 {
 	m_Anim->bSpottingPlayer = false;
+}
+
+bool ASmallEnemy::CanAttack_Pawn() const
+{
+	//switch (m_State)
+	//{
+	//case EEnemyState::STATE_None:			break;
+	//case EEnemyState::STATE_OnGround:		break;
+	//case EEnemyState::STATE_InAir:			return false;
+	//case EEnemyState::STATE_PreLaunched:	return false;
+	//case EEnemyState::STATE_Launched:		return false;
+	//case EEnemyState::STATE_OnWall:			return false;
+	//default:								break;
+	//}
+	if (m_State != EEnemyState::STATE_OnGround) return false;
+	return true;
 }
 
 void ASmallEnemy::TargetedPure()
@@ -565,6 +643,7 @@ void ASmallEnemy::HookedPure(const FVector InstigatorLocation, bool OnGround, bo
 	{
 		//AI
 		IncapacitateUndeterminedTime(EAIIncapacitatedType::Grappled, &ASmallEnemy::Capacitate_Grappled);
+		Cancel_CHOMP();
 
 		FVector Direction = InstigatorLocation - GetActorLocation();
 		RotateActorYawToVector(Direction.GetSafeNormal());
@@ -574,31 +653,27 @@ void ASmallEnemy::HookedPure(const FVector InstigatorLocation, bool OnGround, bo
 
 	if (bCanBeGrappleHooked)
 	{
-		GetCharacterMovement()->Velocity *= 0.f;
-
-		/* Rotate again towards Instigator - Yaw*/
-		FVector InstigatorDirection = (InstigatorLocation - FVector(0,0,GrappledInstigatorOffset)) - GetActorLocation();
-		FVector GoToLocation = InstigatorLocation + (InstigatorDirection.GetSafeNormal2D() * -GrappledInstigatorOffset);
-		FVector Direction = GoToLocation - GetActorLocation();
-		RotateActorYawToVector(InstigatorDirection);
 
 		// Enable Gravity and Disable Collisions
 		m_GravityState = EGravityState::Default;
 		GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Falling);
-		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		//GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		//FTimerHandle h;
+		//TimerManager.SetTimer(h, [this](){ GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics); }, FMath::Clamp(GrappledLaunchTime - GrappledLaunchTime_CollisionActivation, 0.f, GrappledLaunchTime), false);
+		DisableCollisions(FMath::Clamp(GrappledLaunchTime - GrappledLaunchTime_CollisionActivation, 0.f, GrappledLaunchTime));
 
-		FVector Velocity{};
-		OnGround ?
-			Velocity = ((Direction) / GrappledLaunchTime) + (0.5f * FVector(0, 0, -m_BaseGravityZ) * GrappledLaunchTime) :	// On Ground
-			Velocity = ((InstigatorDirection) / GrappledLaunchTime);														// In Air
-
-		GetCharacterMovement()->AddImpulse(Velocity, true);
-
-		FTimerHandle h;
-		TimerManager.SetTimer(h, [this](){ GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics); }, FMath::Clamp(GrappledLaunchTime - GrappledLaunchTime_CollisionActivation, 0.f, GrappledLaunchTime), false);
+		///* Rotate again towards Instigator - Yaw*/
+		GrappleLaunchToInstigator(InstigatorLocation, GrappledLaunchTime, OnGround);
 
 		bCanBeGrappleHooked = false;
 		TimerManager.SetTimer(Handle_GrappledCooldown, this, &ASmallEnemy::ResetCanBeGrappleHooked, GrappleHookedInternalCooldown);
+
+		//
+		if (m_DogPack)
+			m_DogPack->AlertPack(this);
+		SleepingEnd();
+
+		Delegate_LaunchedLand.BindUObject(this, &ASmallEnemy::LandedLaunched);
 	}
 }
 
@@ -614,9 +689,7 @@ void ASmallEnemy::PullFree_Pure(const FVector InstigatorLocation)
 	m_State = EEnemyState::STATE_InAir;
 	
 	// Add Impulse towards instigator - 2D direction
-	FVector Direction = InstigatorLocation - GetActorLocation();
-	RotateActorYawToVector(Direction.GetSafeNormal2D());
-	GetCharacterMovement()->AddImpulse(Direction.GetSafeNormal2D() * Direction.Size() * Grappled_PulledFreeStrengthMultiplier, true);
+	PullFree_Launch(InstigatorLocation);
 
 	// Enable Gravity and Disable Collisions
 	m_GravityState = EGravityState::Default;
@@ -631,6 +704,41 @@ void ASmallEnemy::PullFree_Pure(const FVector InstigatorLocation)
 	// Internal cooldown to getting grapplehooked
 	bCanBeGrappleHooked = false;
 	TimerManager.SetTimer(Handle_GrappledCooldown, this, &ASmallEnemy::ResetCanBeGrappleHooked, GrappleHookedInternalCooldown);
+
+	Delegate_LaunchedLand.BindUObject(this, &ASmallEnemy::LandedLaunched);
+}
+
+void ASmallEnemy::PullFree_Launch(const FVector& InstigatorLocation)
+{
+	FVector Direction = InstigatorLocation - GetActorLocation();
+	float Dotproduct_Up = FVector::DotProduct(FVector::UpVector, Direction.GetSafeNormal());
+	// Player is currently below the dog
+	if (Dotproduct_Up <= 0.f)
+	{
+		RotateActorYawToVector(Direction.GetSafeNormal2D());
+		GetCharacterMovement()->AddImpulse(Direction.GetSafeNormal2D() * Direction.Size() * Grappled_PulledFreeStrengthMultiplier, true);
+	}
+	else
+	{
+		GrappleLaunchToInstigator(InstigatorLocation, GrappledLaunchTime, true);
+	}
+}
+
+void ASmallEnemy::GrappleLaunchToInstigator(FVector InstigatorLocation, float Time, bool OnGround)
+{
+	/* Rotate again towards Instigator - Yaw*/
+	FVector InstigatorDirection = (InstigatorLocation - FVector(0, 0, GrappledInstigatorOffset)) - GetActorLocation();
+	FVector GoToLocation = InstigatorLocation + (InstigatorDirection.GetSafeNormal2D() * -GrappledInstigatorOffset);
+	FVector Direction = GoToLocation - GetActorLocation();
+	RotateActorYawToVector(InstigatorDirection);
+
+	FVector Velocity{};
+	OnGround ?
+		Velocity = ((Direction) / Time) + (0.5f * FVector(0, 0, -m_BaseGravityZ) * Time) :		// On Ground
+		Velocity = ((InstigatorDirection) / Time);												// In Air
+
+	GetCharacterMovement()->Velocity *= 0.f;
+	GetCharacterMovement()->AddImpulse(Velocity, true);
 }
 
 bool ASmallEnemy::CanBeAttacked()
@@ -640,30 +748,49 @@ bool ASmallEnemy::CanBeAttacked()
 
 void ASmallEnemy::Do_SmackAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor)
 {
+	/**
+	** Check if actor has component
+	 *	is this the best method of creating modular game mechanics?
+	 *  Don't know the cost of actually checking for and actor component vs casting to an interface. 
+	** Or is Interface better? 
+	 *  Issue with interfaces would be the multiple inheritance on the classes
+	 *	slowing down compile time due too them being something of a nightmare for compilers. 
+	 */
+	//auto s = OtherActor->GetComponentByClass(UBouncyShroomActorComponent::StaticClass());	
 }
 
-void ASmallEnemy::Receive_SmackAttack_Pure(const FVector& Direction, const float& Strength)
+void ASmallEnemy::Receive_SmackAttack_Pure(const FVector Direction, const float Strength, const bool bOverrideStrength)
 {
-	if (GetCanBeSmackAttacked())
-	{
-		/* Sets a timer before character can be damaged by the same attack */
-		TimerManager.SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, SmackAttack_InternalTimer, false);
+	if (!GetCanBeSmackAttacked()) return;
+	
 
-		EnableGravity();
+	/* Sets a timer before character can be damaged by the same attack */
+	TimerManager.SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, SmackAttack_InternalTimer, false);
+	DisableCollisions(SmackAttack_InternalTimer);
 
-		/* Weaker smack attack if actor on ground than in air */
-		float s;
-		GetMovementComponent()->IsFalling() ? s = Strength : s = Strength * SmackAttack_OnGroundMultiplication;
+	EnableGravity();
 
-		bCanBeSmackAttacked = false;
-		SetActorRotation(FVector(Direction.GetSafeNormal2D() * -1.f).Rotation(), ETeleportType::TeleportPhysics);
-		GetCharacterMovement()->Velocity *= 0.f;
-		GetCharacterMovement()->AddImpulse(Direction * s, true);
+	/* Weaker smack attack if actor on ground than in air */
+	float s = Strength;
+	if (!bOverrideStrength)
+		if (GetCharacterMovement()->IsWalking()) 
+			s = Strength * SmackAttack_OnGroundMultiplication;
 
-		Incapacitate(EAIIncapacitatedType::Stunned, 1.5f/* Stun timer */);
+	bCanBeSmackAttacked = false;
+	SetActorRotation(FVector(Direction.GetSafeNormal2D() * -1.f).Rotation(), ETeleportType::TeleportPhysics);
+	GetCharacterMovement()->Velocity *= 0.f;
+	GetCharacterMovement()->AddImpulse(Direction * s, true);
 
-		Launched(Direction);
-	}
+	Incapacitate(EAIIncapacitatedType::Stunned, 1.5f/* Stun timer */);
+	Launched(Direction);
+
+	if (m_DogPack)
+		m_DogPack->AlertPack(this);
+	SleepingEnd();
+
+	Delegate_LaunchedLand.BindUObject(this, &ASmallEnemy::LandedLaunched);
+
+	DRAWLINE(Direction * Strength, FColor::Red, 2.f);
 }
 void ASmallEnemy::Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength)
 {
@@ -672,8 +799,20 @@ void ASmallEnemy::Receive_GroundPound_Pure(const FVector& PoundDirection, const 
 	GetCharacterMovement()->AddImpulse(PoundDirection * GP_Strength, true);
 
 	/* Sets a timer before character can be damaged by the same attack */
-	
 	Launched(PoundDirection);
+
+	if (m_DogPack)
+		m_DogPack->AlertPack(this);
+	SleepingEnd();
+
+	Delegate_LaunchedLand.BindUObject(this, &ASmallEnemy::LandedLaunched);
+}
+
+void ASmallEnemy::ChompingAnotherEnemy(IAttackInterface* OtherInterface, AActor* OtherActor)
+{
+	FVector Direction2D = FVector(OtherActor->GetActorLocation() - GetActorLocation()).GetSafeNormal2D();
+	FVector NewDirection = (FVector::UpVector * ChompOther_Angle) + (Direction2D * (1.f - FMath::Abs(ChompOther_Angle)));
+	OtherInterface->Receive_SmackAttack_Pure(NewDirection, ChompOther_Strength, true);
 }
 
 void ASmallEnemy::NS_Start_Trail(FVector direction)
@@ -761,4 +900,9 @@ void ASmallEnemy::Launched(FVector direction)
 	RotateActorYawToVector(direction * -1.f);
 	// Particles
 	NS_Start_Trail(direction);
+}
+
+void ASmallEnemy::LandedLaunched(const FHitResult& LandHit)
+{
+	LaunchedLandCollision_PreLaunch(LandHit.ImpactNormal, LandHit.ImpactPoint);
 }

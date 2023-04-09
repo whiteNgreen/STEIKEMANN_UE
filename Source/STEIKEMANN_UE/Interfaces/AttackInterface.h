@@ -43,7 +43,7 @@ public:
 		void SmackAttack();
 	//virtual void Do_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength) = 0;
 	virtual void Do_SmackAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor){}
-	virtual void Receive_SmackAttack_Pure(const FVector& Direction, const float& Strength){}
+	virtual void Receive_SmackAttack_Pure(const FVector Direction, const float Strength, const bool bOverrideStrength = false){}
 	virtual bool GetCanBeSmackAttacked() const { return false; }
 	virtual void ResetCanBeSmackAttacked(){}
 

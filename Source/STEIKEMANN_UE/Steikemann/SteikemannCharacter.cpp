@@ -3091,7 +3091,7 @@ void ASteikemannCharacter::Do_SmackAttack_Pure(IAttackInterface* OtherInterface,
 	}
 }
 
-void ASteikemannCharacter::Receive_SmackAttack_Pure(const FVector& Direction, const float& Strength)
+void ASteikemannCharacter::Receive_SmackAttack_Pure(const FVector Direction, const float Strength, const bool bOverrideStrength)
 {
 	PTakeDamage(1, Direction);
 }

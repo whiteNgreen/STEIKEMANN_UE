@@ -1118,7 +1118,7 @@ public:
 	bool bCanBeSmackAttacked{ true };
 
 	void Do_SmackAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override;
-	void Receive_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength) override;
+	void Receive_SmackAttack_Pure(const FVector Direction, const float AttackStrength, const bool bOverrideStrength = false) override;
 
 	bool GetCanBeSmackAttacked() const override { return bCanBeSmackAttacked; }
 	void ResetCanBeSmackAttacked() override { bCanBeSmackAttacked = true; }

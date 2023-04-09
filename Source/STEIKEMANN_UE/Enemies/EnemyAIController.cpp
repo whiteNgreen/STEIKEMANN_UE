@@ -277,6 +277,33 @@ void AEnemyAIController::StopSensingPlayer()
 		return;
 }
 
+bool AEnemyAIController::AlertedByPack()
+{
+	switch (m_AIState)
+	{
+	case ESmallEnemyAIState::RecentlySpawned:			break;
+	case ESmallEnemyAIState::Idle:						break;
+	case ESmallEnemyAIState::Alerted:					break;
+	case ESmallEnemyAIState::ChasingTarget:				return false;
+	case ESmallEnemyAIState::GuardSpawn:				break;
+	case ESmallEnemyAIState::Attack:					return false;
+	case ESmallEnemyAIState::Incapacitated:				return false;
+	case ESmallEnemyAIState::None:						break;
+	default:
+		break;
+	}
+
+	SetState(ESmallEnemyAIState::ChasingTarget);
+	return true;
+}
+
+bool AEnemyAIController::CanAttack_AI() const
+{
+	if (m_AIState == ESmallEnemyAIState::Incapacitated)		return false;
+	if (!m_PawnOwner->CanAttack_Pawn())						return false;
+	return true;
+}
+
 void AEnemyAIController::AttackBegin()
 {
 	StopMovement();
@@ -304,6 +331,11 @@ void AEnemyAIController::CancelAttackJump()
 {
 	TM_AI.ClearTimer(TH_PreAttack);
 	TM_AI.ClearTimer(TH_AttackState);
+}
+
+void AEnemyAIController::ReceiveAttack()
+{
+
 }
 
 void AEnemyAIController::SetState(const ESmallEnemyAIState& state)
@@ -574,8 +606,9 @@ void AEnemyAIController::ChaseUpdate(float DeltaTime)
 	}
 
 	if (m_Player)
-		if (FVector::Dist(GetPawn()->GetActorLocation(), m_Player->GetActorLocation()) < AttackDistance)
-			SetState(ESmallEnemyAIState::Attack);
+		if (CanAttack_AI())
+			if (FVector::Dist(GetPawn()->GetActorLocation(), m_Player->GetActorLocation()) < AttackDistance)
+				SetState(ESmallEnemyAIState::Attack);
 }
 
 void AEnemyAIController::LerpPinkTeal_ChaseLocation(float DeltaTime)

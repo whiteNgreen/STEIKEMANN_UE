@@ -13,6 +13,7 @@
 
 DECLARE_DELEGATE(FIncapacitatedLandDelegation)
 DECLARE_DELEGATE(FIncapacitatedCollision)
+DECLARE_DELEGATE_OneParam(FLaunchedLand, const FHitResult& LandHit)
 
 /************************ ENUMS *****************************/
 
@@ -87,8 +88,11 @@ public: // Functions
 	void SetSpawnPointData(TSharedPtr<SpawnPointData> spawn);
 	FVector GetRandomLocationNearSpawn();
 #pragma endregion // SpawnRespawn
-
+	FTimerHandle TH_DisabledCollision;
 	void DisableCollisions();
+	/* Disables collisions for a period. Calling EnableCollisions() on timer end
+	 * TimerHandle TH_DisabledCollision */
+	void DisableCollisions(float time);
 	void EnableCollisions();
 #pragma region GameplayTags
 	UPROPERTY(BlueprintReadOnly, Category = "GameplayTags")
@@ -125,8 +129,10 @@ public: // Functions
 		float AttackJumpStrength{ 1200.f };
 	void AttackJump();
 	void CHOMP_Pure();
+	void Cancel_CHOMP();
 	UFUNCTION()
 		void ChompCollisionOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
 
 	virtual void Activate_AttackCollider() override;
 	virtual void Deactivate_AttackCollider() override;
@@ -168,6 +174,8 @@ public: // Functinos calling AI controller or Functions AI controller calling
 
 	void SpottingPlayer_Begin();
 	void SpottingPlayer_End();
+
+	bool CanAttack_Pawn() const;
 
 private: // Functions Capacitate - Used for IncapacitatedLandingDelegate
 	void IncapacitatedLand();
@@ -214,7 +222,7 @@ private:
 public:
 	FTimerHandle TH_FreezeCollisionLaunchCooldown;
 	FTimerHandle TH_CollisionLaunchFreeze;
-	FVector CollisionLaunchVelocity;
+	FVector CollisionLaunchDirection;
 	FVector MeshInitialPosition;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Launched Reflected Collision")
 		float LaunchedCollision_FreezeCooldown{ 0.1f };
@@ -225,8 +233,10 @@ public:
 	 * The calculation uses this velocity as the dividing factor */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Launched Reflected Collision")
 		float LaunchedCollision_FreezeVelocityMultiplier{ 1000.f };
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Launched Reflected Collision")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Launched Reflected Collision|Wall")
 		float LaunchedCollision_VelocityMultiplier{ 0.8f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Launched Reflected Collision|Ground")
+		float LaunchedGroundCollision_VelocityMultiplier{ 0.3f };
 public:
 	UTimelineComponent* TlComp_LaunchedCollision;
 	UPROPERTY(EditAnywhere)
@@ -241,6 +251,10 @@ public:
 	bool CanReflectCollisionLaunch() const;
 	void ReflectedCollisionLaunch_PreLaunch(FVector SurfaceNormal, FVector SurfaceLocation);
 	void ReflectedCollisionLaunch_Launch();
+	void LaunchedLandCollision_PreLaunch(FVector SurfaceNormal, FVector SurfaceLocation);
+	void LaunchedLandCollision_Launch();
+	FVector GetCollisionDirection(const FVector& SurfaceNormal);
+	void GetCollisionTime(float& OUT_Time, float& OUT_Multiplier);
 
 public:	// Visual effects
 	UFUNCTION(BlueprintImplementableEvent)
@@ -270,7 +284,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook|PulledFree")
 		float Grappled_PulledFreeNoCollisionTimer{ 0.5f };
 
-	/* ----- Grapple Interface ------ */
+public:	/* ----- Grapple Interface ------ */
 	virtual void TargetedPure() override;
 
 	virtual void UnTargetedPure() override;
@@ -286,7 +300,9 @@ public:
 
 	virtual void PullFree_Pure(const FVector InstigatorLocation);
 
-	//virtual FGameplayTag GetGrappledGameplayTag_Pure() const override { return Enemy; }
+public:
+	void PullFree_Launch(const FVector& InstigatorLocation);
+	void GrappleLaunchToInstigator(FVector InstigatorLocation, float Time, bool OnGround);
 #pragma endregion	//GrappleHooked
 #pragma region GettingSmacked
 public:
@@ -297,7 +313,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|SmackAttack")
 		float SmackAttack_OnGroundMultiplication{ 0.1f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|SmackAttack")
-		float SmackAttack_InternalTimer{ 0.5f };
+		float SmackAttack_InternalTimer{ 0.156f };
 
 	/**
 	*	Sets a timer before character can be damaged again 
@@ -306,13 +322,19 @@ public:
 	
 	bool CanBeAttacked() override;
 
-	void Do_SmackAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override;	// Getting SmackAttacked
-	void Receive_SmackAttack_Pure(const FVector& Direction, const float& Strength) override;
+	virtual void Do_SmackAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override;	// Getting SmackAttacked
+	virtual void Receive_SmackAttack_Pure(const FVector Direction, const float Strength, const bool bOverrideStrength = false) override;
 	bool GetCanBeSmackAttacked() const override { return bCanBeSmackAttacked; }
 	void ResetCanBeSmackAttacked() override { bCanBeSmackAttacked = true; }
 
-	void Do_GroundPound_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override {}
-	void Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength) override;
+	virtual void Do_GroundPound_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override {}
+	virtual void Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength) override;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|AttackingOtherDogs")
+		float ChompOther_Strength{ 1400.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|AttackingOtherDogs")
+		float ChompOther_Angle{ 0.5f };
+	void ChompingAnotherEnemy(IAttackInterface* OtherInterface, AActor* OtherActor);
 
 public: // Particles for getting smacked
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Particles|Trail")
@@ -336,6 +358,8 @@ public: // Particles for getting smacked
 
 	void Launched();
 	void Launched(FVector direction);
+	FLaunchedLand Delegate_LaunchedLand;
+	void LandedLaunched(const FHitResult& LandHit);
 #pragma endregion	//GettingSmacked
 #pragma region Pogo
 public:

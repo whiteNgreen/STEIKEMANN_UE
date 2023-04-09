@@ -71,6 +71,7 @@ public:	// Functions
 	FVector SuspiciousLocation{};
 	bool bIsSensingPawn{};
 
+	bool AlertedByPack();
 
 	// Attacking 
 	/* The distance to the player the AI will initiate Attack */
@@ -83,11 +84,14 @@ public:	// Functions
 	FTimerHandle TH_PreAttack;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 		float JumpToChompTime{ 1.f };
+	bool CanAttack_AI() const;
 	void AttackBegin();
 	void AttackEnd();
 	void Attack();
 	void AttackJump();
 	void CancelAttackJump();
+
+	void ReceiveAttack();
 
 	// Setting State
 	void SetState(const ESmallEnemyAIState& state);

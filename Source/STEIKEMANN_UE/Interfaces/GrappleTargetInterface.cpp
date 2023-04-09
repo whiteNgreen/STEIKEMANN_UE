@@ -4,3 +4,4 @@
 #include "../Interfaces/GrappleTargetInterface.h"
 
 // Add default functionality here for any IGrappleTargetInterface functions that are not pure virtual.
+

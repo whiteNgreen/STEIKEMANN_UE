@@ -12,7 +12,6 @@ enum class EGravityState : int8
 	LerpToNone,
 	ForcedNone
 };
-// State
 UENUM()
 enum class EEnemyState : int8
 {
@@ -25,7 +24,6 @@ enum class EEnemyState : int8
 
 	STATE_OnWall
 };
-// Wall Mechanic
 UENUM()
 enum class EWall : int8
 {
@@ -35,7 +33,6 @@ enum class EWall : int8
 
 	WALL_Leaving
 };
-
 struct SpawnPointData
 {
 	FVector Location;
@@ -53,7 +50,6 @@ enum class EDogType : uint8
 	Pink,
 	Teal
 };
-
 UENUM(BlueprintType)
 enum class ESmallEnemyAIState : uint8
 {
@@ -79,7 +75,6 @@ enum class EIdleState : uint8
 
 	None
 };
-
 UENUM(BlueprintType)
 enum class EAIIncapacitatedType : uint8
 {
