@@ -141,6 +141,19 @@ public: // Functions
 	void Chomp_EnableCollision();
 	void Chomp_DisableCollision();
 
+#pragma region ChaseState
+	void Bark_Pure();
+	UFUNCTION(BlueprintImplementableEvent)
+		void Bark_BPEvent();
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Chase|Bark")
+		float Bark_JumpStrenght{ 700.f };
+
+	void CorgiJump_Pure();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CorgiJump_BPEvent();
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Chase|CorgiJump")
+		float CorgiJump_MinJumpStrength{ 1200.f };
+#pragma endregion //ChaseState
 #pragma endregion // AI
 
 #pragma region States
@@ -237,6 +250,9 @@ public:
 		float LaunchedCollision_VelocityMultiplier{ 0.8f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Launched Reflected Collision|Ground")
 		float LaunchedGroundCollision_VelocityMultiplier{ 0.3f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Launched Reflected Collision|OtherCharacters")
+		float LaunchedCharacterCollision_VelocityCap{ 2000.f };
+
 public:
 	UTimelineComponent* TlComp_LaunchedCollision;
 	UPROPERTY(EditAnywhere)
@@ -249,12 +265,15 @@ public:
 	UFUNCTION()
 		void OnCapsuleComponentLaunchHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& SweepHit);
 	bool CanReflectCollisionLaunch() const;
-	void ReflectedCollisionLaunch_PreLaunch(FVector SurfaceNormal, FVector SurfaceLocation);
+	void ReflectedCollisionLaunch_PreLaunch(FVector SurfaceNormal, FVector SurfaceLocation, bool bAlwaysFreeze = false);
 	void ReflectedCollisionLaunch_Launch();
 	void LaunchedLandCollision_PreLaunch(FVector SurfaceNormal, FVector SurfaceLocation);
 	void LaunchedLandCollision_Launch();
 	FVector GetCollisionDirection(const FVector& SurfaceNormal);
 	void GetCollisionTime(float& OUT_Time, float& OUT_Multiplier);
+
+	void DogToDogCollision(const FHitResult& SweepHit, ASmallEnemy* OtherDog);
+	void GettingDogCollision(FVector SurfaceNormal, FVector SurfaceLocation);
 
 public:	// Visual effects
 	UFUNCTION(BlueprintImplementableEvent)

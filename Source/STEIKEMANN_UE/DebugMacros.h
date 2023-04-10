@@ -16,7 +16,7 @@
 
 // DrawDebugLine MACRO from GetActorLocation()
 #define DRAWLINE(Vec, Color, T) ( DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + (Vec), Color, false, T, 0, 5.f) )
-#define DRAWPOINT(Vec, T) ( DrawDebugPoint(GetWorld(), Vec, 20.f, FColor::Red, false, T, 0) )
+#define DRAWPOINT(Vec, Color, T) ( DrawDebugPoint(GetWorld(), Vec, 20.f, Color, false, T, 0) )
 
 
 /* -- timer macros --

@@ -31,7 +31,6 @@ void AEnemyAIController::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	if (!m_PawnOwner) return;
 
-
 	TM_AI.Tick(DeltaTime);
 	
 	switch (m_AIState)
@@ -60,7 +59,7 @@ void AEnemyAIController::Tick(float DeltaTime)
 	default:
 		break;
 	}
-	//PrintState();
+	//PRINT_STATE();
 }
 
 void AEnemyAIController::OnPossess(APawn* InPawn)
@@ -341,6 +340,8 @@ void AEnemyAIController::ReceiveAttack()
 void AEnemyAIController::SetState(const ESmallEnemyAIState& state)
 {
 	if (m_AIIncapacitatedType != EAIIncapacitatedType::None) return;
+	// CHECK IF AI CAN LEAVE STATE
+	// if (!CanLeaveState(ESmallEnemyAIState)) return;
 
 	AlwaysBeginStates(state);
 	if (m_AIState == state) return;
@@ -361,7 +362,8 @@ void AEnemyAIController::SetState(const ESmallEnemyAIState& state)
 		break;
 	}
 
-	Print_SetState(state);
+	//Print_SetState(state);
+	//PRINT_SETSTATE(state);
 }
 
 void AEnemyAIController::AlwaysBeginStates(const ESmallEnemyAIState& incommingState)
@@ -506,7 +508,6 @@ void AEnemyAIController::Post_Incapacitate_GettingSmacked()
 
 void AEnemyAIController::RedetermineIncapacitateState()
 {
-	PRINTLONG(3.f, "Redetermined Incapacitate State");
 	if (FVector(m_PawnOwner->GetActorLocation() - m_Player->GetActorLocation()).SquaredLength() < FMath::Square(PostGettingSmackedActivationRange))
 		m_EAIPost_IncapacitatedType = EAIPost_IncapacitatedType::ChasePlayer;
 	else
@@ -524,12 +525,18 @@ bool AEnemyAIController::IsIncapacitated() const
 
 void AEnemyAIController::ChaseBegin()
 {
-	TM_AI.SetTimer(TH_ChaseUpdate, this, &AEnemyAIController::ChaseTimedUpdate, PinkTeal_UpdateTime, false);
+	//TM_AI.SetTimer(TH_ChaseUpdate, this, &AEnemyAIController::ChaseTimedUpdate, PinkTeal_UpdateTime, false);
+	ChaseTimedUpdate();
+	ChaseUpdate(GetWorld()->GetDeltaSeconds());
+	SetChaseState_Start();
 }
 
 void AEnemyAIController::ChaseEnd()
 {
 	TM_AI.ClearTimer(TH_ChaseUpdate);
+
+	TM_AI.ClearTimer(TH_Chase_InvalidPath_Bark);
+	TM_AI.ClearTimer(TH_Chase_InvalidPath_JumpAttempt);
 }
 
 void AEnemyAIController::ChaseTimedUpdate()
@@ -581,6 +588,9 @@ void AEnemyAIController::ChaseTimedUpdate()
 
 void AEnemyAIController::ChaseUpdate(float DeltaTime)
 {
+	if (TM_AI.IsTimerActive(TH_DisabledChaseMovement)) return;
+	Evaluate_ChaseState();
+
 	switch (m_DogType)
 	{
 	case EDogType::Red:
@@ -627,6 +637,65 @@ void AEnemyAIController::GetPlayerPtr()
 		FTimerHandle h;
 		GetWorldTimerManager().SetTimer(h, this, &AEnemyAIController::GetPlayerPtr, 0.5f);
 	}
+}
+
+void AEnemyAIController::SetChaseState_Start()
+{
+	Evaluate_ChaseState();
+}
+
+void AEnemyAIController::SetChaseState(const EAI_ChaseState NewChaseState)
+{
+	if (m_EAI_ChaseState == NewChaseState) return;
+	m_EAI_ChaseState = NewChaseState;
+
+	switch (m_EAI_ChaseState)
+	{
+	case EAI_ChaseState::None:
+		break;
+	case EAI_ChaseState::ChasePlayer_ValidPath:
+		TM_AI.ClearTimer(TH_Chase_InvalidPath_Bark);
+		TM_AI.ClearTimer(TH_Chase_InvalidPath_JumpAttempt);
+		break;
+	case EAI_ChaseState::ChasePlayer_InvalidPath:
+		ChaseState_InvalidPath_Begin();
+		break;
+	default:
+		break;
+	}
+}
+
+void AEnemyAIController::Evaluate_ChaseState()
+{
+	if (GetPathFollowingComponent()->HasValidPath())
+		SetChaseState(EAI_ChaseState::ChasePlayer_ValidPath);
+	else
+		SetChaseState(EAI_ChaseState::ChasePlayer_InvalidPath);
+}
+
+void AEnemyAIController::ChaseState_InvalidPath_Begin()
+{
+	const float barktime = FMath::RandRange(ChaseState_Bark_Interval_Min, ChaseState_Bark_Interval_Min + ChaseState_Bark_Interval_Addition);
+	TM_AI.SetTimer(TH_Chase_InvalidPath_Bark, this, &AEnemyAIController::ChaseState_Bark, barktime);
+
+	const float corgijumptime = ChaseState_CorgiJumpTime;
+	TM_AI.SetTimer(TH_Chase_InvalidPath_JumpAttempt, this, &AEnemyAIController::ChaseState_CorgiJump, corgijumptime);
+}
+
+void AEnemyAIController::ChaseState_Bark()
+{
+	const float time = FMath::RandRange(ChaseState_Bark_Interval_Min, ChaseState_Bark_Interval_Min + ChaseState_Bark_Interval_Addition);
+	TM_AI.SetTimer(TH_Chase_InvalidPath_Bark, this, &AEnemyAIController::ChaseState_Bark, time);
+
+	m_PawnOwner->Bark_Pure();
+	const float dmTime = FMath::RandRange(ChaseState_Bark_DisableMovementTimer - 0.2f, ChaseState_Bark_DisableMovementTimer + 0.2f);
+	TM_AI.SetTimer(TH_DisabledChaseMovement, dmTime, false);
+}
+
+void AEnemyAIController::ChaseState_CorgiJump()
+{
+	TM_AI.ClearTimer(TH_Chase_InvalidPath_Bark);
+	m_PawnOwner->CorgiJump_Pure();
 }
 
 void AEnemyAIController::ChasePlayer_Red()
@@ -719,6 +788,7 @@ void AEnemyAIController::GuardSpawnEnd()
 	TM_AI.ClearTimer(TH_GuardSpawn);
 }
 
+#ifdef UE_BUILD_DEBUG
 void AEnemyAIController::PrintState()
 {
 	FString s;
@@ -736,6 +806,7 @@ void AEnemyAIController::PrintState()
 		break;
 	case ESmallEnemyAIState::ChasingTarget:
 		s += "CHASE";
+		PRINT_ChaseState();
 		break;
 	case ESmallEnemyAIState::GuardSpawn:
 		s += "GUARD";
@@ -771,7 +842,7 @@ void AEnemyAIController::PrintState()
 	PRINTPAR("%s - State :: %s", *t, *s);
 }
 
-void AEnemyAIController::Print_SetState(const ESmallEnemyAIState& state)
+void AEnemyAIController::Print_SetState(ESmallEnemyAIState state)
 {
 	FString s = "Set State To: ";
 	switch (state)
@@ -837,5 +908,23 @@ void AEnemyAIController::Print_SetState(const ESmallEnemyAIState& state)
 	PRINTPARLONG(1.f, "%s", *s);
 }
 
-
-
+void AEnemyAIController::PRINT_ChaseState()
+{
+	FString s = "ChaseState = ";
+	switch (m_EAI_ChaseState)
+	{
+	case EAI_ChaseState::None:
+		s += "None";
+		break;
+	case EAI_ChaseState::ChasePlayer_ValidPath:
+		s += "Chaseplayer_ValidPath";
+		break;
+	case EAI_ChaseState::ChasePlayer_InvalidPath:
+		s += "Chaseplayer_InvalidPath";
+		break;
+	default:
+		break;
+	}
+	PRINTPAR("%s", *s);
+}
+#endif

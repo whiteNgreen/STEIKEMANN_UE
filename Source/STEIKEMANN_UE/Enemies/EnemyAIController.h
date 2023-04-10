@@ -113,7 +113,9 @@ public:	// Functions
 	void RedetermineIncapacitateState();
 	bool IsIncapacitated() const;
 
-	
+#pragma region Chase
+
+#pragma region Chase_General
 	// Chase Target
 	void ChaseBegin();
 	void ChaseEnd();
@@ -123,9 +125,38 @@ public:	// Functions
 	void GetPlayerPtr();
 	AActor* m_Player{ nullptr };
 	FTimerHandle TH_ChaseUpdate;
+#pragma endregion //Chase_General
 
+#pragma region Chase_State
+public:
+	FTimerHandle TH_DisabledChaseMovement;
+	EAI_ChaseState m_EAI_ChaseState;
+	void SetChaseState_Start();
+	void SetChaseState(const EAI_ChaseState NewChaseState);
+	void Evaluate_ChaseState();
+	FTimerHandle TH_Chase_InvalidPath_Bark;
+	void ChaseState_InvalidPath_Begin();
+	void ChaseState_Bark();
+	FTimerHandle TH_Chase_InvalidPath_JumpAttempt;
+	void ChaseState_CorgiJump();
+
+public:
+	UPROPERTY(EditAnywhere, Category = "State|Chase|Bark")
+		float ChaseState_Bark_DisableMovementTimer{ 1.f };
+	/* Barking interval is set between the minimum value and 
+	 * min value + Addition value */
+	UPROPERTY(EditAnywhere, Category = "State|Chase|Bark")
+		float ChaseState_Bark_Interval_Min{ 1.f };
+	UPROPERTY(EditAnywhere, Category = "State|Chase|Bark")
+		float ChaseState_Bark_Interval_Addition{ 1.f };
+	UPROPERTY(EditAnywhere, Category = "State|Chase|InvalidPath Jump")
+		float ChaseState_CorgiJumpTime{ 2.f };
+
+
+#pragma endregion //Chase_State
+
+#pragma region Chase_DogPack
 	struct EDogPack* m_DogPack{ nullptr };
-
 	void ChasePlayer_Red();
 	void ChasePlayer_Red_Update();
 
@@ -149,7 +180,8 @@ public:	// Functions
 	FVector PinkTeal_ChaseLocation;
 	FVector PinkTeal_ChaseLocation_Target;
 	bool bPinkTealCloseToPlayer{};
-
+#pragma endregion //Chase_DogPack
+#pragma endregion //Chase
 	// Guard spawn
 	void GuardSpawnUpdate(float DeltaTime);
 	void GuardSpawnBegin();
@@ -190,7 +222,20 @@ public: // Variables
 	//UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	EDogType m_DogType;
 
-public: // Debugging
+
+#ifdef UE_BUILD_DEBUG
+public:
 	void PrintState();
-	void Print_SetState(const ESmallEnemyAIState& state);
+	void Print_SetState(ESmallEnemyAIState state);
+
+	void PRINT_ChaseState();
+
+	#define PRINT_STATE()			PrintState()
+	#define PRINT_SETSTATE(state)	Print_SetState(state)
+	#define PRINT_CHASESTATE()		PRINT_ChaseState()
+#else
+	#define PRINT_STATE()
+	#define PRINT_SETSTATE(state)
+	#define PRINT_CHASESTATE()
+#endif
 };

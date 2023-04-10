@@ -457,7 +457,6 @@ private:
 	//float m_BaseGravity{};
 
 public:/* ------------------- Basic Movement ------------------- */
-public:
 	UPROPERTY(EditAnywhere, Category = "Movement|Walk/Run", meta = (AllowPrivateAcces = "true"))
 	float TurnRate{ 50.f };
 
@@ -481,16 +480,16 @@ public:
 		UCurveFloat* Curve_AirFrictionMultiplier{ nullptr };
 
 	bool bActivateJump{};
-	UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump")
 		bool bJumping{};
 	UPROPERTY(BlueprintReadOnly)
 		bool bCanEdgeJump{};
 
 	/* How long after walking off an edge the player is still allowed to jump */
-	UPROPERTY(BlueprintReadOnly, Category = "Movement|Jump")
-		float PostEdge_JumpTimer_Length{ 0.3f };
-	float PostEdge_JumpTimer{};
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump")
+		float PostEdge_JumpTimer_Length{ 0.5f };
 	bool bCanPostEdgeRegularJump{};
+	FTimerHandle PostEdgeJump;
 
 	/* The angle from the Upwards axis the jump direction will go towards input */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump")

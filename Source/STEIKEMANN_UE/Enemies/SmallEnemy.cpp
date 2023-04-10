@@ -378,10 +378,34 @@ void ASmallEnemy::Chomp_DisableCollision()
 	BoxComp_Chomp->SetRelativeScale3D(FVector(0,0,0));
 }
 
+void ASmallEnemy::Bark_Pure()
+{
+	RotateActorYawToVector(SteikeWorldStatics::PlayerLocation - GetActorLocation());
+
+	GetCharacterMovement()->Velocity *= 0.f;
+	GetCharacterMovement()->AddImpulse(FVector::UpVector * Bark_JumpStrenght, true);
+
+	Bark_BPEvent();
+}
+
+void ASmallEnemy::CorgiJump_Pure()
+{
+	RotateActorYawToVector(SteikeWorldStatics::PlayerLocation - GetActorLocation());
+	FVector JumpDirection =
+		(GetActorForwardVector() * (1.f - FMath::Abs(AttackJumpAngle)))
+		+ (FVector::UpVector * AttackJumpAngle);
+	GetCharacterMovement()->Velocity *= 0.f;
+	GetCharacterMovement()->AddImpulse(JumpDirection * FMath::Max(AttackJumpStrength * 0.5f, CorgiJump_MinJumpStrength), true);
+
+	CorgiJump_BPEvent();
+}
+
 void ASmallEnemy::Incapacitate(const EAIIncapacitatedType& IncapacitateType, float Time/*, const ESmallEnemyAIState& NextState*/)
 {
-	m_AI->IncapacitateAI(IncapacitateType, Time/*, NextState*/);
-	m_AI->Incapacitate_GettingSmacked();
+	if (m_AI) {
+		m_AI->IncapacitateAI(IncapacitateType, Time/*, NextState*/);
+		m_AI->Incapacitate_GettingSmacked();
+	}
 	Chomp_DisableCollision();
 }
 
@@ -424,6 +448,7 @@ void ASmallEnemy::IncapacitatedLand()
 
 bool ASmallEnemy::IsIncapacitated() const
 {
+	if (!m_AI) return false;
 	AEnemyAIController* AI = Cast<AEnemyAIController>(GetController());
 	return AI->IsIncapacitated();
 }
@@ -483,7 +508,6 @@ void ASmallEnemy::LeaveWall()
 
 void ASmallEnemy::Tl_LaunchedCollision_End()
 {
-	PRINTLONG(2.f, "TIMELINE END");
 	GetMesh()->SetWorldLocation(GetActorLocation() + MeshInitialPosition);
 }
 
@@ -498,7 +522,13 @@ void ASmallEnemy::OnCapsuleComponentLaunchHit(UPrimitiveComponent* HitComponent,
 	if (IGameplayTagAssetInterface* ITag = Cast<IGameplayTagAssetInterface>(OtherActor))
 	{
 		if (ITag->HasMatchingGameplayTag(Tag::Player()))	return;
-		if (ITag->HasMatchingGameplayTag(Tag::Enemy()))		return;
+		if (ITag->HasMatchingGameplayTag(Tag::Enemy())) 
+		{
+			if (CanReflectCollisionLaunch())
+				if (ASmallEnemy* Dog = Cast<ASmallEnemy>(OtherActor))
+					DogToDogCollision(SweepHit, Dog);
+			return;
+		}
 	}
 
 
@@ -513,7 +543,7 @@ bool ASmallEnemy::CanReflectCollisionLaunch() const
 		return false;
 	return true;
 }
-void ASmallEnemy::ReflectedCollisionLaunch_PreLaunch(FVector SurfaceNormal, FVector SurfaceLocation)
+void ASmallEnemy::ReflectedCollisionLaunch_PreLaunch(FVector SurfaceNormal, FVector SurfaceLocation, bool bAlwaysFreeze)
 {
 	if (!GetWorld()) return;
 	m_GravityState = EGravityState::ForcedNone;
@@ -525,7 +555,7 @@ void ASmallEnemy::ReflectedCollisionLaunch_PreLaunch(FVector SurfaceNormal, FVec
 	GetCollisionTime(time, Multiplier);
 	TlComp_LaunchedCollision->PlayFromStart();
 
-	if (TimerManager.IsTimerActive(TH_FreezeCollisionLaunchCooldown))
+	if (TimerManager.IsTimerActive(TH_FreezeCollisionLaunchCooldown) && !bAlwaysFreeze)
 		ReflectedCollisionLaunch_Launch();
 	else
 	{
@@ -585,6 +615,28 @@ void ASmallEnemy::GetCollisionTime(float& OUT_Time, float& OUT_Multiplier)
 	OUT_Time *= OUT_Multiplier;
 }
 
+void ASmallEnemy::DogToDogCollision(const FHitResult& SweepHit, ASmallEnemy* OtherDog)
+{
+	PRINTLONG(2.f, "DOG COLLISION");
+	DRAWLINE(OtherDog->GetVelocity(), FColor::Blue, 2.f);
+	DRAWLINE(GetVelocity(), FColor::Red, 2.f);
+	DRAWLINE(SweepHit.ImpactNormal * 200.f, FColor::Green, 3.f);
+	DRAWPOINT(SweepHit.ImpactPoint, FColor::Blue, 2.f);
+
+	//TimerManager.SetTimer(TH_CollisionLaunchFreeze, 1.f, false);
+	//OtherDog->TimerManager.SetTimer(TH_CollisionLaunchFreeze, 1.f, false);
+	//FVector CollisionNormal = SweepHit.ImpactNormal;
+
+	ReflectedCollisionLaunch_PreLaunch(SweepHit.ImpactNormal, SweepHit.ImpactPoint, true);
+	OtherDog->ReflectedCollisionLaunch_PreLaunch(-SweepHit.ImpactNormal, SweepHit.ImpactPoint, true);
+	//OtherDog->GettingDogCollision(-SweepHit.ImpactNormal, SweepHit.ImpactPoint);
+}
+
+void ASmallEnemy::GettingDogCollision(FVector SurfaceNormal, FVector SurfaceLocation)
+{
+
+}
+
 void ASmallEnemy::SpottingPlayer_Begin()
 {
 	m_Anim->bSpottingPlayer = true;
@@ -596,16 +648,6 @@ void ASmallEnemy::SpottingPlayer_End()
 
 bool ASmallEnemy::CanAttack_Pawn() const
 {
-	//switch (m_State)
-	//{
-	//case EEnemyState::STATE_None:			break;
-	//case EEnemyState::STATE_OnGround:		break;
-	//case EEnemyState::STATE_InAir:			return false;
-	//case EEnemyState::STATE_PreLaunched:	return false;
-	//case EEnemyState::STATE_Launched:		return false;
-	//case EEnemyState::STATE_OnWall:			return false;
-	//default:								break;
-	//}
 	if (m_State != EEnemyState::STATE_OnGround) return false;
 	return true;
 }
@@ -788,8 +830,6 @@ void ASmallEnemy::Receive_SmackAttack_Pure(const FVector Direction, const float 
 	SleepingEnd();
 
 	Delegate_LaunchedLand.BindUObject(this, &ASmallEnemy::LandedLaunched);
-
-	DRAWLINE(Direction * Strength, FColor::Red, 2.f);
 }
 void ASmallEnemy::Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength)
 {

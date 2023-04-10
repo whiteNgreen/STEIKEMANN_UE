@@ -76,6 +76,13 @@ enum class EIdleState : uint8
 	None
 };
 UENUM(BlueprintType)
+enum class EAI_ChaseState : uint8
+{
+	None,
+	ChasePlayer_ValidPath,
+	ChasePlayer_InvalidPath
+};
+UENUM(BlueprintType)
 enum class EAIIncapacitatedType : uint8
 {
 	None,

@@ -223,7 +223,6 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	SteikeWorldStatics::PlayerLocation = GetActorLocation();
 
 	if (bIsDead) { return; }
-	//m_InputVector = InputVectorRaw;
 
 	/* Rotate Inputvector to match the playercontroller */
 	FRotator Rot = GetControlRotation();
@@ -236,8 +235,6 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	if (m_GamepadCameraInput.Length() > 1.f)
 		m_GamepadCameraInput.Normalize();
 
-	PRINTPAR("Walkspeed = %f", GetMoveComponent()->MaxWalkSpeed);
-	DRAWLINE(GetMoveComponent()->Velocity, FColor::Red, 0.f);
 	//PRINTPAR("MouseMovement = %s", *m_MouseMovementInput.ToString());
 	//PRINTPAR("GH_GrappleSmackAimingVector_MNK = %s", *GH_GrappleSmackAimingVector.ToString());
 
@@ -287,17 +284,11 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		ResetActorRotationPitchAndRoll(DeltaTime);
 	}
 	
-	/*		Jump		*/
-	PostEdge_JumpTimer += DeltaTime;
-	if (GetMoveComponent()->IsFalling() && (PostEdge_JumpTimer < PostEdge_JumpTimer_Length))
-	{
+	/*		Post Edge Jump		*/
+	if (GetCharacterMovement()->IsWalking()){ 
 		bCanPostEdgeRegularJump = true;
+		TimerManager.SetTimer(PostEdgeJump, [this]() { bCanPostEdgeRegularJump = false; }, PostEdge_JumpTimer_Length, false);
 	}
-	else if (GetMoveComponent()->IsFalling() && (PostEdge_JumpTimer > PostEdge_JumpTimer_Length))
-	{
-		bCanPostEdgeRegularJump = false;
-	}
-	if (GetCharacterMovement()->IsWalking()) { PostEdge_JumpTimer = 0.f; }
 
 
 	/*------------ BASIC STATES ---------------*/
@@ -1820,19 +1811,10 @@ void ASteikemannCharacter::Jump()
 
 			if (GetMoveComponent()->IsFalling() && JumpCurrentCount == 0)
 			{
-				/* and the post edge timer is valid */
 				if (bCanPostEdgeRegularJump)
-				{
-					JumpCurrentCount++;
-				}
-				/* after post edge timer is valid */
+					Jump_OnGround();
 				else 
-				{
-					JumpCurrentCount = 2;
-				}
-				GetMoveComponent()->Jump(JumpStrength);
-				Anim_Activate_Jump();
-				TLComp_AirFriction->PlayFromStart();
+					Jump_DoubleJump();
 				break;
 			}
 			if (CanDoubleJump())
@@ -2018,6 +2000,7 @@ bool ASteikemannCharacter::PB_Active_TargetDetection()
 
 bool ASteikemannCharacter::PB_Passive_IMPL(AActor* OtherActor)
 {
+	if (!OtherActor) return false;
 	// Validate Distance
 	if (!PB_ValidTargetDistance(OtherActor->GetActorLocation()))	
 		return false;
