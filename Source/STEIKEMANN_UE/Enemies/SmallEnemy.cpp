@@ -721,7 +721,7 @@ void ASmallEnemy::HookedPure(const FVector InstigatorLocation, bool OnGround, bo
 void ASmallEnemy::UnHookedPure()
 {
 	Execute_UnHooked(this);
-	Incapacitate(EAIIncapacitatedType::None);
+	Incapacitate(EAIIncapacitatedType::Stunned, 0.1f);
 	m_GravityState = EGravityState::Default;
 }
 
@@ -803,14 +803,10 @@ void ASmallEnemy::Do_SmackAttack_Pure(IAttackInterface* OtherInterface, AActor* 
 void ASmallEnemy::Receive_SmackAttack_Pure(const FVector Direction, const float Strength, const bool bOverrideStrength)
 {
 	if (!GetCanBeSmackAttacked()) return;
-	
-
 	/* Sets a timer before character can be damaged by the same attack */
 	TimerManager.SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, SmackAttack_InternalTimer, false);
-	DisableCollisions(SmackAttack_InternalTimer);
-
+	//DisableCollisions(SmackAttack_InternalTimer);
 	EnableGravity();
-
 	/* Weaker smack attack if actor on ground than in air */
 	float s = Strength;
 	if (!bOverrideStrength)
@@ -833,6 +829,8 @@ void ASmallEnemy::Receive_SmackAttack_Pure(const FVector Direction, const float 
 }
 void ASmallEnemy::Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength)
 {
+	EnableGravity();
+
 	SetActorRotation(FVector(PoundDirection.GetSafeNormal2D() * -1.f).Rotation(), ETeleportType::TeleportPhysics);
 	GetCharacterMovement()->Velocity *= 0.f;
 	GetCharacterMovement()->AddImpulse(PoundDirection * GP_Strength, true);
@@ -845,6 +843,14 @@ void ASmallEnemy::Receive_GroundPound_Pure(const FVector& PoundDirection, const 
 	SleepingEnd();
 
 	Delegate_LaunchedLand.BindUObject(this, &ASmallEnemy::LandedLaunched);
+}
+
+void ASmallEnemy::Receive_LeewayPause_Pure(float Pausetime)
+{
+	CustomTimeDilation = AttackInterface_LeewayPause_Timedilation;
+	FTimerHandle h;
+	if (GetWorld())
+		GetWorldTimerManager().SetTimer(h, [this]() { if(GetWorld() && this)CustomTimeDilation = 1.f; }, Pausetime, false);
 }
 
 void ASmallEnemy::ChompingAnotherEnemy(IAttackInterface* OtherInterface, AActor* OtherActor)
@@ -928,6 +934,7 @@ void ASmallEnemy::PrintState()
 
 void ASmallEnemy::Launched()
 {
+	EnableGravity();
 	Launched(GetVelocity().GetSafeNormal());
 }
 

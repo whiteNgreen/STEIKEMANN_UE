@@ -115,6 +115,8 @@ enum class EAttackState : int8
 	,Post_GroundPound
 	,Post_Buffer
 };
+
+
 UENUM()
 enum class ESmackAttackType : int8
 {
@@ -931,8 +933,7 @@ public:	// UPROPERTY Variables
 		float GH_GrapplingEnemyHold{ 1.f };
 	//-----------------------------------------------
 
-public: 
-	/* ------- GrappleTargetInterface ------ */
+public: /* ------- GrappleTargetInterface ------ */
 	virtual void TargetedPure() override {}
 
 	virtual void UnTargetedPure() override {}
@@ -942,7 +943,10 @@ public:
 
 	virtual void UnHookedPure() override {}
 
-	/* ------- Native Variables and functions -------- */
+public:	// AttackInterface
+	virtual void Cause_LeewayPause_Pure(float Pausetime) override;
+
+public: /* ------- Native Variables and functions -------- */
 	void LeftTriggerClick();
 	void LeftTriggerUn_Click();
 
@@ -1018,6 +1022,7 @@ public:
 	FTimerHandle TH_BufferAttack;
 	FAttackActionBuffer Delegate_AttackBuffer;
 	ESmackAttackType m_ESmackAttackType = ESmackAttackType::Regular;
+	EAttackType m_EAttackType = EAttackType::None;
 	virtual void AttackContact(AActor* target) override;
 	void AttackContact_Particles(FVector location, FQuat direction);
 
@@ -1052,10 +1057,8 @@ public:
 	FVector AttackDirection{};
 	FVector AttackColliderScale{};
 
-
 	void Click_Attack();
 	void UnClick_Attack();
-
 
 	UFUNCTION(BlueprintImplementableEvent)
 		void AttackSmack_Start();
@@ -1063,13 +1066,12 @@ public:
 		void AttackSmack_Start_Pure();
 	void AttackSmack_Start_Ground_Pure();
 	void AttackSmack_Grapple_Pure();
-
 	// Combo
 	int AttackComboCount{};
 	UFUNCTION(BlueprintImplementableEvent)
 		void ComboAttack(int combo);
 	void ComboAttack_Pure();
-
+	void Cancel_SmackAttack();
 
 	UFUNCTION(BlueprintCallable)
 		void Stop_Attack();
@@ -1123,13 +1125,15 @@ public:
 	
 	/* The angle from the ground the enemy will be smacked. 0.0: Is parallel to the ground. 1.0: Is directly upwards */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks", meta = (UIMin = "0.0", UIMax = "1.0"))
-		float SmackUpwardAngle{ 0.5f };
+		float SmackUpwardAngle{ 0.6f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
-		float SmackAttackStrength{ 1500.f };
+		float SmackAttackStrength{ 1600.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
+		float GrappleSmack_Strength{ 2300.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks", meta = (UIMin = "0", UIMax = "1"))
 		float SmackAttack_InputAngleMultiplier			/*UMETA(DisplayName = "Input Angle Multiplier")*/ { 0.2 };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks", meta = (UIMin = "0", UIMax = "1"))
-		float SmackAttack_InputStrengthMultiplier		/*UMETA(DisplayName = "Input Strength Multiplier")*/ { 0.2 };
+		float Grapplesmack_DirectionMultiplier		/*UMETA(DisplayName = "Input Strength Multiplier")*/ { 0.2 };
 
 	bool IsSmackAttacking() const;
 

@@ -235,9 +235,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	if (m_GamepadCameraInput.Length() > 1.f)
 		m_GamepadCameraInput.Normalize();
 
-	//PRINTPAR("MouseMovement = %s", *m_MouseMovementInput.ToString());
-	//PRINTPAR("GH_GrappleSmackAimingVector_MNK = %s", *GH_GrappleSmackAimingVector.ToString());
-
+	/* PRINTING STATE MACHINE INFO */
 	//switch (m_EState)
 	//{
 	//case EState::STATE_OnGround:
@@ -259,6 +257,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	//	break;
 	//}
 	//PRINTPAR("Attack State :: %i", m_EAttackState);
+	//PRINTPAR("Attack type :: %i", m_EAttackType);
 	//PRINTPAR("Grapple State :: %i", m_EGrappleState);
 	//PRINTPAR("Grapple Type  :: %i", m_EGrappleType);
 	//PRINTPAR("Smack Attack State :: %i", m_ESmackAttackState);
@@ -709,7 +708,14 @@ void ASteikemannCharacter::RightTriggerClick()
 	case EState::STATE_OnWall:		
 		CancelOnWall();
 		break;
-	case EState::STATE_Attacking:	return;
+	case EState::STATE_Attacking:	
+		if (!GrappledActor.IsValid()) return;
+		if (m_EAttackType == EAttackType::SmackAttack) {
+			Cancel_SmackAttack();
+		}
+		else
+			return;
+		break;
 	case EState::STATE_Grappling:	return;
 	default:
 		break;
@@ -718,11 +724,9 @@ void ASteikemannCharacter::RightTriggerClick()
 	if (!GrappledActor.IsValid()) return;
 	Active_GrappledActor = GrappledActor;
 	Active_GrappledActor_Location = Active_GrappledActor->GetActorLocation();
-
 	IGameplayTagAssetInterface* ITag = Cast<IGameplayTagAssetInterface>(Active_GrappledActor.Get());
 	IGrappleTargetInterface* IGrapple = Cast<IGrappleTargetInterface>(Active_GrappledActor.Get());
 	if (!ITag || !IGrapple) return;
-
 	if (ITag->HasMatchingGameplayTag(Tag::AubergineDoggo()))
 		GrappledEnemy = Active_GrappledActor;
 	JumpCurrentCount = 1;	// Reset DoubleJump
@@ -791,6 +795,7 @@ void ASteikemannCharacter::GH_SetGrappleType(IGameplayTagAssetInterface* ITag, I
 		IGrapple->HookedPure(GetActorLocation(), true, true);
 		m_EGrappleType = EGrappleType::Dynamic_Ground;
 		GH_GrappleDynamic_Start();
+		Cause_LeewayPause_Pure(AttackInterface_LeewayPause_Time);
 
 		TFunc_GrappleLaunchFunction = [this, IGrapple]() {
 			GH_Launch_Dynamic(IGrapple, true);
@@ -1032,7 +1037,7 @@ void ASteikemannCharacter::GH_ShowGrappleSmackCurveIndicator_Gamepad(float Delta
 	angle = FMath::DegreesToRadians(SmackUpwardAngle);
 	angle = angle + (angle * (((InputVectorRaw.X + InputVectorRaw.Length()) / 2.f) * SmackAttack_InputAngleMultiplier));
 	Direction = (cosf(angle) * Direction) + (sinf(angle) * FVector::UpVector);
-	float strength = (SmackAttackStrength * AdditionalStrength + (SmackAttackStrength * (InputVectorRaw.X * SmackAttack_InputStrengthMultiplier)));
+	float strength = (GrappleSmack_Strength * AdditionalStrength + (GrappleSmack_Strength * (InputVectorRaw.X * Grapplesmack_DirectionMultiplier)));
 	//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + Direction * strength * DeltaTime, FColor::Red, false, DrawTime, -1, 6.f);
 
 	GH_ShowGrappleSmackCurve(DeltaTime, Direction, strength, DrawTime);
@@ -1045,7 +1050,7 @@ void ASteikemannCharacter::GH_ShowGrappleSmackCurveIndicator(float DeltaTime, fl
 	FVector Direction = GH_GrappleSmackAiming_MNK(Active_GrappledActor.Get());
 	//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + Direction * SmackAttackStrength, FColor::Red, false, DrawTime, 0, 4.f);
 
-	GH_ShowGrappleSmackCurve(DeltaTime, Direction, SmackAttackStrength + (SmackAttackStrength * SmackAttack_InputStrengthMultiplier), DrawTime);
+	GH_ShowGrappleSmackCurve(DeltaTime, Direction, GrappleSmack_Strength + (GrappleSmack_Strength * Grapplesmack_DirectionMultiplier), DrawTime);
 }
 
 void ASteikemannCharacter::GH_ShowGrappleSmackCurve(float DeltaTime, FVector Direction, float SmackStrength, float DrawTime)
@@ -1079,6 +1084,22 @@ bool ASteikemannCharacter::GH_ShowGrappleSmackImpactIndicator(FVector start, FVe
 		return true;
 	}
 	return false;
+}
+
+void ASteikemannCharacter::Cause_LeewayPause_Pure(float Pausetime)
+{
+	/* Just iterating through the InReachGrappleTargets for now. 
+	* It is the current method of checking which relevant actors that are nearby without having to create a new method.
+	* Though the method of checking should probably be done through the gamemode or 
+	* something. Where it can know about the active enemies and iterate through them to call the interface function.
+	*/
+	for (auto& target : InReachGrappleTargets)
+	{
+		if (target == Active_GrappledActor) continue;
+		if (auto iattack = Cast<IAttackInterface>(target)) {
+			iattack->Receive_LeewayPause_Pure(Pausetime);
+		}
+	}
 }
 
 void ASteikemannCharacter::Anim_Grapple_End_Pure()
@@ -2883,6 +2904,7 @@ void ASteikemannCharacter::Click_Attack()
 		break;
 	}
 	m_ESmackAttackType = ESmackAttackType::Regular;
+	m_EAttackType = EAttackType::SmackAttack;
 	return;
 }
 
@@ -2930,14 +2952,32 @@ void ASteikemannCharacter::ComboAttack_Pure()
 		TLComp_Attack_SMACK->PlayFromStart();
 }
 
+void ASteikemannCharacter::Cancel_SmackAttack()
+{
+	EndAttackBufferPeriod();
+	Deactivate_AttackCollider();
+	Stop_Attack();
+
+	AttackComboCount = 0;
+	AttackContactedActors.Empty();
+	m_EAttackState = EAttackState::None;
+	m_EAttackType = EAttackType::None;
+	m_ESmackAttackType = ESmackAttackType::Regular;
+	m_EMovementInputState = EMovementInput::Open;
+	ResetState();
+}
+
 void ASteikemannCharacter::Stop_Attack()
 {
 	AttackComboCount = 0;
 	AttackContactedActors.Empty();
 	m_EAttackState = EAttackState::None;
+	m_EAttackType = EAttackType::None;
 	m_ESmackAttackType = ESmackAttackType::Regular;
 	m_EState = EState::STATE_None;
 	m_EMovementInputState = EMovementInput::Open;
+
+	//EndAttackBufferPeriod();// testing
 
 	SetDefaultState();
 }
@@ -3116,7 +3156,7 @@ void ASteikemannCharacter::Do_SmackAttack_Pure(IAttackInterface* OtherInterface,
 		if (m_ESmackAttackType == ESmackAttackType::GrappleSmack)
 		{
 			FVector Direction = GH_GrappleSmackAiming_MNK(OtherActor);
-			OtherInterface->Receive_SmackAttack_Pure(Direction, SmackAttackStrength + (SmackAttackStrength * SmackAttack_InputStrengthMultiplier));
+			OtherInterface->Receive_SmackAttack_Pure(Direction, GrappleSmack_Strength + (GrappleSmack_Strength * Grapplesmack_DirectionMultiplier));
 			return;
 		}
 
@@ -3153,6 +3193,7 @@ void ASteikemannCharacter::Do_GroundPound()
 
 	bPB_Groundpound_PredeterminedPogoHit = PB_Groundpound_Predeterminehit();
 	m_WallState = EOnWallState::WALL_Leave;
+	m_EAttackType = EAttackType::GroundPound;
 
 	ExitOnWall(EState::STATE_Attacking);
 	GetMoveComponent()->CancelOnWall();

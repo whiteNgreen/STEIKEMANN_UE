@@ -235,6 +235,7 @@ private:
 public:
 	FTimerHandle TH_FreezeCollisionLaunchCooldown;
 	FTimerHandle TH_CollisionLaunchFreeze;
+	FTimerHandle TH_InternalDogToDogCollision;
 	FVector CollisionLaunchDirection;
 	FVector MeshInitialPosition;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Launched Reflected Collision")
@@ -339,8 +340,8 @@ public:
 	*	With respect to the specific handle it should use */
 	void WaitBeforeNewDamage(FTimerHandle TimerHandle, float Time);	
 	
+public:	// AttackInterface
 	bool CanBeAttacked() override;
-
 	virtual void Do_SmackAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override;	// Getting SmackAttacked
 	virtual void Receive_SmackAttack_Pure(const FVector Direction, const float Strength, const bool bOverrideStrength = false) override;
 	bool GetCanBeSmackAttacked() const override { return bCanBeSmackAttacked; }
@@ -348,7 +349,9 @@ public:
 
 	virtual void Do_GroundPound_Pure(IAttackInterface* OtherInterface, AActor* OtherActor) override {}
 	virtual void Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength) override;
+	virtual void Receive_LeewayPause_Pure(float Pausetime) override;
 
+public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|AttackingOtherDogs")
 		float ChompOther_Strength{ 1400.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|AttackingOtherDogs")

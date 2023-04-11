@@ -9,6 +9,7 @@
 UENUM(BlueprintType)
 enum EAttackType
 {
+	None,
 	SmackAttack,
 	//Scoop,
 	GroundPound,
@@ -53,4 +54,16 @@ public:
 	virtual void Do_GroundPound_Pure(IAttackInterface* OtherInterface, AActor* OtherActor){}
 	virtual void Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength) {}
 	virtual void Receive_Pogo_GroundPound_Pure(){}
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AttackInterface|Grapplehook")
+		float AttackInterface_LeewayPause_Time{ 1.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AttackInterface|Grapplehook")
+		float AttackInterface_LeewayPause_Timedilation{ 0.35f };
+	UFUNCTION(BlueprintNativeEvent, Category = "Attack|Stun")
+		void Receive_LeewayPause();
+	UFUNCTION(BlueprintNativeEvent, Category = "Attack|Stun")
+		void Cause_LeewayPause();
+	virtual void Cause_LeewayPause_Pure(float Pausetime) {}
+	virtual void Receive_LeewayPause_Pure(float Pausetime) {}
 };

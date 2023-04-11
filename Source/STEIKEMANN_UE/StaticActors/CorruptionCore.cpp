@@ -83,6 +83,7 @@ void ACorruptionCore::Death()
 void ACorruptionCore::DestroyConnectedTendrils()
 {
 	for (auto& it : ConnectedTendrils) {
-		it->DestroyTendril_Start();
+		if (it)
+			it->DestroyTendril_Start();
 	}
 }
