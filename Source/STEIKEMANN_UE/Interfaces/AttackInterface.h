@@ -40,7 +40,8 @@ public:
 	virtual void Gen_Attack(IAttackInterface* OtherInterface, AActor* OtherActor, const EAttackType AType){}
 	UFUNCTION(BlueprintNativeEvent, Category = "Attack|GenAttack")
 		void Gen_ReceiveAttack_IMPL(const FVector& Dircetion, const float Strength, const EAttackType AType);
-	virtual void Gen_ReceiveAttack(const FVector Direction, const float Strength, const EAttackType AType){}
+	virtual void Gen_ReceiveAttack(const FVector Direction, const float Strength, const EAttackType AType, const float Delaytime = -1.f){}
+	FTimerHandle TH_Gen_ReceiveAttackDelay;
 
 	UFUNCTION(BlueprintNativeEvent, Category = "Attack|SmackAttack")
 		void SmackAttack();

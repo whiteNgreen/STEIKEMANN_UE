@@ -25,11 +25,12 @@ public:
 		FGameplayTagContainer GTagContainer;
 	void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override { TagContainer = GTagContainer; }
 
+	FTimerManager TimerManager;
 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
 public:	
-
+	virtual void Tick(float DeltaTime) override;
 };

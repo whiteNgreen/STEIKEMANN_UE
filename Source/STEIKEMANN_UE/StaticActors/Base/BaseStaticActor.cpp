@@ -20,4 +20,10 @@ void ABaseStaticActor::BeginPlay()
 	
 }
 
+void ABaseStaticActor::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+	TimerManager.Tick(DeltaTime);
+}
+
 

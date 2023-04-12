@@ -62,9 +62,13 @@ void AInkFlower::PlayerCollectInk(AActor* player)
 		p->Pickup_InkFlower();
 }
 
-void AInkFlower::Gen_ReceiveAttack(const FVector& Direction, const float& Strength, EAttackType& AType)
+void AInkFlower::Gen_ReceiveAttack(const FVector Direction, const float Strength, EAttackType AType, const float Delaytime)
 {
 	if (!CanBeAttacked()) return;
+	if (AType == EAttackType::Environmental) {
+		Anim_Hit();
+		return;
+	}
 	bAICanBeDamaged = false;
 
 	Anim_Open();

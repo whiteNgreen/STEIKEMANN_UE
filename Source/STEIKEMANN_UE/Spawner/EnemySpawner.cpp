@@ -149,13 +149,20 @@ void AEnemySpawner::RespawnActor()
 	}
 }
 
-void AEnemySpawner::Gen_ReceiveAttack(const FVector Direction, const float Strength, const EAttackType AType)
+void AEnemySpawner::Gen_ReceiveAttack(const FVector Direction, const float Strength, const EAttackType AType, const float Delaytime)
 {
+	if (Delaytime > 0.f) {
+		if (TimerManager.IsTimerActive(TH_Gen_ReceiveAttackDelay))
+			return;
+		TimerManager.SetTimer(TH_Gen_ReceiveAttackDelay, [this, Direction, Strength, AType]() { Gen_ReceiveAttack(Direction, Strength, AType); }, Delaytime, false);
+		return;
+	}
 	if (!CanBeAttacked()) return;
 	bAICanBeDamaged = false;
 
 	BeginActorSpawn(&AEnemySpawner::BeginActorRespawn);
 	Execute_Gen_ReceiveAttack_IMPL(this, Direction, Strength, AType);
+	Anim_Hit();
 }
 
 void AEnemySpawner::SpawnAubergineDog(int& index)
@@ -195,17 +202,20 @@ void AEnemySpawner::SpawnAubergineDog(int& index)
 ASmallEnemy* AEnemySpawner::SpawnCharacter()
 {
 	if (!GetWorld()) return nullptr;
+
 	float yaw = RandomFloat(0, 360.f);
 	float pitch = RandomFloat(PitchRange.X, PitchRange.Y);
 	FRotator rot(0.f, yaw, 0.f);
-
-	ASmallEnemy* spawnedDog = GetWorld()->SpawnActor<ASmallEnemy>(SpawningActorType, SpawnPoint->GetComponentLocation(), rot);
-	if (!spawnedDog)
-		return nullptr;
-	// Launch character out
 	FVector LaunchDirection;
 	LaunchDirection = FVector::ForwardVector.RotateAngleAxis(yaw, FVector::UpVector);
 	LaunchDirection = (cosf(FMath::DegreesToRadians(pitch)) * LaunchDirection) + (sinf(FMath::DegreesToRadians(pitch)) * FVector::UpVector);
+	DRAWLINE(LaunchDirection * 300.f, FColor::Blue, 2.f);
+
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	ASmallEnemy* spawnedDog = GetWorld()->SpawnActor<ASmallEnemy>(SpawningActorType, SpawnPoint->GetComponentLocation() + (LaunchDirection * 50.f), rot, Params);
+	if (!spawnedDog)
+		return nullptr;
 
 	spawnedDog->Launched(LaunchDirection);
 	spawnedDog->GetCharacterMovement()->bJustTeleported = false;

@@ -39,7 +39,7 @@ public:
 		int Health{ 4 };
 
 	virtual bool CanBeAttacked() override { return true; }
-	virtual void Gen_ReceiveAttack(const FVector Direction, const float Strength, const EAttackType AType) override;
+	virtual void Gen_ReceiveAttack(const FVector Direction, const float Strength, const EAttackType AType, const float Delaytime = -1.f) override;
 
 	void ReceiveDamage(int damage);
 	void Death();

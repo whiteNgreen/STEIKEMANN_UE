@@ -11,7 +11,6 @@ ACorruptionCore::ACorruptionCore()
 {
 	Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Mesh"));
 	Mesh->SetupAttachment(Root);
-	
 	Collider = CreateDefaultSubobject<UCapsuleComponent>("Collider");
 	Collider->SetupAttachment(Mesh);
 }
@@ -20,7 +19,6 @@ ACorruptionCore::ACorruptionCore()
 void ACorruptionCore::BeginPlay()
 {
 	Super::BeginPlay();
-
 	GTagContainer.AddTag(Tag::CorruptionCore());
 }
 
@@ -28,22 +26,30 @@ void ACorruptionCore::BeginPlay()
 void ACorruptionCore::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
 }
 
-void ACorruptionCore::Gen_ReceiveAttack(const FVector Direction, const float Strength, const EAttackType AType)
+void ACorruptionCore::Gen_ReceiveAttack(const FVector Direction, const float Strength, const EAttackType AType, const float Delaytime)
 {
+	if (Delaytime > 0.f) {
+		if (TimerManager.IsTimerActive(TH_Gen_ReceiveAttackDelay)) 
+			return;
+		TimerManager.SetTimer(TH_Gen_ReceiveAttackDelay, [this, Direction, Strength, AType]() { Gen_ReceiveAttack(Direction, Strength, AType); }, Delaytime, false);
+		return;
+	}
 	if (!bAICanBeDamaged) { return; }
 	switch (AType)
 	{
 	case EAttackType::SmackAttack:
 		ReceiveDamage(1);
 		break;
+	case EAttackType::Environmental:
+		ReceiveDamage(2);
+		break;
 	default:
 		break;
 	}
 	bAICanBeDamaged = false;
-	GetWorldTimerManager().SetTimer(FTHCanBeDamaged, this, &ACorruptionCore::ResetCanbeDamaged, 0.1f);
+	TimerManager.SetTimer(FTHCanBeDamaged, this, &ACorruptionCore::ResetCanbeDamaged, 0.1f);
 	Execute_Gen_ReceiveAttack_IMPL(this, Direction, Strength, AType);
 }
 
@@ -58,7 +64,7 @@ void ACorruptionCore::Death()
 	/* Particles and disable mesh + collision */
 	UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), DeathParticles, GetActorLocation());
 	Collider->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	Mesh->SetHiddenInGame(true, true);
+	//Mesh->SetHiddenInGame(true, true);
 
 	DestroyConnectedTendrils();
 
@@ -68,7 +74,7 @@ void ACorruptionCore::Death()
 	};
 	FTimerDelegate FDelegate;
 	FDelegate.BindLambda(func);
-	GetWorldTimerManager().SetTimer(FTHDestruction, FDelegate, 5.f, false);
+	TimerManager.SetTimer(FTHDestruction, FDelegate, 5.f, false);
 }
 
 void ACorruptionCore::DestroyConnectedTendrils()

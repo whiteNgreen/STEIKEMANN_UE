@@ -275,6 +275,7 @@ public:
 
 	void DogToDogCollision(const FHitResult& SweepHit, ASmallEnemy* OtherDog);
 	void GettingDogCollision(FVector SurfaceNormal, FVector SurfaceLocation);
+	bool DogEnvironmentCollision(const FHitResult& SweepHit);
 
 public:	// Visual effects
 	UFUNCTION(BlueprintImplementableEvent)

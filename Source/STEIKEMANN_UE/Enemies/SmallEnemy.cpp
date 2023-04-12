@@ -519,18 +519,29 @@ void ASmallEnemy::Tl_LaunchedCollisionShake(FVector vector)
 void ASmallEnemy::OnCapsuleComponentLaunchHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& SweepHit)
 {
 	if (OtherActor == this) return;
-	if (IGameplayTagAssetInterface* ITag = Cast<IGameplayTagAssetInterface>(OtherActor))
-	{
-		if (ITag->HasMatchingGameplayTag(Tag::Player()))	return;
-		if (ITag->HasMatchingGameplayTag(Tag::Enemy())) 
-		{
-			if (CanReflectCollisionLaunch())
-				if (ASmallEnemy* Dog = Cast<ASmallEnemy>(OtherActor))
-					DogToDogCollision(SweepHit, Dog);
-			return;
-		}
-	}
-
+	//if (IGameplayTagAssetInterface* ITag = Cast<IGameplayTagAssetInterface>(OtherActor))
+	//{
+	//	if (ITag->HasMatchingGameplayTag(Tag::Player()))	return;
+	//	if (ITag->HasMatchingGameplayTag(Tag::Enemy())) 
+	//	{
+	//		if (CanReflectCollisionLaunch())
+	//			if (ASmallEnemy* Dog = Cast<ASmallEnemy>(OtherActor))
+	//				DogToDogCollision(SweepHit, Dog);
+	//		return;
+	//	}
+	//	if (ITag->HasMatchingGameplayTag(Tag::CorruptionCore()) || ITag->HasMatchingGameplayTag(Tag::InkFlower()))
+	//	{
+	//		if (CanReflectCollisionLaunch()) {
+	//			float Time{};
+	//			float m{};
+	//			GetCollisionTime(Time, m);
+	//			if (IAttackInterface* IAttack = Cast<IAttackInterface>(OtherActor)) {
+	//				IAttack->Gen_ReceiveAttack(SweepHit.ImpactNormal, 1000.f, EAttackType::Environmental, Time);
+	//			}
+	//		}
+	//	}
+	//}
+	if (DogEnvironmentCollision(SweepHit)) return;
 
 	if (CanReflectCollisionLaunch())
 		ReflectedCollisionLaunch_PreLaunch(SweepHit.ImpactNormal, SweepHit.ImpactPoint);
@@ -635,6 +646,34 @@ void ASmallEnemy::DogToDogCollision(const FHitResult& SweepHit, ASmallEnemy* Oth
 void ASmallEnemy::GettingDogCollision(FVector SurfaceNormal, FVector SurfaceLocation)
 {
 
+}
+
+bool ASmallEnemy::DogEnvironmentCollision(const FHitResult& SweepHit)
+{
+	AActor* OtherActor = SweepHit.GetActor();
+	if (IGameplayTagAssetInterface* ITag = Cast<IGameplayTagAssetInterface>(OtherActor))
+	{
+		if (ITag->HasMatchingGameplayTag(Tag::Player())) return true;
+		if (ITag->HasMatchingGameplayTag(Tag::Enemy()))
+		{
+			if (CanReflectCollisionLaunch())
+				if (ASmallEnemy* Dog = Cast<ASmallEnemy>(OtherActor))
+					DogToDogCollision(SweepHit, Dog);
+			return true;
+		}
+		if (ITag->HasMatchingGameplayTag(Tag::CorruptionCore()) || ITag->HasMatchingGameplayTag(Tag::InkFlower()) || ITag->HasMatchingGameplayTag(Tag::EnemySpawner()))
+		{
+			if (CanReflectCollisionLaunch()) {
+				float Time{};
+				float m{};
+				GetCollisionTime(Time, m);
+				if (IAttackInterface* IAttack = Cast<IAttackInterface>(OtherActor)) {
+					IAttack->Gen_ReceiveAttack(SweepHit.ImpactNormal, 1000.f, EAttackType::Environmental, Time);
+				}
+			}
+		}
+	}
+	return false;
 }
 
 void ASmallEnemy::SpottingPlayer_Begin()
@@ -950,5 +989,29 @@ void ASmallEnemy::Launched(FVector direction)
 
 void ASmallEnemy::LandedLaunched(const FHitResult& LandHit)
 {
+	PRINTLONG(2.f, "Landed Launched Delegate Call");
+	//if (IGameplayTagAssetInterface* ITag = Cast<IGameplayTagAssetInterface>(LandHit.GetActor()))
+	//{
+	//	if (ITag->HasMatchingGameplayTag(Tag::Player()))	return;
+	//	if (ITag->HasMatchingGameplayTag(Tag::Enemy()))
+	//	{
+	//		if (CanReflectCollisionLaunch())
+	//			if (ASmallEnemy* Dog = Cast<ASmallEnemy>(LandHit.GetActor()))
+	//				DogToDogCollision(LandHit, Dog);
+	//		return;
+	//	}
+	//	if (ITag->HasMatchingGameplayTag(Tag::CorruptionCore()) || ITag->HasMatchingGameplayTag(Tag::InkFlower()))
+	//	{
+	//		if (CanReflectCollisionLaunch()) {
+	//			float Time{};
+	//			float m{};
+	//			GetCollisionTime(Time, m);
+	//			if (IAttackInterface* IAttack = Cast<IAttackInterface>(LandHit.GetActor())) {
+	//				IAttack->Gen_ReceiveAttack(LandHit.ImpactNormal, 1000.f, EAttackType::Environmental, Time);
+	//			}
+	//		}
+	//	}
+	//}
+	DogEnvironmentCollision(LandHit);
 	LaunchedLandCollision_PreLaunch(LandHit.ImpactNormal, LandHit.ImpactPoint);
 }

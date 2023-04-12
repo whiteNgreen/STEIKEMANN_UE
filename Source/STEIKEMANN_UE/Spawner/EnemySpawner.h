@@ -126,7 +126,10 @@ public: // Functions
 
 		// Attack Interface
 	virtual bool CanBeAttacked() override { return bAICanBeDamaged; }
-	virtual void Gen_ReceiveAttack(const FVector Direction, const float Strength, const EAttackType AType) override;
+	virtual void Gen_ReceiveAttack(const FVector Direction, const float Strength, const EAttackType AType, const float Delaytime = -1.f) override;
+
+	UFUNCTION(BlueprintImplementableEvent)
+		void Anim_Hit();
 
 public: // Functions - Called by SpawnedActor
 

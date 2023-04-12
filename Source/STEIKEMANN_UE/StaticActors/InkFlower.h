@@ -31,6 +31,8 @@ public:
 
 public: // Animation
 	UFUNCTION(BlueprintImplementableEvent)
+		void Anim_Hit();
+	UFUNCTION(BlueprintImplementableEvent)
 		void Anim_Open();
 
 public: // Collectible
@@ -46,6 +48,6 @@ public: // Collectible
 
 public:// Attack Interface
 	virtual bool CanBeAttacked() override { return bAICanBeDamaged; }
-	virtual void Gen_ReceiveAttack(const FVector& Direction, const float& Strength, EAttackType& AType);
+	virtual void Gen_ReceiveAttack(const FVector Direction, const float Strength, EAttackType AType, const float Delaytime = -1.f);
 
 };
