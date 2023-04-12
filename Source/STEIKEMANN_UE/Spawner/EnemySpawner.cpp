@@ -149,12 +149,13 @@ void AEnemySpawner::RespawnActor()
 	}
 }
 
-void AEnemySpawner::Gen_ReceiveAttack(const FVector& Direction, const float& Strength, EAttackType& AType)
+void AEnemySpawner::Gen_ReceiveAttack(const FVector Direction, const float Strength, const EAttackType AType)
 {
 	if (!CanBeAttacked()) return;
 	bAICanBeDamaged = false;
 
 	BeginActorSpawn(&AEnemySpawner::BeginActorRespawn);
+	Execute_Gen_ReceiveAttack_IMPL(this, Direction, Strength, AType);
 }
 
 void AEnemySpawner::SpawnAubergineDog(int& index)

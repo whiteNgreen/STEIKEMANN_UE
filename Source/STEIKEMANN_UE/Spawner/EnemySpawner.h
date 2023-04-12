@@ -126,7 +126,7 @@ public: // Functions
 
 		// Attack Interface
 	virtual bool CanBeAttacked() override { return bAICanBeDamaged; }
-	virtual void Gen_ReceiveAttack(const FVector& Direction, const float& Strength, EAttackType& AType) override;
+	virtual void Gen_ReceiveAttack(const FVector Direction, const float Strength, const EAttackType AType) override;
 
 public: // Functions - Called by SpawnedActor
 

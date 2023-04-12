@@ -12,6 +12,7 @@
 #include "CorruptionCore.generated.h"
 
 class UCapsuleComponent;
+class UTimelineComponent;
 
 UCLASS()
 class ACorruptionCore : public ABaseStaticActor,
@@ -23,19 +24,22 @@ public:
 	// Sets default values for this actor's properties
 	ACorruptionCore();
 
+public: // Components
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
 		USkeletalMeshComponent* Mesh{ nullptr };
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
 		UCapsuleComponent* Collider{ nullptr };
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
-		class USphereComponent* Sphere{ nullptr };
-
+public: // Timeline
+	UTimelineComponent* TLComp_Smacked;
+	UPROPERTY(EditAnywhere)
+		UCurveFloat* Curve_SmackAnim;
+public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Variables", meta = (UIMin = "0", UIMAX = "10"))
 		int Health{ 4 };
 
 	virtual bool CanBeAttacked() override { return true; }
-	virtual void Gen_ReceiveAttack(const FVector& Direction, const float& Strength, EAttackType& AType) override;
+	virtual void Gen_ReceiveAttack(const FVector Direction, const float Strength, const EAttackType AType) override;
 
 	void ReceiveDamage(int damage);
 	void Death();

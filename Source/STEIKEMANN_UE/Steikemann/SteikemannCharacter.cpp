@@ -2636,9 +2636,11 @@ void ASteikemannCharacter::OnCapsuleComponentBeginOverlap(UPrimitiveComponent* O
 	
 	/* Collision with collectible */
 	if (tags.HasTag(Tag::Collectible())) {
-		ACollectible* collectible = Cast<ACollectible>(OtherActor);
-		ReceiveCollectible(collectible->CollectibleType);
-		collectible->Destruction();
+		if (ACollectible* collectible = Cast<ACollectible>(OtherActor))
+		{
+			ReceiveCollectible(collectible->CollectibleType);
+			collectible->Destruction();
+		}
 	}
 
 	/* Add checkpoint, overrides previous checkpoint */
@@ -3112,12 +3114,14 @@ void ASteikemannCharacter::OnAttackColliderBeginOverlap(UPrimitiveComponent* Ove
 	}
 }
 
-void ASteikemannCharacter::Gen_Attack(IAttackInterface* OtherInterface, AActor* OtherActor, EAttackType& AType)
+void ASteikemannCharacter::Gen_Attack(IAttackInterface* OtherInterface, AActor* OtherActor, const EAttackType AType)
 {
-	FVector Direction{ OtherActor->GetActorLocation() - GetActorLocation() };
-	Direction = Direction.GetSafeNormal2D();
-
+	FVector Direction_ActorToActor{ OtherActor->GetActorLocation() - GetActorLocation() };
+	FVector Direction_ComponentToActor = FVector(OtherActor->GetActorLocation() - GetMesh()->GetSocketLocation("Stav_CollisionSocket"));
+	//FVector Direction = FVector(Direction_ActorToActor.GetSafeNormal() + Direction_ComponentToActor.GetSafeNormal()).GetSafeNormal();
+	FVector Direction = Direction_ComponentToActor.GetSafeNormal();
 	OtherInterface->Gen_ReceiveAttack(Direction, SmackAttackStrength, AType);
+	DRAWLINE(Direction * 300.f, FColor::Red, 2.f);
 }
 
 void ASteikemannCharacter::TlCurve_AttackTurn_IMPL(float value)

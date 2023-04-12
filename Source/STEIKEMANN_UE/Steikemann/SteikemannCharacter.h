@@ -1084,7 +1084,7 @@ public: /* ------- Native Variables and functions -------- */
 	UFUNCTION()
 		void OnAttackColliderBeginOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
-	void Gen_Attack(IAttackInterface* OtherInterface, AActor* OtherActor, EAttackType& AType) override;
+	void Gen_Attack(IAttackInterface* OtherInterface, AActor* OtherActor, const EAttackType AType) override;
 
 	/***** TIMELINE COMPONENTS *****/
 	/* Turning Character during attack		

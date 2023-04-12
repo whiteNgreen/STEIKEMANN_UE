@@ -14,10 +14,6 @@ ACorruptionCore::ACorruptionCore()
 	
 	Collider = CreateDefaultSubobject<UCapsuleComponent>("Collider");
 	Collider->SetupAttachment(Mesh);
-
-	Sphere = CreateDefaultSubobject<USphereComponent>(TEXT("Sphere"));
-	Sphere->SetupAttachment(Root);
-
 }
 
 // Called when the game starts or when spawned
@@ -35,7 +31,7 @@ void ACorruptionCore::Tick(float DeltaTime)
 
 }
 
-void ACorruptionCore::Gen_ReceiveAttack(const FVector& Direction, const float& Strength, EAttackType& AType)
+void ACorruptionCore::Gen_ReceiveAttack(const FVector Direction, const float Strength, const EAttackType AType)
 {
 	if (!bAICanBeDamaged) { return; }
 	switch (AType)
@@ -47,7 +43,8 @@ void ACorruptionCore::Gen_ReceiveAttack(const FVector& Direction, const float& S
 		break;
 	}
 	bAICanBeDamaged = false;
-	GetWorldTimerManager().SetTimer(FTHCanBeDamaged, this, &ACorruptionCore::ResetCanbeDamaged, 0.5f);
+	GetWorldTimerManager().SetTimer(FTHCanBeDamaged, this, &ACorruptionCore::ResetCanbeDamaged, 0.1f);
+	Execute_Gen_ReceiveAttack_IMPL(this, Direction, Strength, AType);
 }
 
 void ACorruptionCore::ReceiveDamage(const int damage)
@@ -60,15 +57,9 @@ void ACorruptionCore::Death()
 {
 	/* Particles and disable mesh + collision */
 	UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), DeathParticles, GetActorLocation());
-	Sphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Collider->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Mesh->SetHiddenInGame(true, true);
 
-	/* Spawn collectible */
-	//FVector Loc = GetActorLocation() + FVector(0,0,200);
-	//GetWorld()->SpawnActor<AActor>(SpawnedCollectible, Loc, FRotator());
-
-	//
 	DestroyConnectedTendrils();
 
 	/* Destroy object after 10 seconds */

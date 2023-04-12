@@ -37,8 +37,10 @@ public:
 	FTimerHandle FTHCanBeDamaged;
 	virtual void ResetCanbeDamaged() { bAICanBeDamaged = true; }
 	virtual bool CanBeAttacked() = 0;
-	virtual void Gen_Attack(IAttackInterface* OtherInterface, AActor* OtherActor, EAttackType& AType){}
-	virtual void Gen_ReceiveAttack(const FVector& Direction, const float& Strength, EAttackType& AType){}
+	virtual void Gen_Attack(IAttackInterface* OtherInterface, AActor* OtherActor, const EAttackType AType){}
+	UFUNCTION(BlueprintNativeEvent, Category = "Attack|GenAttack")
+		void Gen_ReceiveAttack_IMPL(const FVector& Dircetion, const float Strength, const EAttackType AType);
+	virtual void Gen_ReceiveAttack(const FVector Direction, const float Strength, const EAttackType AType){}
 
 	UFUNCTION(BlueprintNativeEvent, Category = "Attack|SmackAttack")
 		void SmackAttack();
