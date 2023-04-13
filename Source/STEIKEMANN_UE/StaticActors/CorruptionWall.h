@@ -19,4 +19,6 @@ public:
 		void OpenWall_Pure();
 	UFUNCTION(BlueprintImplementableEvent)
 		void OpenWall_Impl();
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
+		void MeatWall_Pulse();
 };

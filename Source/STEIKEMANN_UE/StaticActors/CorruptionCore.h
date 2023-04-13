@@ -30,10 +30,10 @@ public: // Components
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
 		UCapsuleComponent* Collider{ nullptr };
 
-public: // Timeline
-	UTimelineComponent* TLComp_Smacked;
-	UPROPERTY(EditAnywhere)
-		UCurveFloat* Curve_SmackAnim;
+public: // Timeline --  For the more advanced smacked animation method
+	//UTimelineComponent* TLComp_Smacked;
+	//UPROPERTY(EditAnywhere)
+		//UCurveFloat* Curve_SmackAnim;
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Variables", meta = (UIMin = "0", UIMAX = "10"))
 		int Health{ 4 };

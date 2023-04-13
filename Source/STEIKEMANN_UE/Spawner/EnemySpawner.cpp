@@ -209,7 +209,6 @@ ASmallEnemy* AEnemySpawner::SpawnCharacter()
 	FVector LaunchDirection;
 	LaunchDirection = FVector::ForwardVector.RotateAngleAxis(yaw, FVector::UpVector);
 	LaunchDirection = (cosf(FMath::DegreesToRadians(pitch)) * LaunchDirection) + (sinf(FMath::DegreesToRadians(pitch)) * FVector::UpVector);
-	DRAWLINE(LaunchDirection * 300.f, FColor::Blue, 2.f);
 
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;

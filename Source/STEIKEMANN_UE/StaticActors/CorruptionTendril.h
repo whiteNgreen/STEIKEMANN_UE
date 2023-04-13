@@ -15,6 +15,7 @@ class STEIKEMANN_UE_API ACorruptionTendril : public ABaseStaticActor
 	GENERATED_BODY()
 
 public:
+	ACorruptionTendril();
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 		void TendrilPulse_Start();
 	UFUNCTION(BlueprintImplementableEvent)
@@ -24,4 +25,17 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		TArray<class ACorruptionWall*> ConnectedWalls;
+
+protected:
+	virtual void BeginPlay() override;
+
+
+	UPROPERTY(BlueprintReadWrite)
+		class UTimelineComponent* TLComp_Pulse;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		UCurveFloat* Curve_Pulse;
+	UFUNCTION(BlueprintImplementableEvent)
+		void TL_Pulse(float value);
+	UFUNCTION(BlueprintImplementableEvent)
+		void TL_Pulse_End();
 };
