@@ -56,6 +56,7 @@ void ACorruptionCore::Gen_ReceiveAttack(const FVector Direction, const float Str
 void ACorruptionCore::ReceiveDamage(const int damage)
 {
 	Health = FMath::Clamp(Health -= damage, 0, 10);
+	HealthUpdate(Health);
 	if (Health == 0) { Death(); }
 }
 

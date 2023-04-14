@@ -42,6 +42,8 @@ public:
 	virtual void Gen_ReceiveAttack(const FVector Direction, const float Strength, const EAttackType AType, const float Delaytime = -1.f) override;
 
 	void ReceiveDamage(int damage);
+	UFUNCTION(BlueprintImplementableEvent)
+		void HealthUpdate(int newhealth);
 	void Death();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

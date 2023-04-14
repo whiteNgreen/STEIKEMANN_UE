@@ -688,6 +688,7 @@ void ASteikemannCharacter::GH_GrappleAiming()
 
 void ASteikemannCharacter::RightTriggerClick()
 {
+	if (ActionLocked()) return;
 	if (bGrappleClick) return;
 	bGrappleClick = true;
 
@@ -1574,6 +1575,11 @@ bool ASteikemannCharacter::BreakMovementInput(float value)
 	return false;
 }
 
+bool ASteikemannCharacter::ActionLocked() const
+{
+	return (m_EMovementInputState == EMovementInput::Locked || m_EMovementInputState == EMovementInput::PeriodLocked);
+}
+
 void ASteikemannCharacter::MoveForward(float value)
 {
 	InputVectorRaw.X = value;
@@ -2427,6 +2433,7 @@ void ASteikemannCharacter::CheckForNewJournalEntry()
 
 void ASteikemannCharacter::ShowHUD_Timed_Pure()
 {
+	if (ActionLocked()) return;
 	ShowHUD_Timed();
 }
 
@@ -2855,6 +2862,7 @@ bool ASteikemannCharacter::IsSmackAttacking() const
 
 void ASteikemannCharacter::Click_Attack()
 {
+	if (ActionLocked()) return;
 	if (bAttackPress) { return; }
 	bAttackPress = true;
 
@@ -3073,7 +3081,7 @@ void ASteikemannCharacter::OnAttackColliderBeginOverlap(UPrimitiveComponent* Ove
 		FGameplayTagContainer TCon;	
 		ITag->GetOwnedGameplayTags(TCon);
 		
-		EAttackType AType;
+		EAttackType AType = EAttackType::None;
 		if (OverlappedComp == AttackCollider) { AType = EAttackType::SmackAttack; }
 		if (OverlappedComp == GroundPoundCollider) { AType = EAttackType::GroundPound; }
 
@@ -3178,6 +3186,7 @@ void ASteikemannCharacter::Receive_SmackAttack_Pure(const FVector Direction, con
 
 void ASteikemannCharacter::Click_GroundPound()
 {
+	if (ActionLocked()) return;
 	if (!bGroundPoundPress)
 	{
 		bGroundPoundPress = true;

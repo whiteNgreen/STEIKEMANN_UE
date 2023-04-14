@@ -463,6 +463,7 @@ public:/* ------------------- Basic Movement ------------------- */
 	float TurnRate{ 50.f };
 
 	bool BreakMovementInput(float value);
+	bool ActionLocked() const;
 
 	void MoveForward(float value);
 	void MoveRight(float value);
