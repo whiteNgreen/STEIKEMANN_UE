@@ -236,26 +236,8 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		m_GamepadCameraInput.Normalize();
 
 	/* PRINTING STATE MACHINE INFO */
-	//switch (m_EState)
-	//{
-	//case EState::STATE_OnGround:
-	//	PRINT("STATE_OnGround");
-	//	break;
-	//case EState::STATE_InAir:
-	//	PRINT("STATE_InAir");
-	//	break;
-	//case EState::STATE_OnWall:
-	//	PRINT("STATE_OnWall");
-	//	break;
-	//case EState::STATE_Attacking:
-	//	PRINT("STATE_Attacking");
-	//	break;
-	//case EState::STATE_Grappling:
-	//	PRINT("STATE_Grappling");
-	//	break;
-	//default:
-	//	break;
-	//}
+#ifdef UE_BUILD_DEBUG
+	//PrintState();
 	//PRINTPAR("Attack State :: %i", m_EAttackState);
 	//PRINTPAR("Attack type :: %i", m_EAttackType);
 	//PRINTPAR("Grapple State :: %i", m_EGrappleState);
@@ -277,6 +259,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	//default:
 	//	break;
 	//}
+#endif
 
 	/*		Resets Rotation Pitch and Roll		*/
 	if (IsFalling() || GetMoveComponent()->IsWalking()) {
@@ -692,10 +675,22 @@ void ASteikemannCharacter::RightTriggerClick()
 	if (bGrappleClick) return;
 	bGrappleClick = true;
 
+	GH_Click();
+}
+
+void ASteikemannCharacter::RightTriggerUn_Click()
+{
+	bGrappleClick = false;
+	GH_DelegateDynamicLaunch();
+}
+
+void ASteikemannCharacter::GH_Click()
+{
+	Print_State(2.f);
 	switch (m_EState)
 	{
 	case EState::STATE_None:		break;
-	case EState::STATE_OnGround:	
+	case EState::STATE_OnGround:
 		TL_Dash_End();
 		if (bPressedCancelButton)
 		{
@@ -705,11 +700,13 @@ void ASteikemannCharacter::RightTriggerClick()
 			return;
 		}
 		break;
-	case EState::STATE_InAir:		break;
-	case EState::STATE_OnWall:		
+	case EState::STATE_InAir:
+		if (GH_GrappleLaunchLandDelegate()) return;
+		break;
+	case EState::STATE_OnWall:
 		CancelOnWall();
 		break;
-	case EState::STATE_Attacking:	
+	case EState::STATE_Attacking:
 		if (!GrappledActor.IsValid()) return;
 		if (m_EAttackType == EAttackType::SmackAttack) {
 			Cancel_SmackAttack();
@@ -739,12 +736,6 @@ void ASteikemannCharacter::RightTriggerClick()
 
 	// Player Animations
 	Anim_Grapple_Start();
-}
-
-void ASteikemannCharacter::RightTriggerUn_Click()
-{
-	bGrappleClick = false;
-	GH_DelegateDynamicLaunch();
 }
 
 void ASteikemannCharacter::GH_SetGrappleType(IGameplayTagAssetInterface* ITag, IGrappleTargetInterface* IGrapple)
@@ -987,6 +978,21 @@ void ASteikemannCharacter::PullDynamicTargetOffWall()
 	m_EMovementInputState = EMovementInput::Locked;
 	FTimerHandle h;
 	TimerManager.SetTimer(h, [this]() { m_EMovementInputState = EMovementInput::Open; }, GH_PostPullingTargetFreeTime, false);
+}
+
+bool ASteikemannCharacter::GH_GrappleLaunchLandDelegate()
+{
+	if (IsOnGround()) return false;
+	if (Delegate_GrappleEnemyOnLand.IsBound()) return false;
+
+	if (CheckStaticWorldBeneathCharacter(150.f))
+	{
+		Delegate_GrappleEnemyOnLand.BindUObject(this, &ASteikemannCharacter::GH_Click);
+		TimerManager.SetTimer(TH_UnbindGrappleEnemyOnLand, [this]() { Delegate_GrappleEnemyOnLand.Unbind(); }, 1.f, false);
+
+		return true;
+	}
+	return false;
 }
 
 FVector ASteikemannCharacter::GH_GetTargetLocation() const
@@ -1794,6 +1800,13 @@ void ASteikemannCharacter::Landed(const FHitResult& Hit)
 	LandedDelegate.Broadcast(Hit);
 
 	bPB_Groundpound_PredeterminedPogoHit = false;
+
+	if (Delegate_GrappleEnemyOnLand.IsBound()) {
+		m_EState = EState::STATE_OnGround;
+		Delegate_NextFrameDelegate.AddUObject(this, &ASteikemannCharacter::GH_Click);
+		Delegate_GrappleEnemyOnLand.Unbind();
+		TimerManager.ClearTimer(TH_UnbindGrappleEnemyOnLand);
+	}
 }
 
 void ASteikemannCharacter::Jump()
@@ -3276,7 +3289,6 @@ void ASteikemannCharacter::GroundPoundLand(const FHitResult& Hit)
 
 void ASteikemannCharacter::Do_GroundPound_Pure(IAttackInterface* OtherInterface, AActor* OtherActor)
 {
-
 	const float diff = GetActorLocation().Z - OtherActor->GetActorLocation().Z;
 	const float range = 40.f;
 	const bool b = diff < range || diff > -range;
@@ -3298,5 +3310,54 @@ void ASteikemannCharacter::Do_GroundPound_Pure(IAttackInterface* OtherInterface,
 void ASteikemannCharacter::Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength)
 {
 }
+
+#ifdef UE_BUILD_DEBUG
+void ASteikemannCharacter::Print_State()
+{
+	switch (m_EState)
+	{
+	case EState::STATE_OnGround:
+		PRINT("STATE_OnGround");
+		break;
+	case EState::STATE_InAir:
+		PRINT("STATE_InAir");
+		break;
+	case EState::STATE_OnWall:
+		PRINT("STATE_OnWall");
+		break;
+	case EState::STATE_Attacking:
+		PRINT("STATE_Attacking");
+		break;
+	case EState::STATE_Grappling:
+		PRINT("STATE_Grappling");
+		break;
+	default:
+		break;
+	}
+}
+void ASteikemannCharacter::Print_State(float time)
+{
+	switch (m_EState)
+	{
+	case EState::STATE_OnGround:
+		PRINTLONG(time, "STATE_OnGround");
+		break;
+	case EState::STATE_InAir:
+		PRINTLONG(time, "STATE_InAir");
+		break;
+	case EState::STATE_OnWall:
+		PRINTLONG(time, "STATE_OnWall");
+		break;
+	case EState::STATE_Attacking:
+		PRINTLONG(time, "STATE_Attacking");
+		break;
+	case EState::STATE_Grappling:
+		PRINTLONG(time, "STATE_Grappling");
+		break;
+	default:
+		break;
+	}
+}
+#endif
 
 

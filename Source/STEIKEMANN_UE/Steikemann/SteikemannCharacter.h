@@ -26,6 +26,7 @@
 
 DECLARE_DELEGATE(FAttackActionBuffer)
 DECLARE_DELEGATE_OneParam(FPostAttackBuffer, EPostAttackType& PostAttackType);
+DECLARE_DELEGATE(FGrappleEnemyLandDelegate)
 
 //class UNiagaraSystem;
 //class UNiagaraComponent;
@@ -533,6 +534,7 @@ public:/* ------------------- Basic Movement ------------------- */
 	bool IsFalling() const;
 	bool IsOnGround() const;
 
+
 	//bool CanJump() const override;
 
 	/* 
@@ -846,6 +848,7 @@ private:
 public:
 	void RightTriggerClick();
 	void RightTriggerUn_Click();
+	void GH_Click();	// The start of the grapple function -- Called by RightTriggerClick and other possible delegations
 	void GH_SetGrappleType(IGameplayTagAssetInterface* ITag, IGrappleTargetInterface* IGrapple);
 
 	UFUNCTION(BlueprintCallable)
@@ -870,6 +873,10 @@ public:	// Launch Functions
 
 	void PullDynamicTargetOffWall();
 	
+	FTimerHandle TH_UnbindGrappleEnemyOnLand;
+	FGrappleEnemyLandDelegate Delegate_GrappleEnemyOnLand;
+	bool GH_GrappleLaunchLandDelegate();
+
 public:	// Animation functions
 	UFUNCTION(BlueprintImplementableEvent)
 		void Anim_Grapple_Start();
@@ -1209,4 +1216,9 @@ public: /* ------- Native Variables and functions -------- */
 	#pragma endregion //GroundPound
 
 #pragma endregion					//Attacks
+
+#ifdef UE_BUILD_DEBUG
+	void Print_State();
+	void Print_State(float time);
+#endif
 };

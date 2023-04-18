@@ -33,10 +33,13 @@ public:
 };
 
 
+DECLARE_MULTICAST_DELEGATE(FNextFrameDelegate)
 DECLARE_MULTICAST_DELEGATE_OneParam(FParticleUpdate, float DeltaTime)
 DECLARE_MULTICAST_DELEGATE_OneParam(FMaterialUpdate, float DeltaTime)
 DECLARE_DELEGATE(FWaterPuddleEnter)
 DECLARE_DELEGATE(FWaterPuddleExit)
+
+#define ECC_StaticWorldChannel ECC_WorldStatic
 
 class UNiagaraSystem;
 class UNiagaraComponent;
@@ -55,6 +58,7 @@ public:
 	virtual void EndTick(float DeltaTime);
 
 	FTimerManager TimerManager;
+	FNextFrameDelegate Delegate_NextFrameDelegate;
 	FParticleUpdate Delegate_ParticleUpdate;
 	FMaterialUpdate Delegate_MaterialUpdate;
 
@@ -82,6 +86,7 @@ public:
 
 	FVector LandVelocity{};
 	virtual void Landed(const FHitResult& Hit) override;
+	bool CheckStaticWorldBeneathCharacter(float LengthBeneath) const;
 
 	float m_GravityScale;
 	float m_BaseGravityZ;

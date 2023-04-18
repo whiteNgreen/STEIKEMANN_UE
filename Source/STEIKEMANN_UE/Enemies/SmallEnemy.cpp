@@ -519,28 +519,7 @@ void ASmallEnemy::Tl_LaunchedCollisionShake(FVector vector)
 void ASmallEnemy::OnCapsuleComponentLaunchHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& SweepHit)
 {
 	if (OtherActor == this) return;
-	//if (IGameplayTagAssetInterface* ITag = Cast<IGameplayTagAssetInterface>(OtherActor))
-	//{
-	//	if (ITag->HasMatchingGameplayTag(Tag::Player()))	return;
-	//	if (ITag->HasMatchingGameplayTag(Tag::Enemy())) 
-	//	{
-	//		if (CanReflectCollisionLaunch())
-	//			if (ASmallEnemy* Dog = Cast<ASmallEnemy>(OtherActor))
-	//				DogToDogCollision(SweepHit, Dog);
-	//		return;
-	//	}
-	//	if (ITag->HasMatchingGameplayTag(Tag::CorruptionCore()) || ITag->HasMatchingGameplayTag(Tag::InkFlower()))
-	//	{
-	//		if (CanReflectCollisionLaunch()) {
-	//			float Time{};
-	//			float m{};
-	//			GetCollisionTime(Time, m);
-	//			if (IAttackInterface* IAttack = Cast<IAttackInterface>(OtherActor)) {
-	//				IAttack->Gen_ReceiveAttack(SweepHit.ImpactNormal, 1000.f, EAttackType::Environmental, Time);
-	//			}
-	//		}
-	//	}
-	//}
+
 	if (DogEnvironmentCollision(SweepHit)) return;
 
 	if (CanReflectCollisionLaunch())
@@ -628,15 +607,11 @@ void ASmallEnemy::GetCollisionTime(float& OUT_Time, float& OUT_Multiplier)
 
 void ASmallEnemy::DogToDogCollision(const FHitResult& SweepHit, ASmallEnemy* OtherDog)
 {
-	PRINTLONG(2.f, "DOG COLLISION");
-	DRAWLINE(OtherDog->GetVelocity(), FColor::Blue, 2.f);
-	DRAWLINE(GetVelocity(), FColor::Red, 2.f);
-	DRAWLINE(SweepHit.ImpactNormal * 200.f, FColor::Green, 3.f);
-	DRAWPOINT(SweepHit.ImpactPoint, FColor::Blue, 2.f);
-
-	//TimerManager.SetTimer(TH_CollisionLaunchFreeze, 1.f, false);
-	//OtherDog->TimerManager.SetTimer(TH_CollisionLaunchFreeze, 1.f, false);
-	//FVector CollisionNormal = SweepHit.ImpactNormal;
+	//PRINTLONG(2.f, "DOG COLLISION");
+	//DRAWLINE(OtherDog->GetVelocity(), FColor::Blue, 2.f);
+	//DRAWLINE(GetVelocity(), FColor::Red, 2.f);
+	//DRAWLINE(SweepHit.ImpactNormal * 200.f, FColor::Green, 3.f);
+	//DRAWPOINT(SweepHit.ImpactPoint, FColor::Blue, 2.f);
 
 	ReflectedCollisionLaunch_PreLaunch(SweepHit.ImpactNormal, SweepHit.ImpactPoint, true);
 	OtherDog->ReflectedCollisionLaunch_PreLaunch(-SweepHit.ImpactNormal, SweepHit.ImpactPoint, true);
@@ -651,9 +626,12 @@ void ASmallEnemy::GettingDogCollision(FVector SurfaceNormal, FVector SurfaceLoca
 bool ASmallEnemy::DogEnvironmentCollision(const FHitResult& SweepHit)
 {
 	AActor* OtherActor = SweepHit.GetActor();
+	if (OtherActor == this) return true;
 	if (IGameplayTagAssetInterface* ITag = Cast<IGameplayTagAssetInterface>(OtherActor))
 	{
-		if (ITag->HasMatchingGameplayTag(Tag::Player())) return true;
+		if (ITag->HasMatchingGameplayTag(Tag::Player())) {
+			return true;
+		}
 		if (ITag->HasMatchingGameplayTag(Tag::Enemy()))
 		{
 			if (CanReflectCollisionLaunch())
@@ -737,12 +715,9 @@ void ASmallEnemy::HookedPure(const FVector InstigatorLocation, bool OnGround, bo
 		// Enable Gravity and Disable Collisions
 		m_GravityState = EGravityState::Default;
 		GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Falling);
-		//GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		//FTimerHandle h;
-		//TimerManager.SetTimer(h, [this](){ GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics); }, FMath::Clamp(GrappledLaunchTime - GrappledLaunchTime_CollisionActivation, 0.f, GrappledLaunchTime), false);
 		DisableCollisions(FMath::Clamp(GrappledLaunchTime - GrappledLaunchTime_CollisionActivation, 0.f, GrappledLaunchTime));
 
-		///* Rotate again towards Instigator - Yaw*/
+		/* Rotate again towards Instigator - Yaw*/
 		GrappleLaunchToInstigator(InstigatorLocation, GrappledLaunchTime, OnGround);
 
 		bCanBeGrappleHooked = false;
@@ -989,29 +964,6 @@ void ASmallEnemy::Launched(FVector direction)
 
 void ASmallEnemy::LandedLaunched(const FHitResult& LandHit)
 {
-	PRINTLONG(2.f, "Landed Launched Delegate Call");
-	//if (IGameplayTagAssetInterface* ITag = Cast<IGameplayTagAssetInterface>(LandHit.GetActor()))
-	//{
-	//	if (ITag->HasMatchingGameplayTag(Tag::Player()))	return;
-	//	if (ITag->HasMatchingGameplayTag(Tag::Enemy()))
-	//	{
-	//		if (CanReflectCollisionLaunch())
-	//			if (ASmallEnemy* Dog = Cast<ASmallEnemy>(LandHit.GetActor()))
-	//				DogToDogCollision(LandHit, Dog);
-	//		return;
-	//	}
-	//	if (ITag->HasMatchingGameplayTag(Tag::CorruptionCore()) || ITag->HasMatchingGameplayTag(Tag::InkFlower()))
-	//	{
-	//		if (CanReflectCollisionLaunch()) {
-	//			float Time{};
-	//			float m{};
-	//			GetCollisionTime(Time, m);
-	//			if (IAttackInterface* IAttack = Cast<IAttackInterface>(LandHit.GetActor())) {
-	//				IAttack->Gen_ReceiveAttack(LandHit.ImpactNormal, 1000.f, EAttackType::Environmental, Time);
-	//			}
-	//		}
-	//	}
-	//}
-	DogEnvironmentCollision(LandHit);
+	if (DogEnvironmentCollision(LandHit)) return;
 	LaunchedLandCollision_PreLaunch(LandHit.ImpactNormal, LandHit.ImpactPoint);
 }

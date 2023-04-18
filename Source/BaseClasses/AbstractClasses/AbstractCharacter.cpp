@@ -3,6 +3,7 @@
 
 #include "AbstractCharacter.h"
 #include "GameFrameWork/CharacterMovementComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "NiagaraComponent.h"
 //#include "../DebugMacros.h"
 // Base components
@@ -39,6 +40,10 @@ void ABaseCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	TimerManager.Tick(DeltaTime);
+	if (Delegate_NextFrameDelegate.IsBound()) {
+		Delegate_NextFrameDelegate.Broadcast();
+		Delegate_NextFrameDelegate.Clear();
+	}
 }
 
 void ABaseCharacter::EndTick(float DeltaTime)
@@ -100,6 +105,20 @@ bool ABaseCharacter::ShroomBounce(FVector direction, float strength)
 void ABaseCharacter::Landed(const FHitResult& Hit)
 {
 	LandVelocity = GetCharacterMovement()->Velocity;
+}
+
+bool ABaseCharacter::CheckStaticWorldBeneathCharacter(float LengthBeneath) const
+{
+	FHitResult Hit;
+	FCollisionQueryParams Params("", false, this);
+	FCollisionShape capsule = FCollisionShape::MakeCapsule(GetCapsuleComponent()->GetScaledCapsuleRadius() * 0.95f, GetCapsuleComponent()->GetScaledCapsuleHalfHeight() * 0.95f);
+	FVector below(0, 0, LengthBeneath);
+	FVector location = GetActorLocation() - below;
+
+	const bool b  = GetWorld()->SweepSingleByChannel(Hit, location, location, FQuat(1, 0, 0, 0), ECC_StaticWorldChannel, capsule, Params);
+	if (b)
+		DrawDebugCapsule(GetWorld(), location, capsule.GetCapsuleHalfHeight(), capsule.GetCapsuleRadius(), FQuat(1, 0, 0, 0), FColor::Red, false, 2.f, 0, 5.f);
+	return b;
 }
 
 
