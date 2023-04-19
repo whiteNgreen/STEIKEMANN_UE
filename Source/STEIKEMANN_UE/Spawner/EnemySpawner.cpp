@@ -67,7 +67,8 @@ void AEnemySpawner::BeginActorSpawn(void(AEnemySpawner::* spawnFunction)())
 
 void AEnemySpawner::BeginActorRespawn()
 {
-	DetermineActorsToRespawn(m_ActorsToRespawn);
+	DetermineActorsToRespawn(m_ActorsToRespawn);	
+	//m_ActorsToRespawn = SpawnedActors;	// Make all dogs respawn no matter what
 	RespawnActors(m_ActorsToRespawn);
 }
 
@@ -118,7 +119,9 @@ void AEnemySpawner::DetermineActorsToRespawn(TArray<ASmallEnemy*>& actorsToRespa
 void AEnemySpawner::RespawnActors(TArray<ASmallEnemy*>& actorsToRespawn)
 {
 	m_SpawnIndex = 0;
+	//m_SpawnIndex = actorsToRespawn.Num()-1;
 	m_SpawnAmount = actorsToRespawn.Num();
+	//m_SpawnAmount = 0;
 	m_ActorsToDestroy = actorsToRespawn;
 
 	if (actorsToRespawn.Num() == 0) {
@@ -134,12 +137,16 @@ void AEnemySpawner::RespawnActor()
 	m_ActorsToRespawn.RemoveAt(m_ActorsToRespawn.Num() - 1);
 
 	SpawnAubergineDog(type);
+	//m_ActorsToDestroy[m_SpawnIndex]->Destroy();
 	m_SpawnIndex++;
+	//m_SpawnIndex--;
 	if (m_SpawnIndex < m_SpawnAmount) {
+	//if (m_SpawnIndex > m_SpawnAmount) {
 		TimerManager.SetTimer(TH_SpawnTimer, this, &AEnemySpawner::RespawnActor, Timer_SpawnIterator);
 	}
 
 	if (m_SpawnIndex >= m_SpawnAmount) {
+	//if (m_SpawnIndex < m_SpawnAmount) {
 		TimerManager.SetTimer(FTHCanBeDamaged, [this]() { bAICanBeDamaged = true; }, CanBeAttackedTimer, false);
 
 		for (auto& it : m_ActorsToDestroy) {
@@ -203,16 +210,16 @@ ASmallEnemy* AEnemySpawner::SpawnCharacter()
 {
 	if (!GetWorld()) return nullptr;
 
-	float yaw = RandomFloat(0, 360.f);
+	float yaw = RandomFloat(-90.f, 90.f);
 	float pitch = RandomFloat(PitchRange.X, PitchRange.Y);
 	FRotator rot(0.f, yaw, 0.f);
 	FVector LaunchDirection;
-	LaunchDirection = FVector::ForwardVector.RotateAngleAxis(yaw, FVector::UpVector);
+	LaunchDirection = GetActorForwardVector().RotateAngleAxis(yaw, FVector::UpVector);
 	LaunchDirection = (cosf(FMath::DegreesToRadians(pitch)) * LaunchDirection) + (sinf(FMath::DegreesToRadians(pitch)) * FVector::UpVector);
 
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-	ASmallEnemy* spawnedDog = GetWorld()->SpawnActor<ASmallEnemy>(SpawningActorType, SpawnPoint->GetComponentLocation() + (LaunchDirection * 50.f), rot, Params);
+	ASmallEnemy* spawnedDog = GetWorld()->SpawnActor<ASmallEnemy>(SpawningActorType, SpawnPoint->GetComponentLocation() + (LaunchDirection * 100.f), rot, Params);
 	if (!spawnedDog)
 		return nullptr;
 

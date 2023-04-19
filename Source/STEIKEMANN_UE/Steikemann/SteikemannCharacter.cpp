@@ -681,12 +681,14 @@ void ASteikemannCharacter::RightTriggerClick()
 void ASteikemannCharacter::RightTriggerUn_Click()
 {
 	bGrappleClick = false;
-	GH_DelegateDynamicLaunch();
+	if (!GH_InvalidRelease)
+		GH_DelegateDynamicLaunch();
 }
 
 void ASteikemannCharacter::GH_Click()
 {
 	Print_State(2.f);
+	GH_InvalidRelease = false;
 	switch (m_EState)
 	{
 	case EState::STATE_None:		break;
@@ -714,7 +716,9 @@ void ASteikemannCharacter::GH_Click()
 		else
 			return;
 		break;
-	case EState::STATE_Grappling:	return;
+	case EState::STATE_Grappling:	
+		GH_InvalidRelease = true;
+		return;
 	default:
 		break;
 	}
@@ -791,12 +795,12 @@ void ASteikemannCharacter::GH_SetGrappleType(IGameplayTagAssetInterface* ITag, I
 
 		TFunc_GrappleLaunchFunction = [this, IGrapple]() {
 			GH_Launch_Dynamic(IGrapple, true);
-			TFunc_GrappleLaunchFunction.Reset();
+			//TFunc_GrappleLaunchFunction.Reset();
 			return;
 		};
 
 
-		TimerManager.SetTimer(TH_GrappleHold, [this]() { TFunc_GrappleLaunchFunction(); }, GH_GrapplingEnemyHold, false);
+		TimerManager.SetTimer(TH_GrappleHold, [this]() { TFunc_GrappleLaunchFunction(); TFunc_GrappleLaunchFunction.Reset(); }, GH_GrapplingEnemyHold, false);
 		return;
 	}
 }
@@ -1123,15 +1127,22 @@ void ASteikemannCharacter::GH_StopControlRig()
 void ASteikemannCharacter::GH_DelegateDynamicLaunch()
 {
 	if (!TFunc_GrappleLaunchFunction) return;
+	//if (TimerManager.IsTimerActive(TH_GrappleHoldRelease)) return;
+	//if (m_EGrappleState == EGrappleState::Post_Launch) {
+	if (m_EState == EState::STATE_Grappling) {
+		PRINTLONG(2.f, "RightTrigger UnClick == State::Grappling");
+		//return;
+	}
 
 	// Call grapple launch when releasing button, but only if the minimal time (GrappleDrag_PreLaunch_Timer_Length) has elapsed
 	if (TimerManager.GetTimerElapsed(TH_GrappleHold) < GrappleDrag_PreLaunch_Timer_Length) {
-		TimerManager.SetTimer(TH_GrappleHold, [this]() { TFunc_GrappleLaunchFunction(); }, GrappleDrag_PreLaunch_Timer_Length - TimerManager.GetTimerElapsed(TH_GrappleHold), false);
+		TimerManager.SetTimer(TH_GrappleHold, [this]() { TFunc_GrappleLaunchFunction(); TFunc_GrappleLaunchFunction.Reset(); }, GrappleDrag_PreLaunch_Timer_Length - TimerManager.GetTimerElapsed(TH_GrappleHold), false);
 		return;
 	}
-	else {
+	else {	// SJEKK UTEN DENNE
 		TimerManager.ClearTimer(TH_GrappleHold);
 		TFunc_GrappleLaunchFunction();
+		TFunc_GrappleLaunchFunction.Reset();
 	}
 }
 
