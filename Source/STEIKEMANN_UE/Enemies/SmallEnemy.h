@@ -94,6 +94,17 @@ public: // Functions
 	 * TimerHandle TH_DisabledCollision */
 	void DisableCollisions(float time);
 	void EnableCollisions();
+
+	/**
+	* Timer delegate called on DisableCollisions(float time) to check if the current placement
+	* of the actor is valid. Does a sweep check to the actor's surroundings and moves the 
+	* actor if necessary. 
+	*/
+	FTimerHandle TH_EnableCollision_PlacementCheck;
+	// This function should be placed in the BaseCharacterClass
+	// as it would probably be used by any characterclass in the game
+	void ActorInvalidPlacement();	
+
 #pragma region GameplayTags
 	UPROPERTY(BlueprintReadOnly, Category = "GameplayTags")
 		FGameplayTagContainer GameplayTags;

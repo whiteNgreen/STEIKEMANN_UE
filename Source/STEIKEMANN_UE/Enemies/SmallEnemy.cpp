@@ -174,11 +174,35 @@ void ASmallEnemy::DisableCollisions()
 void ASmallEnemy::DisableCollisions(float time)
 {
 	DisableCollisions();
+	TimerManager.SetTimer(TH_EnableCollision_PlacementCheck, this, &ASmallEnemy::ActorInvalidPlacement, time);
 	TimerManager.SetTimer(TH_DisabledCollision, this, &ASmallEnemy::EnableCollisions, time);
 }
 void ASmallEnemy::EnableCollisions()
 {
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+}
+
+void ASmallEnemy::ActorInvalidPlacement()
+{
+	if (!GetWorld()) return;
+	FHitResult Hit;
+	FCollisionQueryParams Params("", false, this);
+	FCollisionShape capsule = FCollisionShape::MakeCapsule(GetCapsuleComponent()->GetScaledCapsuleRadius(), GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
+	if (GetWorld()->SweepSingleByChannel(Hit, GetActorLocation(), GetActorLocation(), FQuat(1, 0, 0, 0), ECC_StaticWorldChannel, capsule, Params))
+	{
+		// SKRIV MER
+
+		// Her antar vi at hunden er inni et objekt. 
+		//		Fra sweep hit, dot produktet mellom hit.normal og hit.impact->actorlocation
+		//		Hvis (dot > 0) sjekk om det er korrekt avstand til capsule og hit.impactpoint
+
+		// Kan også sjekke en linetrace fra StartLaunchLocation->CurrentLocation for å se om det er noen objekter mellom. 
+		//		Hvis det er det så gjør en større capsule sweep enn den forrige for å sjekke etter overflater
+		//			Hvis den økte capsule sweep'en ikke finner en overflate så gjør en til sweep som er enda større 
+		//			og sett posisjonen basert på det
+		//		Hvis ikke så er actor sikkert i lufta
+
+	}
 }
 
 void ASmallEnemy::SetDogType(enum EDogType type)
