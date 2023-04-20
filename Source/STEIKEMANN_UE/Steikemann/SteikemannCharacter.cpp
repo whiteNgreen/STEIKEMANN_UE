@@ -237,17 +237,17 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 
 	/* PRINTING STATE MACHINE INFO */
 #ifdef UE_BUILD_DEBUG
-	//PrintState();
-	//PRINTPAR("Attack State :: %i", m_EAttackState);
-	//PRINTPAR("Attack type :: %i", m_EAttackType);
-	//PRINTPAR("Grapple State :: %i", m_EGrappleState);
-	//PRINTPAR("Grapple Type  :: %i", m_EGrappleType);
-	//PRINTPAR("Smack Attack State :: %i", m_ESmackAttackState);
+	Print_State();
+	PRINTPAR("Attack State :: %i", m_EAttackState);
+	PRINTPAR("Attack type :: %i", m_EAttackType);
+	PRINTPAR("Grapple State :: %i", m_EGrappleState);
+	PRINTPAR("Grapple Type  :: %i", m_EGrappleType);
+	PRINTPAR("Smack Attack Type :: %i", m_ESmackAttackType);
+	PRINTPAR("MovementInputState = %i", m_EMovementInputState);
 	//PRINTPAR("Air State :: %i", m_EAirState);
 	//PRINTPAR("Ground State :: %i", m_EGroundState);
 	//PRINTPAR("Pogo Type :: %i", m_EPogoType);
 	//PRINTPAR("Jump Count = %i", JumpCurrentCount);
-	//PRINTPAR("MovementInputState = %i", m_EMovementInputState);
 	//switch (m_EInputType)
 	//{
 	//case EInputType::MouseNKeyboard:
@@ -673,7 +673,12 @@ void ASteikemannCharacter::RightTriggerClick()
 {
 	if (ActionLocked()) return;
 	if (bGrappleClick) return;
+	//if (bAttackPress)   return;
+
+	//if (TFunc_GrappleLaunchFunction)	return;
 	bGrappleClick = true;
+	PRINTLONG(2.f, "   ");
+	PRINTLONG(2.f, "Right trigger CLICK");
 
 	GH_Click();
 }
@@ -681,12 +686,16 @@ void ASteikemannCharacter::RightTriggerClick()
 void ASteikemannCharacter::RightTriggerUn_Click()
 {
 	bGrappleClick = false;
-	GH_DelegateDynamicLaunch();
+	PRINTLONG(2.f, "Right trigger RELEASE");
+	//if (/*!GH_InvalidRelease || */!ActionLocked())
+	if (bAttackPress)   return;
+		GH_DelegateDynamicLaunch();
 }
 
 void ASteikemannCharacter::GH_Click()
 {
 	Print_State(2.f);
+	GH_InvalidRelease = false;
 	switch (m_EState)
 	{
 	case EState::STATE_None:		break;
@@ -714,7 +723,9 @@ void ASteikemannCharacter::GH_Click()
 		else
 			return;
 		break;
-	case EState::STATE_Grappling:	return;
+	case EState::STATE_Grappling:	
+		//GH_InvalidRelease = true;
+		return;
 	default:
 		break;
 	}
@@ -791,12 +802,12 @@ void ASteikemannCharacter::GH_SetGrappleType(IGameplayTagAssetInterface* ITag, I
 
 		TFunc_GrappleLaunchFunction = [this, IGrapple]() {
 			GH_Launch_Dynamic(IGrapple, true);
-			TFunc_GrappleLaunchFunction.Reset();
+			//TFunc_GrappleLaunchFunction.Reset();
 			return;
 		};
 
 
-		TimerManager.SetTimer(TH_GrappleHold, [this]() { TFunc_GrappleLaunchFunction(); }, GH_GrapplingEnemyHold, false);
+		TimerManager.SetTimer(TH_GrappleHold, [this]() { TFunc_GrappleLaunchFunction(); TFunc_GrappleLaunchFunction.Reset(); }, GH_GrapplingEnemyHold, false);
 		return;
 	}
 }
@@ -1122,16 +1133,17 @@ void ASteikemannCharacter::GH_StopControlRig()
 
 void ASteikemannCharacter::GH_DelegateDynamicLaunch()
 {
-	if (!TFunc_GrappleLaunchFunction) return;
+	if (!TFunc_GrappleLaunchFunction)	return;
 
 	// Call grapple launch when releasing button, but only if the minimal time (GrappleDrag_PreLaunch_Timer_Length) has elapsed
 	if (TimerManager.GetTimerElapsed(TH_GrappleHold) < GrappleDrag_PreLaunch_Timer_Length) {
-		TimerManager.SetTimer(TH_GrappleHold, [this]() { TFunc_GrappleLaunchFunction(); }, GrappleDrag_PreLaunch_Timer_Length - TimerManager.GetTimerElapsed(TH_GrappleHold), false);
+		TimerManager.SetTimer(TH_GrappleHold, [this]() { TFunc_GrappleLaunchFunction(); TFunc_GrappleLaunchFunction.Reset(); }, GrappleDrag_PreLaunch_Timer_Length - TimerManager.GetTimerElapsed(TH_GrappleHold), false);
 		return;
 	}
-	else {
+	else {	// SJEKK UTEN DENNE
 		TimerManager.ClearTimer(TH_GrappleHold);
 		TFunc_GrappleLaunchFunction();
+		TFunc_GrappleLaunchFunction.Reset();
 	}
 }
 
@@ -2875,10 +2887,13 @@ bool ASteikemannCharacter::IsSmackAttacking() const
 
 void ASteikemannCharacter::Click_Attack()
 {
-	if (ActionLocked()) return;
-	if (bAttackPress) { return; }
+	if (bAttackPress)   return; 
 	bAttackPress = true;
 
+	if (m_EState == EState::STATE_Attacking)
+		BufferDelegate_Attack(&ASteikemannCharacter::ComboAttack_Pure);
+
+	if (ActionLocked()) return;
 	switch (m_EState)
 	{
 	case EState::STATE_OnGround:
@@ -2992,6 +3007,7 @@ void ASteikemannCharacter::Cancel_SmackAttack()
 
 void ASteikemannCharacter::Stop_Attack()
 {
+	PRINTLONG(2.f, "STOP ATTACK");
 	AttackComboCount = 0;
 	AttackContactedActors.Empty();
 	m_EAttackState = EAttackState::None;

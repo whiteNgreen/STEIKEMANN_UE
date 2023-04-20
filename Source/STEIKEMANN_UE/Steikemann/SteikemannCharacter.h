@@ -929,6 +929,8 @@ private:
 	TWeakObjectPtr<AActor> GrappledEnemy{ nullptr };
 
 	FTimerHandle TH_GrappleHold;
+	bool GH_InvalidRelease{};
+	FTimerHandle TH_GrappleHoldRelease;
 	TFunction<void()> TFunc_GrappleHoldFunction;
 	TFunction<void()> TFunc_GrappleLaunchFunction;
 

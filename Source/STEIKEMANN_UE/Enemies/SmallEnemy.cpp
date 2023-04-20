@@ -653,9 +653,8 @@ bool ASmallEnemy::DogEnvironmentCollision(const FHitResult& SweepHit)
 	if (OtherActor == this) return true;
 	if (IGameplayTagAssetInterface* ITag = Cast<IGameplayTagAssetInterface>(OtherActor))
 	{
-		if (ITag->HasMatchingGameplayTag(Tag::Player())) {
-			return true;
-		}
+		if (ITag->HasMatchingGameplayTag(Tag::Player()))		return true;
+		if (ITag->HasMatchingGameplayTag(Tag::BouncyShroom()))  return true;
 		if (ITag->HasMatchingGameplayTag(Tag::Enemy()))
 		{
 			if (CanReflectCollisionLaunch())
