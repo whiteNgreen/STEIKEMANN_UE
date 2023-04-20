@@ -111,6 +111,8 @@ void ASteikemannCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	PRINTPARLONG(3.f, "Gravity Z: %f == %f", GetCharacterMovement()->GetGravityZ(), GetCharacterMovement()->GetGravityZ() / 4.f);
+
 	// Root motion tullball
 	SetAnimRootMotionTranslationScale(1.f/4.5f);
 
@@ -237,17 +239,17 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 
 	/* PRINTING STATE MACHINE INFO */
 #ifdef UE_BUILD_DEBUG
-	//PrintState();
-	//PRINTPAR("Attack State :: %i", m_EAttackState);
-	//PRINTPAR("Attack type :: %i", m_EAttackType);
-	//PRINTPAR("Grapple State :: %i", m_EGrappleState);
-	//PRINTPAR("Grapple Type  :: %i", m_EGrappleType);
-	//PRINTPAR("Smack Attack State :: %i", m_ESmackAttackState);
+	Print_State();
+	PRINTPAR("Attack State :: %i", m_EAttackState);
+	PRINTPAR("Attack type :: %i", m_EAttackType);
+	PRINTPAR("Grapple State :: %i", m_EGrappleState);
+	PRINTPAR("Grapple Type  :: %i", m_EGrappleType);
+	PRINTPAR("Smack Attack Type :: %i", m_ESmackAttackType);
+	PRINTPAR("MovementInputState = %i", m_EMovementInputState);
 	//PRINTPAR("Air State :: %i", m_EAirState);
 	//PRINTPAR("Ground State :: %i", m_EGroundState);
 	//PRINTPAR("Pogo Type :: %i", m_EPogoType);
 	//PRINTPAR("Jump Count = %i", JumpCurrentCount);
-	//PRINTPAR("MovementInputState = %i", m_EMovementInputState);
 	//switch (m_EInputType)
 	//{
 	//case EInputType::MouseNKeyboard:
@@ -673,7 +675,12 @@ void ASteikemannCharacter::RightTriggerClick()
 {
 	if (ActionLocked()) return;
 	if (bGrappleClick) return;
+	//if (bAttackPress)   return;
+
+	//if (TFunc_GrappleLaunchFunction)	return;
 	bGrappleClick = true;
+	PRINTLONG(2.f, "   ");
+	PRINTLONG(2.f, "Right trigger CLICK");
 
 	GH_Click();
 }
@@ -681,7 +688,9 @@ void ASteikemannCharacter::RightTriggerClick()
 void ASteikemannCharacter::RightTriggerUn_Click()
 {
 	bGrappleClick = false;
-	if (!GH_InvalidRelease)
+	PRINTLONG(2.f, "Right trigger RELEASE");
+	//if (/*!GH_InvalidRelease || */!ActionLocked())
+	if (bAttackPress)   return;
 		GH_DelegateDynamicLaunch();
 }
 
@@ -717,7 +726,7 @@ void ASteikemannCharacter::GH_Click()
 			return;
 		break;
 	case EState::STATE_Grappling:	
-		GH_InvalidRelease = true;
+		//GH_InvalidRelease = true;
 		return;
 	default:
 		break;
@@ -1126,13 +1135,7 @@ void ASteikemannCharacter::GH_StopControlRig()
 
 void ASteikemannCharacter::GH_DelegateDynamicLaunch()
 {
-	if (!TFunc_GrappleLaunchFunction) return;
-	//if (TimerManager.IsTimerActive(TH_GrappleHoldRelease)) return;
-	//if (m_EGrappleState == EGrappleState::Post_Launch) {
-	if (m_EState == EState::STATE_Grappling) {
-		PRINTLONG(2.f, "RightTrigger UnClick == State::Grappling");
-		//return;
-	}
+	if (!TFunc_GrappleLaunchFunction)	return;
 
 	// Call grapple launch when releasing button, but only if the minimal time (GrappleDrag_PreLaunch_Timer_Length) has elapsed
 	if (TimerManager.GetTimerElapsed(TH_GrappleHold) < GrappleDrag_PreLaunch_Timer_Length) {
@@ -2278,7 +2281,7 @@ void ASteikemannCharacter::Click_RightFacebutton()
 {
 	if (m_PromptState == EPromptState::InPrompt)
 		ExitPrompt();
-
+	
 	switch (m_EState)
 	{
 	case EState::STATE_None:
@@ -2290,6 +2293,7 @@ void ASteikemannCharacter::Click_RightFacebutton()
 	case EState::STATE_InAir:
 		break;
 	case EState::STATE_OnWall:
+		CancelOnWall();
 		break;
 	case EState::STATE_Attacking: 
 		return;
@@ -2886,10 +2890,13 @@ bool ASteikemannCharacter::IsSmackAttacking() const
 
 void ASteikemannCharacter::Click_Attack()
 {
-	if (ActionLocked()) return;
-	if (bAttackPress) { return; }
+	if (bAttackPress)   return; 
 	bAttackPress = true;
 
+	if (m_EState == EState::STATE_Attacking)
+		BufferDelegate_Attack(&ASteikemannCharacter::ComboAttack_Pure);
+
+	if (ActionLocked()) return;
 	switch (m_EState)
 	{
 	case EState::STATE_OnGround:
@@ -3003,6 +3010,7 @@ void ASteikemannCharacter::Cancel_SmackAttack()
 
 void ASteikemannCharacter::Stop_Attack()
 {
+	PRINTLONG(2.f, "STOP ATTACK");
 	AttackComboCount = 0;
 	AttackContactedActors.Empty();
 	m_EAttackState = EAttackState::None;

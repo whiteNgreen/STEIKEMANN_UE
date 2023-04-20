@@ -196,11 +196,11 @@ void ASmallEnemy::ActorInvalidPlacement()
 		//		Fra sweep hit, dot produktet mellom hit.normal og hit.impact->actorlocation
 		//		Hvis (dot > 0) sjekk om det er korrekt avstand til capsule og hit.impactpoint
 
-		// Kan også sjekke en linetrace fra StartLaunchLocation->CurrentLocation for å se om det er noen objekter mellom. 
-		//		Hvis det er det så gjør en større capsule sweep enn den forrige for å sjekke etter overflater
-		//			Hvis den økte capsule sweep'en ikke finner en overflate så gjør en til sweep som er enda større 
-		//			og sett posisjonen basert på det
-		//		Hvis ikke så er actor sikkert i lufta
+		// Kan ogsï¿½ sjekke en linetrace fra StartLaunchLocation->CurrentLocation for ï¿½ se om det er noen objekter mellom. 
+		//		Hvis det er det sï¿½ gjï¿½r en stï¿½rre capsule sweep enn den forrige for ï¿½ sjekke etter overflater
+		//			Hvis den ï¿½kte capsule sweep'en ikke finner en overflate sï¿½ gjï¿½r en til sweep som er enda stï¿½rre 
+		//			og sett posisjonen basert pï¿½ det
+		//		Hvis ikke sï¿½ er actor sikkert i lufta
 
 	}
 }
@@ -653,11 +653,9 @@ bool ASmallEnemy::DogEnvironmentCollision(const FHitResult& SweepHit)
 	if (OtherActor == this) return true;
 	if (IGameplayTagAssetInterface* ITag = Cast<IGameplayTagAssetInterface>(OtherActor))
 	{
-		if (ITag->HasMatchingGameplayTag(Tag::Player()))		return true;
-		if (ITag->HasMatchingGameplayTag(Tag::BouncyShroom())) {
-			PRINTLONG(2.f, "DOG landed on SHROOM");
-			return true;
-		}
+		if (ITag->HasMatchingGameplayTag(Tag::Player()))				return true;
+		if (ITag->HasMatchingGameplayTag(Tag::BouncyShroom()))			return true;
+		if (ITag->HasMatchingGameplayTag(Tag::EnvironmentHazard()))		return true;
 		if (ITag->HasMatchingGameplayTag(Tag::Enemy()))
 		{
 			if (CanReflectCollisionLaunch())
