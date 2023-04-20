@@ -111,6 +111,8 @@ void ASteikemannCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	PRINTPARLONG(3.f, "Gravity Z: %f == %f", GetCharacterMovement()->GetGravityZ(), GetCharacterMovement()->GetGravityZ() / 4.f);
+
 	// Root motion tullball
 	SetAnimRootMotionTranslationScale(1.f/4.5f);
 
@@ -2279,7 +2281,7 @@ void ASteikemannCharacter::Click_RightFacebutton()
 {
 	if (m_PromptState == EPromptState::InPrompt)
 		ExitPrompt();
-
+	
 	switch (m_EState)
 	{
 	case EState::STATE_None:
@@ -2291,6 +2293,7 @@ void ASteikemannCharacter::Click_RightFacebutton()
 	case EState::STATE_InAir:
 		break;
 	case EState::STATE_OnWall:
+		CancelOnWall();
 		break;
 	case EState::STATE_Attacking: 
 		return;

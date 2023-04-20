@@ -41,7 +41,34 @@ bool ABouncyShroom::GetBounceInfo(const FVector actorLocation, const FVector nor
 	else {
 		OUT_direction = ShroomDirection;
 	}
-	OUT_strength *= BounceMultiplier;
+	//OUT_strength *= BounceMultiplier;
+	OUT_strength = BounceStrength;
 	return true;
+}
+
+void ABouncyShroom::DrawProjectedBouncePath(float time, float drawtime, float GravityMulti)
+{
+	if (!GetWorld()) return;
+	//float delta = GetWorld()->GetDeltaSeconds();
+	float delta = 1.f / 60.f;
+
+	FVector Start = DirectionArrowComp->GetComponentLocation();
+	FVector Direction = DirectionArrowComp->GetComponentRotation().Vector();
+	FVector Velocity = Direction * BounceStrength;
+	FVector Gravity = FVector(0, 0, -980.f * GravityMulti);
+	FVector End = Start + (Velocity * delta);
+	FHitResult Hit;
+	FCollisionQueryParams Params("", false, this);
+	for (float i = 0.f; i < time; i += delta)
+	{
+		DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, drawtime, 0, 5.f);
+		if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_WorldStatic, Params)) {
+			DrawDebugPoint(GetWorld(), Hit.ImpactPoint, 35.f, FColor::Red, false, drawtime, 0);
+			return;
+		}
+		Velocity += Gravity * delta;
+		Start = End;
+		End += Velocity * delta;
+	}
 }
 
