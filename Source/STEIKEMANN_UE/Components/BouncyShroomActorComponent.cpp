@@ -56,7 +56,7 @@ void UBouncyShroomActorComponent::OnOwnerCapsuleHitShroom(UPrimitiveComponent* H
 
 		ABouncyShroom* Shroom = Cast<ABouncyShroom>(OtherActor);
 		FVector direction;
-		float strength = BounceStrength;
+		float strength = 0.f;
 		if (Shroom->GetBounceInfo(GetOwner()->GetActorLocation(), NormalImpulse, m_Owner->LandVelocity.GetSafeNormal(), direction, strength)) {
 			m_Owner->ShroomBounce(direction, strength);
 		}

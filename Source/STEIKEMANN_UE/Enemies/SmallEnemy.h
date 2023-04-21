@@ -66,6 +66,9 @@ public:	// Components
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SpecialStart")
 		bool bStartStuckToWall{};
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Debug")
+		bool bPrintDebugStatus{};
 #pragma endregion //Base
 
 #pragma region Animation

@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 
-#define _Statics_PlayerDistaceToActive 1e7
+#define _Statics_PlayerDistaceToActive 1e10
 /**
  * 
  */

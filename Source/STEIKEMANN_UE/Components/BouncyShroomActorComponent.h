@@ -29,8 +29,8 @@ public:
 	 UFUNCTION()
 		 void OnOwnerCapsuleHitShroom(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 
-	 UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		 float BounceStrength{ 2500.f };
+	 //UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		 //float BounceStrength{ 2500.f };
 
 private:
 	class ABaseCharacter* m_Owner;

@@ -24,7 +24,9 @@ public:
 		USkeletalMeshComponent* Mesh;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		float BounceMultiplier{ 1.f };
+		float BounceStrength{ 2500.f };
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		//float BounceMultiplier{ 1.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		bool bReflectDirection{ true };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (EditCondition = "bReflectDirection", EditConditionHides))
@@ -41,4 +43,7 @@ private:
 	FVector ShroomLocation;
 public:
 	bool GetBounceInfo(const FVector actorLocation, const FVector normalImpulse, const FVector IncommingDirection, FVector& OUT_direction, float& OUT_strength);
+
+	UFUNCTION(BlueprintCallable)
+		void DrawProjectedBouncePath(float time, float drawtime, float GravityMulti);
 };
