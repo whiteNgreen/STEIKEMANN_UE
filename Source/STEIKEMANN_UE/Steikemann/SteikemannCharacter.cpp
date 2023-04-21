@@ -2676,6 +2676,12 @@ void ASteikemannCharacter::OnCapsuleComponentBeginOverlap(UPrimitiveComponent* O
 			ReceiveCollectible(collectible->CollectibleType);
 			collectible->Destruction();
 		}
+		else if (ACollectible_Static* collectible_static = Cast<ACollectible_Static>(OtherActor))
+		{
+			ReceiveCollectible(collectible_static->CollectibleType);
+			collectible_static->Destruction();
+			PRINTPARLONG(2.f, "Collected -> %s", *collectible_static->GetName());
+		}
 	}
 
 	/* Add checkpoint, overrides previous checkpoint */

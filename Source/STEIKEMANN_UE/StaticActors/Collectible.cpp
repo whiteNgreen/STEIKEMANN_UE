@@ -55,3 +55,27 @@ void ACollectible::Destruction()
 	/* Destroy object after 2.f seconds */
 	GetWorldTimerManager().SetTimer(FTHDestruction, [this]() { Destroy(); }, 2.f, false);
 }
+
+/// <summary>
+/// **************************** ACollectible_Static ***********************************
+/// </summary>
+ACollectible_Static::ACollectible_Static()
+{
+	Sphere = CreateDefaultSubobject<USphereComponent>(TEXT("Sphere"));
+	Sphere->SetupAttachment(Root);
+}
+void ACollectible_Static::BeginPlay()
+{
+	Super::BeginPlay();
+	GTagContainer.AddTag(Tag::Collectible());
+}
+void ACollectible_Static::Destruction()
+{
+	Destruction_IMPL();
+	/* Particles and disable mesh + collision */
+	//UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), DeathParticles, GetActorLocation());	// SPAWN PARTICLE IN BLUEPRINT TO AVOID NIAGARA INCLUDE
+	Sphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	/* Destroy object after 2.f seconds */
+	GetWorldTimerManager().SetTimer(FTHDestruction, [this]() { Destroy(); }, 2.f, false);
+}

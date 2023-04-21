@@ -63,3 +63,28 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 };
+
+UCLASS()
+class STEIKEMANN_UE_API ACollectible_Static : public ABaseStaticActor
+{
+	GENERATED_BODY()
+
+public:
+	// Sets default values for this actor's properties
+	ACollectible_Static();
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
+		class USphereComponent* Sphere{ nullptr };
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Type")
+		ECollectibleType CollectibleType;
+
+	FTimerHandle FTHDestruction;
+	UFUNCTION(BlueprintImplementableEvent)
+		void Destruction_IMPL();
+	void Destruction();
+
+protected:
+	// Called when the game starts or when spawned
+	virtual void BeginPlay() override;
+};

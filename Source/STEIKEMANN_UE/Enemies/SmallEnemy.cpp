@@ -105,15 +105,16 @@ void ASmallEnemy::Tick(float DeltaTime)
 
 	if (FVector::DistSquared(GetActorLocation(), playerLoc) < _Statics_PlayerDistaceToActive)
 	{
-		SetDefaultState();
+		//if (bPrintDebugStatus)
+		//	PRINT("Active");
 
+		SetDefaultState();
 		const bool wall = WallDetector->DetectStickyWall(this, GetActorLocation(), GetActorForwardVector(), m_WallData, ECC_EnemyWallDetection);
 		if (wall && (m_State == EEnemyState::STATE_InAir || m_State == EEnemyState::STATE_Launched) && m_WallState != EWall::WALL_Leaving)
 		{
 			m_State = EEnemyState::STATE_OnWall;
 			m_WallState = EWall::WALL_Stuck;
 			PlayerPogoDetection->SetSphereRadius(PB_SphereRadius_Stuck);
-
 			// AI
 			Incapacitate(EAIIncapacitatedType::StuckToWall);
 		}
@@ -143,6 +144,10 @@ void ASmallEnemy::Tick(float DeltaTime)
 
 		//PrintState();
 	}
+	//else {
+	//	if (bPrintDebugStatus)
+	//		PRINT("In_Active");
+	//}
 }
 
 void ASmallEnemy::Anim_Attacked_Pure(FVector direction)
