@@ -1857,8 +1857,6 @@ void ASteikemannCharacter::Jump()
 			if (m_EPogoType != EPogoType::POGO_Leave)
 				if (PB_Active_TargetDetection())
 				{
-					UE_LOG(LogTemp, Warning, TEXT("----------------"));
-
 					m_EPogoType = EPogoType::POGO_Active;
 					break;
 				}
@@ -2551,8 +2549,8 @@ bool ASteikemannCharacter::Validate_Ledge(FHitResult& hit)
 {
 	FHitResult h;
 	FCollisionQueryParams param("", false, this);
-	const bool b1 = GetWorld()->LineTraceSingleByChannel(h, m_Ledgedata.ActorLocation, m_Ledgedata.ActorLocation + (FVector::DownVector * (GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 5.f)), ECC_PlayerWallDetection, param);
-	if (b1)
+	FCollisionShape capsule = FCollisionShape::MakeCapsule(GetCapsuleComponent()->GetScaledCapsuleRadius() + 5.f, GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 5.f);
+	if (GetWorld()->SweepSingleByChannel(h, m_Ledgedata.ActorLocation, m_Ledgedata.ActorLocation, FQuat(1,0,0,0), ECC_PlayerWallDetection, capsule, param))
 		return false;
 	const bool b2 = GetWorld()->LineTraceSingleByChannel(hit, m_Ledgedata.TraceLocation, m_Ledgedata.TraceLocation - (m_Walldata.Normal * 100.f), ECC_PlayerWallDetection, param);
 	if (!b2)

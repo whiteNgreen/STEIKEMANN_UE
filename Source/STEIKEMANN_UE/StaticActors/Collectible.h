@@ -48,7 +48,8 @@ public:
 		//float InitTimer{ 0.5f };
 	//FTimerHandle FTHInit;
 	//void Init();
-
+	bool bWasSpawnedByOwner{};
+	AActor* SpawningOwner{ nullptr };
 	FTimerHandle FTHDestruction;
 	UFUNCTION(BlueprintImplementableEvent)
 		void Destruction_IMPL();

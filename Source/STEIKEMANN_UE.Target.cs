@@ -11,5 +11,6 @@ public class STEIKEMANN_UETarget : TargetRules
 		DefaultBuildSettings = BuildSettingsVersion.V2;
 		ExtraModuleNames.AddRange( new string[] { "STEIKEMANN_UE" } );
 		ExtraModuleNames.AddRange( new string[] { "BaseClasses" } );
+		ExtraModuleNames.AddRange( new string[] { "MechanicTestingClasses" } );
     }
 }
