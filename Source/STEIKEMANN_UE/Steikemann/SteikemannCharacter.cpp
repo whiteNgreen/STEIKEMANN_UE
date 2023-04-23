@@ -111,8 +111,6 @@ void ASteikemannCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	PRINTPARLONG(3.f, "Gravity Z: %f == %f", GetCharacterMovement()->GetGravityZ(), GetCharacterMovement()->GetGravityZ() / 4.f);
-
 	// Root motion tullball
 	SetAnimRootMotionTranslationScale(1.f/4.5f);
 
@@ -239,13 +237,13 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 
 	/* PRINTING STATE MACHINE INFO */
 #ifdef UE_BUILD_DEBUG
-	Print_State();
-	PRINTPAR("Attack State :: %i", m_EAttackState);
-	PRINTPAR("Attack type :: %i", m_EAttackType);
-	PRINTPAR("Grapple State :: %i", m_EGrappleState);
-	PRINTPAR("Grapple Type  :: %i", m_EGrappleType);
-	PRINTPAR("Smack Attack Type :: %i", m_ESmackAttackType);
-	PRINTPAR("MovementInputState = %i", m_EMovementInputState);
+	//Print_State();
+	//PRINTPAR("Attack State :: %i", m_EAttackState);
+	//PRINTPAR("Attack type :: %i", m_EAttackType);
+	//PRINTPAR("Grapple State :: %i", m_EGrappleState);
+	//PRINTPAR("Grapple Type  :: %i", m_EGrappleType);
+	//PRINTPAR("Smack Attack Type :: %i", m_ESmackAttackType);
+	//PRINTPAR("MovementInputState = %i", m_EMovementInputState);
 	//PRINTPAR("Air State :: %i", m_EAirState);
 	//PRINTPAR("Ground State :: %i", m_EGroundState);
 	//PRINTPAR("Pogo Type :: %i", m_EPogoType);
@@ -679,8 +677,6 @@ void ASteikemannCharacter::RightTriggerClick()
 
 	//if (TFunc_GrappleLaunchFunction)	return;
 	bGrappleClick = true;
-	PRINTLONG(2.f, "   ");
-	PRINTLONG(2.f, "Right trigger CLICK");
 
 	GH_Click();
 }
@@ -688,15 +684,12 @@ void ASteikemannCharacter::RightTriggerClick()
 void ASteikemannCharacter::RightTriggerUn_Click()
 {
 	bGrappleClick = false;
-	PRINTLONG(2.f, "Right trigger RELEASE");
-	//if (/*!GH_InvalidRelease || */!ActionLocked())
 	if (bAttackPress)   return;
 		GH_DelegateDynamicLaunch();
 }
 
 void ASteikemannCharacter::GH_Click()
 {
-	Print_State(2.f);
 	GH_InvalidRelease = false;
 	switch (m_EState)
 	{
@@ -2240,6 +2233,11 @@ void ASteikemannCharacter::TL_Dash(float value)
 	FRotator Rot = m_InputVector.Rotation();
 	FVector NewVel = FVector::ForwardVector * GetMoveComponent()->Velocity.Length();
 	GetMoveComponent()->Velocity = NewVel.RotateAngleAxis(Rot.Yaw, FVector::UpVector);
+
+	if (!GetMoveComponent()->IsWalking()) {
+		TimerManager.ClearTimer(TH_Dash);
+		TL_Dash_End();
+	}
 }
 
 void ASteikemannCharacter::TL_Dash_End()
@@ -2678,7 +2676,6 @@ void ASteikemannCharacter::OnCapsuleComponentBeginOverlap(UPrimitiveComponent* O
 		{
 			ReceiveCollectible(collectible_static->CollectibleType);
 			collectible_static->Destruction();
-			PRINTPARLONG(2.f, "Collected -> %s", *collectible_static->GetName());
 		}
 	}
 
@@ -3014,7 +3011,6 @@ void ASteikemannCharacter::Cancel_SmackAttack()
 
 void ASteikemannCharacter::Stop_Attack()
 {
-	PRINTLONG(2.f, "STOP ATTACK");
 	AttackComboCount = 0;
 	AttackContactedActors.Empty();
 	m_EAttackState = EAttackState::None;
