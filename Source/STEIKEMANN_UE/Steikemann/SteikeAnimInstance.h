@@ -90,4 +90,34 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		bool bGroundPound{};
 #pragma endregion //GroundPound
+#pragma region FootIK_ControlRig
+	UPROPERTY(BlueprintReadOnly)
+		FTransform Hip_BaseTransform = FTransform(FRotator(0, 90, 0), FVector(0, 0, 90), FVector(4.5f));
+	UPROPERTY(BlueprintReadOnly)
+		FTransform IKFoot_BaseTransform_L;
+	UPROPERTY(BlueprintReadOnly)
+		FTransform IKFoot_BaseTransform_R;
+
+
+	UPROPERTY(BlueprintReadOnly)
+		bool bIK_Foot_L_Active{};
+	//UPROPERTY(BlueprintReadOnly)
+	//	FVector IK_Foot_L_SurfaceLocation;
+	//UPROPERTY(BlueprintReadOnly)
+	//	FVector IK_Foot_L_SurfaceDirection;
+	//UPROPERTY(BlueprintReadOnly)
+	//	FQuat IK_Foot_L_NewRotation;
+
+	UPROPERTY(BlueprintReadOnly)
+		bool bIK_Foot_R_Active{};
+
+	//UPROPERTY(BlueprintReadOnly)
+	//	FVector IK_Foot_R_SurfaceLocation;
+	//UPROPERTY(BlueprintReadOnly)
+	//	FVector IK_Foot_R_SurfaceDirection;
+	//UPROPERTY(BlueprintReadOnly)
+	//	FQuat IK_Foot_R_NewRotation;
+
+	FQuat GetNewFootIKDirection(const FVector CurrentDirection, const FVector SurfaceDirection);
+#pragma endregion //FootIK_ControlRig
 };

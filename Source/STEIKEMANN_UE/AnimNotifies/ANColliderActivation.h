@@ -113,3 +113,32 @@ class STEIKEMANN_UE_API UANStartControlRigLerp : public UAnimNotify
 public:
 	virtual void Notify(class USkeletalMeshComponent* MeshComp, class UAnimSequenceBase* Animation) override;
 };
+
+UENUM(BlueprintType)
+enum class EIKRaycast_Type : uint8
+{
+	Foot_L,
+	Foot_R
+};
+UCLASS()
+class STEIKEMANN_UE_API UANControlRigRaycast_Start : public UAnimNotify
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		EIKRaycast_Type IKRaycast_Type;
+
+	virtual void Notify(class USkeletalMeshComponent* MeshComp, class UAnimSequenceBase* Animation) override;
+};
+UCLASS()
+class STEIKEMANN_UE_API UANControlRigRaycast_End : public UAnimNotify
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		EIKRaycast_Type IKRaycast_Type;
+
+	virtual void Notify(class USkeletalMeshComponent* MeshComp, class UAnimSequenceBase* Animation) override;
+};

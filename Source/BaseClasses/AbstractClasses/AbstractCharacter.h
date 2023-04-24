@@ -14,6 +14,17 @@
 
 #include "AbstractCharacter.generated.h"
 
+#define ECC_IKCollision ECC_GameTraceChannel6
+
+USTRUCT(BlueprintType)
+struct FIK_RaycastReturn
+{
+	GENERATED_BODY()
+	bool bHitSurface{};
+	FVector SurfaceLocation;
+	FVector SurfaceNormal;
+};
+
 UCLASS(Abstract)
 class BASECLASSES_API AAbstractCharacter : public ACharacter
 {
@@ -30,6 +41,13 @@ public:
 	virtual void EndAttackBufferPeriod()			PURE_VIRTUAL(AAbstractCharacter::EndAttackBufferPeriod);
 
 	virtual void StartAnimLerp_ControlRig()			PURE_VIRTUAL(AAbstractCharacter::StartAnimLerp_ControlRig);
+
+	UPROPERTY(BlueprintReadWrite)
+		bool bIK_Foot_R{};
+	UPROPERTY(BlueprintReadWrite)
+		bool bIK_Foot_L{};	// true for testing purposes!! CHANGE
+	virtual FIK_RaycastReturn RaycastForIKPlacement(FName SocketRaycastOrigin, float RaycastLength, FVector RaycastDirection = FVector(0, 0, -1))
+		PURE_VIRTUAL(AAbstractCharacter::RaycastForIKPlacement, return FIK_RaycastReturn(););
 };
 
 

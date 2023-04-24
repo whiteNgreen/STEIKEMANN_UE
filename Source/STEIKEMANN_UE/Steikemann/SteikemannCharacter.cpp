@@ -192,6 +192,29 @@ void ASteikemannCharacter::Material_UpdateParameterCollection_Player(float Delta
 	UKismetMaterialLibrary::SetVectorParameterValue(GetWorld(), MPC_Player, "Velocity",			FLinearColor(GetVelocity()));
 	UKismetMaterialLibrary::SetVectorParameterValue(GetWorld(), MPC_Player, "Forward",			FLinearColor(GetActorForwardVector()));
 }
+
+FIK_RaycastReturn ASteikemannCharacter::RaycastForIKPlacement(FName SocketRaycastOrigin, float RaycastLength, FVector RaycastDirection)
+{
+	FIK_RaycastReturn ReturnSurface;
+	if (!GetWorld() || !GetMesh())
+		return ReturnSurface;
+	FVector SocketLocation = GetMesh()->GetSocketLocation(SocketRaycastOrigin);
+	SocketLocation.Z = GetActorLocation().Z - 90.f;
+	FVector StartLocation = SocketLocation + (RaycastDirection * RaycastLength);
+	FVector EndLocation = SocketLocation + (-RaycastDirection * RaycastLength);
+	FHitResult Hit;
+	FCollisionQueryParams Params("", true, this);
+	if (GetWorld()->LineTraceSingleByChannel(Hit, StartLocation, EndLocation, ECC_IKCollision, Params))
+	{
+		ReturnSurface.bHitSurface = true;
+		ReturnSurface.SurfaceLocation = SocketLocation; 
+		ReturnSurface.SurfaceLocation = Hit.ImpactPoint + FVector(0,0,10);
+		ReturnSurface.SurfaceNormal = Hit.ImpactNormal;
+		return ReturnSurface;
+	}
+	return ReturnSurface;
+}
+
 void ASteikemannCharacter::NS_Land_Implementation(const FHitResult& Hit)
 {
 	/* Play Landing particle effect */
@@ -435,6 +458,18 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	GuideCamera(DeltaTime);
 	GuideCamera_Movement(DeltaTime);
 
+	/* --------------- ANIMATION -------------------- */
+	//float IK_RaycastLength{ 50.f };
+	//if (bIK_Foot_L) {
+	//	FIK_RaycastReturn RR = RaycastForIKPlacement(FName("Foot_Socket_L"), IK_RaycastLength);
+	//	if (GetAnimInstance())
+	//		GetAnimInstance()->IK_Surface_L = RR;
+	//}
+	//if (bIK_Foot_R) {
+	//	FIK_RaycastReturn RR = RaycastForIKPlacement(FName("Foot_Socket_R"), IK_RaycastLength);
+	//	if (GetAnimInstance())
+	//		GetAnimInstance()->IK_Surface_R = RR;
+	//}
 
 	EndTick(DeltaTime);
 }

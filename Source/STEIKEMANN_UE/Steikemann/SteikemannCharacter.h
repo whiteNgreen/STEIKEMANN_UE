@@ -251,6 +251,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Materialss", meta = (DisplayPriority = "2"))
 		UCurveFloat* Curve_DecalAlpha;
 #pragma endregion				//Material
+#pragma region
+	UFUNCTION(BlueprintCallable)
+		virtual FIK_RaycastReturn RaycastForIKPlacement(FName SocketRaycastOrigin, float RaycastLength, FVector RaycastDirection = FVector(0, 0, 1)) override;
+#pragma endregion // Animation Control Rig
 #pragma region ParticleEffects
 
 	/* ------------------- Particle Effects ------------------- */
@@ -660,7 +664,7 @@ public: // Animation
 		void TL_Dash(float value);
 	void TL_Dash_End();
 	bool Can_Dash_Start() const;
-#pragma endregion //Dash
+#pragma endregion					//Dash
 #pragma region Bounce
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		class UBouncyShroomActorComponent* BounceComp;
@@ -1145,7 +1149,8 @@ public: /* ------- Native Variables and functions -------- */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks", meta = (UIMin = "0", UIMax = "1"))
 		float Grapplesmack_DirectionMultiplier		/*UMETA(DisplayName = "Input Strength Multiplier")*/ { 0.2 };
 
-	bool IsSmackAttacking() const;
+	UFUNCTION(BlueprintCallable)
+		bool IsSmackAttacking() const;
 
 	bool bCanBeSmackAttacked{ true };
 
