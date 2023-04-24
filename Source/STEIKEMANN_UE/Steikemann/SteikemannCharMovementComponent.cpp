@@ -326,14 +326,13 @@ void USteikemannCharMovementComponent::LedgeJump(const FVector input, float Jump
 		i -= p;
 		i.Normalize();
 		i *= input.Size();
-
 		alpha *= 1.f - dot;
-
 		mInput = i;
 	}
 	
 	// Angle direction towards input
-	FVector ortho = FVector::CrossProduct(FVector::UpVector, FVector::CrossProduct(mInput.GetSafeNormal(), FVector::UpVector));
+	//FVector ortho = FVector::CrossProduct(FVector::UpVector, FVector::CrossProduct(mInput.GetSafeNormal(), FVector::UpVector));
+	FVector ortho = mInput.GetSafeNormal();
 	float angle = FMath::Clamp(LedgeJump_AngleLimit * ((LedgeJump_AngleLimit * alpha) / LedgeJump_AngleLimit), 0.f, LedgeJump_AngleLimit);
 	float r = FMath::DegreesToRadians(angle);
 	FVector direction = (cosf(r) * FVector::UpVector) + (sinf(r) * ortho);

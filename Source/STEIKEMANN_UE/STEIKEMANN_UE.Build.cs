@@ -14,7 +14,7 @@ public class STEIKEMANN_UE : ModuleRules
             //,"RawInput", "InputDevice", "ApplicationCore"	// Lagt til angående ps4 gamepad support
 		});	
 
-		PrivateDependencyModuleNames.AddRange(new string[] { "BaseClasses", "Niagara", "GameplayTags", "CoreUObject", "Engine", "InputCore" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "BaseClasses", "MechanicTestingClasses", "Niagara", "GameplayTags", "CoreUObject", "Engine", "InputCore" });
 
 		// Uncomment if you are using Slate UI
 		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });

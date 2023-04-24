@@ -4,6 +4,7 @@
 #include "../StaticActors/Collectible.h"
 #include "NiagaraFunctionLibrary.h"
 #include "Components/SkeletalmeshComponent.h"
+#include "HealthPickupSpawner.h"
 
 // Sets default values
 ACollectible::ACollectible()
@@ -51,6 +52,11 @@ void ACollectible::Destruction()
 	Sphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	if (Mesh)
 		Mesh->SetHiddenInGame(true, true);
+	if (SpawningOwner && bWasSpawnedByOwner)
+	{
+		APickupSpawner* owner = Cast<APickupSpawner>(SpawningOwner);
+		owner->RespawnPickup();
+	}
 
 	/* Destroy object after 2.f seconds */
 	GetWorldTimerManager().SetTimer(FTHDestruction, [this]() { Destroy(); }, 2.f, false);
