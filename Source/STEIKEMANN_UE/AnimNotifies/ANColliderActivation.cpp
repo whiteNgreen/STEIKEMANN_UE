@@ -42,39 +42,3 @@ void UANStartControlRigLerp::Notify(USkeletalMeshComponent* MeshComp, UAnimSeque
 	CallOwnerFunction(MeshComp, &AAbstractCharacter::StartAnimLerp_ControlRig);
 }
 
-//void UANControlRigRaycast_Start::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation)
-//{
-//	AAbstractCharacter* owner = Cast<AAbstractCharacter>(MeshComp->GetOwner());
-//	if (owner)
-//	{
-//		switch (IKRaycast_Type)
-//		{
-//		case EIKRaycast_Type::Foot_L:
-//			owner->bIK_Foot_L = true;
-//			break;
-//		case EIKRaycast_Type::Foot_R:
-//			owner->bIK_Foot_R = true;
-//			break;
-//		default:
-//			break;
-//		}
-//	}
-//}
-//void UANControlRigRaycast_End::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation)
-//{
-//	AAbstractCharacter* owner = Cast<AAbstractCharacter>(MeshComp->GetOwner());
-//	if (owner)
-//	{
-//		switch (IKRaycast_Type)
-//		{
-//		case EIKRaycast_Type::Foot_L:
-//			owner->bIK_Foot_L = false;
-//			break;
-//		case EIKRaycast_Type::Foot_R:
-//			owner->bIK_Foot_R = false;
-//			break;
-//		default:
-//			break;
-//		}
-//	}
-//}

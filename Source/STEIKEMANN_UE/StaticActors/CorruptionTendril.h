@@ -19,17 +19,19 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 		void TendrilPulse_Start();
 	UFUNCTION(BlueprintImplementableEvent)
-		void DestroyTendril_Start();
+		void DestroyTendril_Start(FVector CoreLocation);
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 		void DestroyTendril_End();
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ConnectedMeatWall")
+		bool bIsUsedToDestroyMeatWall{};
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ConnectedMeatWall", meta = (EditCondition = "bIsUsedToDestroyMeatWall", EditConditionHides))
 		TArray<class ACorruptionWall*> ConnectedWalls;
 
 protected:
 	virtual void BeginPlay() override;
 
-
+public: // Pulse Timeline
 	UPROPERTY(BlueprintReadWrite)
 		class UTimelineComponent* TLComp_Pulse;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
@@ -38,4 +40,17 @@ protected:
 		void TL_Pulse(float value);
 	UFUNCTION(BlueprintImplementableEvent)
 		void TL_Pulse_End();
+
+public: // Death/Fade Timeline
+	UPROPERTY(BlueprintReadWrite)
+		class UTimelineComponent* TLComp_Fade;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		UCurveFloat* Curve_Fade;
+	UFUNCTION(BlueprintImplementableEvent)
+		void TL_Fade(float value);
+	UFUNCTION(BlueprintImplementableEvent)
+		void TL_Fade_End();
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ConnectedMeatWall", meta = (EditCondition = "bIsUsedToDestroyMeatWall", EditConditionHides))
+		float ActivateMeatWall_FadeTimer{ 10.f };
 };

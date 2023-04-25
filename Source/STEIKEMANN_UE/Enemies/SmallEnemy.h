@@ -12,6 +12,7 @@
 #include "SmallEnemy.generated.h"
 
 DECLARE_DELEGATE(FIncapacitatedLandDelegation)
+DECLARE_DELEGATE(FStunnedLandDelegation)
 DECLARE_DELEGATE(FIncapacitatedCollision)
 DECLARE_DELEGATE_OneParam(FLaunchedLand, const FHitResult& LandHit)
 
@@ -141,6 +142,9 @@ public: // Functions
 		float AttackJumpAngle{ 0.6f };
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chomp")
 		float AttackJumpStrength{ 1200.f };
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chomp")
+		float PostChomp_StunTime{ 1.5f };
+	FTimerHandle TH_PostChompStun;
 	void AttackJump();
 	void CHOMP_Pure();
 	void Cancel_CHOMP();
@@ -188,6 +192,8 @@ public:	// STATES
 public: // Variables for calling AI
 	FIncapacitatedCollision IncapacitatedCollisionDelegate;
 	FIncapacitatedLandDelegation IncapacitatedLandDelegation;
+	FStunnedLandDelegation Delegate_StunnedLand;
+	FTimerHandle TH_RedetermineIncapacitate;
 
 public: // Functinos calling AI controller or Functions AI controller calling 
 	void Incapacitate(const EAIIncapacitatedType& IncapacitateType, float Time = -1.f/*, const ESmallEnemyAIState& NextState = ESmallEnemyAIState::None*/);
@@ -206,6 +212,8 @@ public: // Functinos calling AI controller or Functions AI controller calling
 
 private: // Functions Capacitate - Used for IncapacitatedLandingDelegate
 	void IncapacitatedLand();
+	void StunnedLand();
+	void PostChompLand();
 	void CollisionDelegate();
 	void Capacitate_Grappled();
 

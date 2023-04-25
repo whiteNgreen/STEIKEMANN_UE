@@ -2,7 +2,7 @@
 
 
 #include "../StaticActors/CorruptionCore.h"
-#include "NiagaraFunctionLibrary.h"
+//#include "NiagaraFunctionLibrary.h"
 #include "../StaticActors/GrappleTarget.h"
 #include "Components/CapsuleComponent.h"
 
@@ -62,12 +62,13 @@ void ACorruptionCore::ReceiveDamage(const int damage)
 
 void ACorruptionCore::Death()
 {
+	Death_IMPL();
 	/* Particles and disable mesh + collision */
-	UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), DeathParticles, GetActorLocation());
+	//UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), DeathParticles, GetActorLocation());
 	Collider->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	//Mesh->SetHiddenInGame(true, true);
 
-	DestroyConnectedTendrils();
+	//DestroyConnectedTendrils();
 
 	/* Destroy object after 10 seconds */
 	auto func = [this]() {
@@ -80,8 +81,9 @@ void ACorruptionCore::Death()
 
 void ACorruptionCore::DestroyConnectedTendrils()
 {
+	FVector Loc = GetActorLocation();
 	for (auto& it : ConnectedTendrils) {
 		if (it)
-			it->DestroyTendril_Start();
+			it->DestroyTendril_Start(Loc);
 	}
 }

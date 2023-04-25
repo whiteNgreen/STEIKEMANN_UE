@@ -41,13 +41,6 @@ public:
 	virtual void EndAttackBufferPeriod()			PURE_VIRTUAL(AAbstractCharacter::EndAttackBufferPeriod);
 
 	virtual void StartAnimLerp_ControlRig()			PURE_VIRTUAL(AAbstractCharacter::StartAnimLerp_ControlRig);
-
-	UPROPERTY(BlueprintReadWrite)
-		bool bIK_Foot_R{};
-	UPROPERTY(BlueprintReadWrite)
-		bool bIK_Foot_L{};	// true for testing purposes!! CHANGE
-	//virtual FIK_RaycastReturn RaycastForIKPlacement(FName SocketRaycastOrigin, float RaycastLength, FVector RaycastDirection = FVector(0, 0, -1))
-	//	PURE_VIRTUAL(AAbstractCharacter::RaycastForIKPlacement, return FIK_RaycastReturn(););
 };
 
 

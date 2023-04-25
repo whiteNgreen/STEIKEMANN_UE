@@ -356,7 +356,7 @@ void AEnemyAIController::SetState(const ESmallEnemyAIState& state)
 	case ESmallEnemyAIState::ChasingTarget:		ChaseBegin();				break;
 	case ESmallEnemyAIState::GuardSpawn:		GuardSpawnBegin();			break;
 	case ESmallEnemyAIState::Attack:			AttackBegin();				break;
-	case ESmallEnemyAIState::Incapacitated:									break;
+	case ESmallEnemyAIState::Incapacitated:		IncapacitateBegin();		break;
 	case ESmallEnemyAIState::None:											break;
 	default:
 		break;
@@ -449,19 +449,18 @@ void AEnemyAIController::IncapacitateBegin()
 
 void AEnemyAIController::IncapacitateEnd()
 {
+	//PRINTLONG(2.f, "END STUNNED!!!");
 	m_AIIncapacitatedType = EAIIncapacitatedType::None;
 	m_PawnOwner->Post_IncapacitateDetermineState();
 }
 
 void AEnemyAIController::IncapacitateAI(const EAIIncapacitatedType& IncapacitateType, float Time/*, const ESmallEnemyAIState& NextState*/)
 {
-	TM_AI.ClearTimer(TH_IncapacitateTimer);
+	if (Time > 0.f)	
+		TM_AI.SetTimer(TH_IncapacitateTimer, this, &AEnemyAIController::Post_Incapacitate_GettingSmacked, Time);
 	SetState(ESmallEnemyAIState::Incapacitated);
 	m_AIIncapacitatedType = IncapacitateType;
-	// AI Incapacitated for an undetermined amount of time
-	if (Time < 0.f)	return;
-
-	TM_AI.SetTimer(TH_IncapacitateTimer, this, &AEnemyAIController::Post_Incapacitate_GettingSmacked, Time);
+	//PRINTPARLONG(Time, "Incapacitated for %f seconds", Time);
 }
 
 void AEnemyAIController::ReDetermineState(const ESmallEnemyAIState& StateOverride)
