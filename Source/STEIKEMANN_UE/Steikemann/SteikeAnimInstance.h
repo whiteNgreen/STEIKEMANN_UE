@@ -99,17 +99,17 @@ public:
 		FTransform IKFoot_BaseTransform_R;
 
 
-	UPROPERTY(BlueprintReadOnly)
-		bool bIK_Foot_L_Active{};
 	//UPROPERTY(BlueprintReadOnly)
-	//	FVector IK_Foot_L_SurfaceLocation;
-	//UPROPERTY(BlueprintReadOnly)
-	//	FVector IK_Foot_L_SurfaceDirection;
-	//UPROPERTY(BlueprintReadOnly)
-	//	FQuat IK_Foot_L_NewRotation;
+	//	bool bIK_Foot_L_Active{};
+	////UPROPERTY(BlueprintReadOnly)
+	////	FVector IK_Foot_L_SurfaceLocation;
+	////UPROPERTY(BlueprintReadOnly)
+	////	FVector IK_Foot_L_SurfaceDirection;
+	////UPROPERTY(BlueprintReadOnly)
+	////	FQuat IK_Foot_L_NewRotation;
 
-	UPROPERTY(BlueprintReadOnly)
-		bool bIK_Foot_R_Active{};
+	//UPROPERTY(BlueprintReadOnly)
+	//	bool bIK_Foot_R_Active{};
 
 	//UPROPERTY(BlueprintReadOnly)
 	//	FVector IK_Foot_R_SurfaceLocation;
@@ -118,6 +118,6 @@ public:
 	//UPROPERTY(BlueprintReadOnly)
 	//	FQuat IK_Foot_R_NewRotation;
 
-	FQuat GetNewFootIKDirection(const FVector CurrentDirection, const FVector SurfaceDirection);
+	//FQuat GetNewFootIKDirection(const FVector CurrentDirection, const FVector SurfaceDirection);
 #pragma endregion //FootIK_ControlRig
 };

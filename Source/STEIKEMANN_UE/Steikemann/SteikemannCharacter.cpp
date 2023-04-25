@@ -193,27 +193,27 @@ void ASteikemannCharacter::Material_UpdateParameterCollection_Player(float Delta
 	UKismetMaterialLibrary::SetVectorParameterValue(GetWorld(), MPC_Player, "Forward",			FLinearColor(GetActorForwardVector()));
 }
 
-FIK_RaycastReturn ASteikemannCharacter::RaycastForIKPlacement(FName SocketRaycastOrigin, float RaycastLength, FVector RaycastDirection)
-{
-	FIK_RaycastReturn ReturnSurface;
-	if (!GetWorld() || !GetMesh())
-		return ReturnSurface;
-	FVector SocketLocation = GetMesh()->GetSocketLocation(SocketRaycastOrigin);
-	SocketLocation.Z = GetActorLocation().Z - 90.f;
-	FVector StartLocation = SocketLocation + (RaycastDirection * RaycastLength);
-	FVector EndLocation = SocketLocation + (-RaycastDirection * RaycastLength);
-	FHitResult Hit;
-	FCollisionQueryParams Params("", true, this);
-	if (GetWorld()->LineTraceSingleByChannel(Hit, StartLocation, EndLocation, ECC_IKCollision, Params))
-	{
-		ReturnSurface.bHitSurface = true;
-		ReturnSurface.SurfaceLocation = SocketLocation; 
-		ReturnSurface.SurfaceLocation = Hit.ImpactPoint + FVector(0,0,10);
-		ReturnSurface.SurfaceNormal = Hit.ImpactNormal;
-		return ReturnSurface;
-	}
-	return ReturnSurface;
-}
+//FIK_RaycastReturn ASteikemannCharacter::RaycastForIKPlacement(FName SocketRaycastOrigin, float RaycastLength, FVector RaycastDirection)
+//{
+//	FIK_RaycastReturn ReturnSurface;
+//	if (!GetWorld() || !GetMesh())
+//		return ReturnSurface;
+//	FVector SocketLocation = GetMesh()->GetSocketLocation(SocketRaycastOrigin);
+//	SocketLocation.Z = GetActorLocation().Z - 90.f;
+//	FVector StartLocation = SocketLocation + (RaycastDirection * RaycastLength);
+//	FVector EndLocation = SocketLocation + (-RaycastDirection * RaycastLength);
+//	FHitResult Hit;
+//	FCollisionQueryParams Params("", true, this);
+//	if (GetWorld()->LineTraceSingleByChannel(Hit, StartLocation, EndLocation, ECC_IKCollision, Params))
+//	{
+//		ReturnSurface.bHitSurface = true;
+//		ReturnSurface.SurfaceLocation = SocketLocation; 
+//		ReturnSurface.SurfaceLocation = Hit.ImpactPoint + FVector(0,0,10);
+//		ReturnSurface.SurfaceNormal = Hit.ImpactNormal;
+//		return ReturnSurface;
+//	}
+//	return ReturnSurface;
+//}
 
 void ASteikemannCharacter::NS_Land_Implementation(const FHitResult& Hit)
 {

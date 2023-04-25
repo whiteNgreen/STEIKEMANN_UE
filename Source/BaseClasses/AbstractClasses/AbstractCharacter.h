@@ -46,8 +46,8 @@ public:
 		bool bIK_Foot_R{};
 	UPROPERTY(BlueprintReadWrite)
 		bool bIK_Foot_L{};	// true for testing purposes!! CHANGE
-	virtual FIK_RaycastReturn RaycastForIKPlacement(FName SocketRaycastOrigin, float RaycastLength, FVector RaycastDirection = FVector(0, 0, -1))
-		PURE_VIRTUAL(AAbstractCharacter::RaycastForIKPlacement, return FIK_RaycastReturn(););
+	//virtual FIK_RaycastReturn RaycastForIKPlacement(FName SocketRaycastOrigin, float RaycastLength, FVector RaycastDirection = FVector(0, 0, -1))
+	//	PURE_VIRTUAL(AAbstractCharacter::RaycastForIKPlacement, return FIK_RaycastReturn(););
 };
 
 

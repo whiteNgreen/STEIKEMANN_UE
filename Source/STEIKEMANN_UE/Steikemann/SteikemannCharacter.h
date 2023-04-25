@@ -251,10 +251,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Materialss", meta = (DisplayPriority = "2"))
 		UCurveFloat* Curve_DecalAlpha;
 #pragma endregion				//Material
-#pragma region
-	UFUNCTION(BlueprintCallable)
-		virtual FIK_RaycastReturn RaycastForIKPlacement(FName SocketRaycastOrigin, float RaycastLength, FVector RaycastDirection = FVector(0, 0, 1)) override;
-#pragma endregion // Animation Control Rig
+//#pragma region
+//	UFUNCTION(BlueprintCallable)
+//		virtual FIK_RaycastReturn RaycastForIKPlacement(FName SocketRaycastOrigin, float RaycastLength, FVector RaycastDirection = FVector(0, 0, 1)) override;
+//#pragma endregion // Animation Control Rig
 #pragma region ParticleEffects
 
 	/* ------------------- Particle Effects ------------------- */
