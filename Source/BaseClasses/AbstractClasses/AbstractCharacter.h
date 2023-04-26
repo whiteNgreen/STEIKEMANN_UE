@@ -14,6 +14,17 @@
 
 #include "AbstractCharacter.generated.h"
 
+#define ECC_IKCollision ECC_GameTraceChannel6
+
+USTRUCT(BlueprintType)
+struct FIK_RaycastReturn
+{
+	GENERATED_BODY()
+	bool bHitSurface{};
+	FVector SurfaceLocation;
+	FVector SurfaceNormal;
+};
+
 UCLASS(Abstract)
 class BASECLASSES_API AAbstractCharacter : public ACharacter
 {

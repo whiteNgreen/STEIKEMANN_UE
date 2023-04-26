@@ -11,6 +11,9 @@ namespace Tag {
 		return p; 
 	}
 
+	// NPCs
+	static FGameplayTag OrangeGirl() { return FGameplayTag::RequestGameplayTag("NPC.OrangeGirl"); }
+
 	// Enemies
 	static FGameplayTag Enemy() { return FGameplayTag::RequestGameplayTag("Enemy"); }
 	static FGameplayTag AubergineDoggo() { return FGameplayTag::RequestGameplayTag("Enemy.AubergineDoggo"); }

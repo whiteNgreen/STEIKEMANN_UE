@@ -31,11 +31,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		UBoxComponent* Volume;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		UCameraComponent* Camera_One;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		UCameraComponent* Camera_Two;
-
 public:
 	// Sets default values for this actor's properties
 	ADialoguePrompt();
@@ -48,19 +43,23 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	UFUNCTION(BlueprintCallable)
+		void SceneComponentLookAt(USceneComponent* Comp, USceneComponent* Target);
+	UFUNCTION(BlueprintCallable)
+		float LerpSceneComponentTransformToSceneComponent(USceneComponent* Comp, USceneComponent* TargetComp, float LerpAlpha, float DeltaTime);
+
 public:
-	AActor* m_Player{ nullptr };
+	UPROPERTY(BlueprintReadOnly)
+		ASteikemannCharacter* m_Player{ nullptr };
 	UPROPERTY(BlueprintReadOnly)
 		bool bPlayerWithinVolume{};
 	UPROPERTY(BlueprintReadOnly)
 		UCameraComponent* m_PlayerCamera{ nullptr };
 
 	UPROPERTY(BlueprintReadOnly)
-		ECameraLerp m_ECameraLerp;
-	UPROPERTY(BlueprintReadOnly)
 		float CameraLerpSpeed{ 1.f };
-	UPROPERTY(BlueprintReadOnly)
-		uint8 m_PromptIndex{0};
+	UPROPERTY(BlueprintReadWrite)
+		int m_PromptIndex_Internal{0};
 
 public:	// Functions for activating prompt
 	UFUNCTION()
@@ -74,13 +73,16 @@ public:	// Functions for activating prompt
 		void EndPrompt();
 
 	/* Common changes when going from one prompt index to another */
-	UFUNCTION(BlueprintImplementableEvent)
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 		void PromptChange();
 	void PromptChange_Pure();
 public:	// Functions called by player
-	bool GetNextPromptState(ASteikemannCharacter* player, int8 promptIndex = -1);
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
+		void GetNextPromptState(ASteikemannCharacter* player, int promptIndex);
+	void GetNextPromptState_Pure(ASteikemannCharacter* player, int promptIndex = -1);
 
-	UFUNCTION(BlueprintImplementableEvent)
-		void ExitPrompt();
-	void ExitPrompt_Pure();
+
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
+		void ExitPrompt(float ExitTime);
 };
+

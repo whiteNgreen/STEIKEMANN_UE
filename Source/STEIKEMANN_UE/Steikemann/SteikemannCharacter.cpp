@@ -192,14 +192,14 @@ void ASteikemannCharacter::Material_UpdateParameterCollection_Player(float Delta
 	UKismetMaterialLibrary::SetVectorParameterValue(GetWorld(), MPC_Player, "Velocity",			FLinearColor(GetVelocity()));
 	UKismetMaterialLibrary::SetVectorParameterValue(GetWorld(), MPC_Player, "Forward",			FLinearColor(GetActorForwardVector()));
 }
+
 void ASteikemannCharacter::NS_Land_Implementation(const FHitResult& Hit)
 {
 	/* Play Landing particle effect */
 	float Velocity = GetVelocity().Size();
 	UNiagaraComponent* NiagaraPlayer{ nullptr };
 
-	if (Component_Niagara->IsComplete())
-	{
+	if (Component_Niagara->IsComplete()){
 		NiagaraPlayer = Component_Niagara;
 	}
 	else
@@ -435,6 +435,18 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	GuideCamera(DeltaTime);
 	GuideCamera_Movement(DeltaTime);
 
+	/* --------------- ANIMATION -------------------- */
+	//float IK_RaycastLength{ 50.f };
+	//if (bIK_Foot_L) {
+	//	FIK_RaycastReturn RR = RaycastForIKPlacement(FName("Foot_Socket_L"), IK_RaycastLength);
+	//	if (GetAnimInstance())
+	//		GetAnimInstance()->IK_Surface_L = RR;
+	//}
+	//if (bIK_Foot_R) {
+	//	FIK_RaycastReturn RR = RaycastForIKPlacement(FName("Foot_Socket_R"), IK_RaycastLength);
+	//	if (GetAnimInstance())
+	//		GetAnimInstance()->IK_Surface_R = RR;
+	//}
 
 	EndTick(DeltaTime);
 }
@@ -488,7 +500,7 @@ void ASteikemannCharacter::EnterPromptArea(ADialoguePrompt* promptActor, FVector
 {
 	m_PromptActor = promptActor;
 	m_PromptState = EPromptState::WithingArea;
-	m_PromptLocation = promptLocation;
+	RotateActorYawToVector(FVector(promptLocation - GetActorLocation()));
 }
 
 void ASteikemannCharacter::LeavePromptArea()
@@ -498,39 +510,87 @@ void ASteikemannCharacter::LeavePromptArea()
 
 bool ASteikemannCharacter::ActivatePrompt()
 {
-	bool b{};
+	if (TimerManager.IsTimerActive(TH_BetweenPromptActivations))
+		return false;
 	switch (m_PromptState)
 	{
 	case EPromptState::None:			return false;
 
 	case EPromptState::WithingArea:
-		m_EMovementInputState = EMovementInput::Locked;
+		Cancel_SmackAttack();
+		m_CameraTransform = Camera->GetComponentTransform();
 		m_PromptState = EPromptState::InPrompt;
 		// Get first prompt state
-		return m_PromptActor->GetNextPromptState(this, 0);
+		m_PromptActor->GetNextPromptState_Pure(this, 0);
+		if (bInPrompt)
+			m_EMovementInputState = EMovementInput::Locked;
+		break;
+		//return b;
 
 	case EPromptState::InPrompt:
 		// Get next prompt state
-		b = m_PromptActor->GetNextPromptState(this);
-		if (!b) m_EMovementInputState = EMovementInput::Open;
-		return b;
+		m_PromptActor->GetNextPromptState_Pure(this);
+		if (!bInPrompt) {
+			PlayerExitPrompt();
+			m_EMovementInputState = EMovementInput::Open;
+			return true;
+		}
+		break;
 	default:
 		break;
 	}
-	return b;
+	return bInPrompt;
 }
 
-bool ASteikemannCharacter::ExitPrompt()
+bool ASteikemannCharacter::PlayerExitPrompt()
 {
+	TimerManager.SetTimer(TH_BetweenPromptActivations, Prompt_BetweenPromptActivations_Timer, false);
 	m_EMovementInputState = EMovementInput::Open;
 	m_PromptState = EPromptState::WithingArea;
 	// Notify DialoguePrompt of exiting
-	m_PromptActor->ExitPrompt_Pure();
+	m_PromptActor->ExitPrompt(Prompt_BetweenPromptActivations_Timer);
 
 	// Start lerping camera back to default position
 	m_CameraLerpAlpha_PostPrompt = 0.f;
 	bCameraLerpBack_PostPrompt = true;
 	return false;
+}
+
+ELoseSapType ASteikemannCharacter::GetLoseSapType()
+{
+	if (CollectibleCommon <= 0)
+		return ELoseSapType::PlayerHasNoSaps;
+	if (CollectibleCommon < 100)
+		return ELoseSapType::PlayerHasNotEnough;
+	return ELoseSapType::LoseAllSaps;
+}
+
+void ASteikemannCharacter::LoseSaps(int amount)
+{
+	UpdateSapCollectible();
+	if (CollectibleCommon <= 0)
+		return;
+	if (CollectibleCommon < 100)
+		return;
+	CurrentSapsLost = 0;
+	SapsToBeLost = amount;
+	if (amount == -1)
+		SapsToBeLost = CollectibleCommon;
+	TimerManager.SetTimer(TH_SapLoss_Start, this, &ASteikemannCharacter::StartSapLoss, SapLoss_Start_Timer);
+}
+
+void ASteikemannCharacter::StartSapLoss()
+{
+	IncrementSapLoss();
+}
+
+void ASteikemannCharacter::IncrementSapLoss()
+{
+	CollectibleCommon--;
+	CurrentSapsLost++;
+	if (CurrentSapsLost < SapsToBeLost)
+		TimerManager.SetTimer(TH_SapLoss_Start, this, &ASteikemannCharacter::StartSapLoss, SapLoss_Start_Update);
+	UpdateSapCollectible();
 }
 
 bool ASteikemannCharacter::LerpCameraBackToBoom(float DeltaTime)
@@ -2276,7 +2336,7 @@ bool ASteikemannCharacter::ShroomBounce(FVector direction, float strength)
 void ASteikemannCharacter::Click_RightFacebutton()
 {
 	if (m_PromptState == EPromptState::InPrompt)
-		ExitPrompt();
+		PlayerExitPrompt();
 	
 	switch (m_EState)
 	{
@@ -2999,6 +3059,7 @@ void ASteikemannCharacter::Cancel_SmackAttack()
 	EndAttackBufferPeriod();
 	Deactivate_AttackCollider();
 	Stop_Attack();
+	StopAnimMontage();
 
 	AttackComboCount = 0;
 	AttackContactedActors.Empty();
@@ -3123,7 +3184,8 @@ void ASteikemannCharacter::OnAttackColliderBeginOverlap(UPrimitiveComponent* Ove
 		/* Attacking a corruption core || Enemy Spawner || InkFlower*/
 		if (TCon.HasTag(Tag::CorruptionCore()) || 
 			TCon.HasTag(Tag::InkFlower()) || 
-			TCon.HasTag(Tag::EnemySpawner()))
+			TCon.HasTag(Tag::EnemySpawner()) ||
+			TCon.HasTag(Tag::OrangeGirl()))
 		{
 			Gen_Attack(IAttack, OtherActor, AType);
 		}

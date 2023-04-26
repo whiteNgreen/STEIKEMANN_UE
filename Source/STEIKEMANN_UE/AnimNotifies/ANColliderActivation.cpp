@@ -41,3 +41,4 @@ void UANStartControlRigLerp::Notify(USkeletalMeshComponent* MeshComp, UAnimSeque
 {
 	CallOwnerFunction(MeshComp, &AAbstractCharacter::StartAnimLerp_ControlRig);
 }
+

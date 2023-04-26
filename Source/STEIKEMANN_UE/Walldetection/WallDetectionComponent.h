@@ -9,7 +9,7 @@
 #include "../STEIKEMANN_UE.h"
 #include "WallDetectionComponent.generated.h"
 
-
+#define ECC_StickyWall ECC_GameTraceChannel4
 
 UCLASS( ClassGroup = (Custom), meta = (BlueprintSpawnableComponent) )
 class STEIKEMANN_UE_API UWallDetectionComponent : public UActorComponent
@@ -49,6 +49,9 @@ public:	// Wall Detection
 
 	bool DetectWall(const AActor* actor, const FVector Location, const FVector ForwardVector, Wall::WallData& walldata, Wall::WallData& WallJumpData);
 	bool DetectStickyWall(const AActor* actor, const FVector Location, const FVector Forward, Wall::WallData& walldata, ECollisionChannel TraceChannel);
+
+	/* Checks if the component detects a sticky wall within an angle of a given normal vector */
+	bool DetectStickyWallOnNormalWithinAngle(FVector actorlocation, const float dotprodlimit, FVector normal);
 
 private:
 	float m_OwnerHalfHeight{};

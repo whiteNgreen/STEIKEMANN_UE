@@ -90,4 +90,13 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		bool bGroundPound{};
 #pragma endregion //GroundPound
+#pragma region FootIK_ControlRig
+	UPROPERTY(BlueprintReadOnly)
+		FTransform Hip_BaseTransform = FTransform(FRotator(0, 90, 0), FVector(0, 0, 90), FVector(4.5f));
+	UPROPERTY(BlueprintReadOnly)
+		FTransform IKFoot_BaseTransform_L;
+	UPROPERTY(BlueprintReadOnly)
+		FTransform IKFoot_BaseTransform_R;
+
+#pragma endregion //FootIK_ControlRig
 };

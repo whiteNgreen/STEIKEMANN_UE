@@ -270,6 +270,7 @@ void ASmallEnemy::AttackJump()
 
 	GetCharacterMovement()->Velocity *= 0.f;
 	GetCharacterMovement()->AddImpulse(JumpDirection * AttackJumpStrength, true);
+	Delegate_StunnedLand.BindUObject(this, &ASmallEnemy::PostChompLand);
 }
 
 void ASmallEnemy::CHOMP_Pure()
@@ -313,19 +314,22 @@ void ASmallEnemy::Landed(const FHitResult& Hit)
 {
 	Super::Landed(Hit);
 
-	if (IncapacitatedLandDelegation.ExecuteIfBound())
-		IncapacitatedLandDelegation.Unbind();
 
-	//if (IncapacitatedCollisionDelegate.ExecuteIfBound())	// HA CAPSULE_HIT DELEGATION FOR DENNE
-	//	IncapacitatedCollisionDelegate.Unbind();
+	//if (!Delegate_LaunchedLand.IsBound())
+	//	if (IncapacitatedLandDelegation.ExecuteIfBound())
+	//		IncapacitatedLandDelegation.Unbind();
 
+	if (!Delegate_LaunchedLand.IsBound())
+		if (Delegate_StunnedLand.ExecuteIfBound())
+			Delegate_StunnedLand.Unbind();
 	if (Delegate_LaunchedLand.ExecuteIfBound(Hit))
 		Delegate_LaunchedLand.Unbind();
 
-	if (IsIncapacitated()) {
-		FTimerHandle h;
-		TimerManager.SetTimer(h, this, &ASmallEnemy::RedetermineIncapacitateState, Incapacitated_LandedStunTime);
-	}
+
+	//if (IsIncapacitated()) {
+	//	FTimerHandle h;
+	//	TimerManager.SetTimer(h, this, &ASmallEnemy::RedetermineIncapacitateState, Incapacitated_LandedStunTime);
+	//}
 
 	m_State = EEnemyState::STATE_OnGround;
 	m_Anim->bIsLaunchedInAir = false;
@@ -472,7 +476,21 @@ void ASmallEnemy::RedetermineIncapacitateState()
 
 void ASmallEnemy::IncapacitatedLand()
 {
+	//PRINTPARLONG(3.f, "%s Stunned for %f seconds", *GetName(), Incapacitated_LandedStunTime);
 	Incapacitate(EAIIncapacitatedType::Stunned, Incapacitated_LandedStunTime);
+}
+
+void ASmallEnemy::StunnedLand()
+{
+	Incapacitate(EAIIncapacitatedType::Stunned, Incapacitated_LandedStunTime);
+	TimerManager.SetTimer(TH_RedetermineIncapacitate, this, &ASmallEnemy::RedetermineIncapacitateState, Incapacitated_LandedStunTime);
+}
+
+void ASmallEnemy::PostChompLand()
+{
+	PRINTPARLONG(PostChomp_StunTime, "Post Chomp pause for %f seconds", PostChomp_StunTime);
+	Incapacitate(EAIIncapacitatedType::Stunned, PostChomp_StunTime);
+	TimerManager.SetTimer(TH_PostChompStun, this, &ASmallEnemy::RedetermineIncapacitateState, PostChomp_StunTime);
 }
 
 bool ASmallEnemy::IsIncapacitated() const
@@ -757,7 +775,9 @@ void ASmallEnemy::HookedPure(const FVector InstigatorLocation, bool OnGround, bo
 			m_DogPack->AlertPack(this);
 		SleepingEnd();
 
-		Delegate_LaunchedLand.BindUObject(this, &ASmallEnemy::LandedLaunched);
+		Delegate_StunnedLand.BindUObject(this, &ASmallEnemy::StunnedLand);
+		if (!GetCharacterMovement()->IsWalking())
+			Delegate_LaunchedLand.BindUObject(this, &ASmallEnemy::LandedLaunched);
 	}
 }
 
@@ -774,6 +794,8 @@ void ASmallEnemy::PullFree_Pure(const FVector InstigatorLocation)
 	
 	// Add Impulse towards instigator - 2D direction
 	PullFree_Launch(InstigatorLocation);
+	// Leave wall
+	LeaveWall();
 
 	// Enable Gravity and Disable Collisions
 	m_GravityState = EGravityState::Default;
@@ -782,13 +804,11 @@ void ASmallEnemy::PullFree_Pure(const FVector InstigatorLocation)
 	FTimerHandle h;
 	TimerManager.SetTimer(h, [this]() { GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics); }, Grappled_PulledFreeNoCollisionTimer, false);
 
-	// Leave wall
-	LeaveWall();
-
 	// Internal cooldown to getting grapplehooked
 	bCanBeGrappleHooked = false;
 	TimerManager.SetTimer(Handle_GrappledCooldown, this, &ASmallEnemy::ResetCanBeGrappleHooked, GrappleHookedInternalCooldown);
 
+	Delegate_StunnedLand.BindUObject(this, &ASmallEnemy::StunnedLand);
 	Delegate_LaunchedLand.BindUObject(this, &ASmallEnemy::LandedLaunched);
 }
 
@@ -861,13 +881,14 @@ void ASmallEnemy::Receive_SmackAttack_Pure(const FVector Direction, const float 
 	GetCharacterMovement()->Velocity *= 0.f;
 	GetCharacterMovement()->AddImpulse(Direction * s, true);
 
-	Incapacitate(EAIIncapacitatedType::Stunned, 1.5f/* Stun timer */);
+	Incapacitate(EAIIncapacitatedType::Stunned);
 	Launched(Direction);
 
 	if (m_DogPack)
 		m_DogPack->AlertPack(this);
 	SleepingEnd();
 
+	Delegate_StunnedLand.BindUObject(this, &ASmallEnemy::StunnedLand);
 	Delegate_LaunchedLand.BindUObject(this, &ASmallEnemy::LandedLaunched);
 }
 void ASmallEnemy::Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength)
@@ -885,6 +906,7 @@ void ASmallEnemy::Receive_GroundPound_Pure(const FVector& PoundDirection, const 
 		m_DogPack->AlertPack(this);
 	SleepingEnd();
 
+	Delegate_StunnedLand.BindUObject(this, &ASmallEnemy::StunnedLand);
 	Delegate_LaunchedLand.BindUObject(this, &ASmallEnemy::LandedLaunched);
 }
 
@@ -936,6 +958,10 @@ void ASmallEnemy::Tl_Smacked(float value)
 
 void ASmallEnemy::Receive_Pogo_GroundPound_Pure()
 {
+	// Don't detach from the wall if it detects a sticky wall below
+	if (WallDetector->DetectStickyWallOnNormalWithinAngle(GetActorLocation(), 0.9f, FVector::UpVector))
+		return;
+
 	FVector Direction = FVector::DownVector;
 	if (IsStuck_Pure())
 		Direction = (FVector::DownVector * (1.f - PB_Groundpound_LaunchWallNormal)) + (m_WallData.Normal * PB_Groundpound_LaunchWallNormal);

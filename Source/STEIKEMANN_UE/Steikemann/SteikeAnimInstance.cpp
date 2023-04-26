@@ -57,9 +57,9 @@ void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 		// Booleans for blending various bodyparts
 		bBlendLowerBody_Air = bFalling && (bGrappling || SteikeOwner->IsSmackAttacking());
+
 	}
 	else {
 		SteikeOwner = Cast<ASteikemannCharacter>(TryGetPawnOwner());
 	}
 }
-

@@ -138,7 +138,13 @@ enum class EPromptState : int8
 	WithingArea,
 	InPrompt
 };
-
+UENUM(BlueprintType)
+enum class ELoseSapType : uint8
+{
+	PlayerHasNoSaps,
+	PlayerHasNotEnough,
+	LoseAllSaps
+};
 
 UCLASS()
 class STEIKEMANN_UE_API ASteikemannCharacter : public ABaseCharacter, 
@@ -212,6 +218,7 @@ public:
 
 	/* ----------------------- Actor Rotation Functions ---------------------------------- */
 	void ResetActorRotationPitchAndRoll(float DeltaTime);
+	/* Rotates actors yaw to direction. Vector does not need to be normalized */
 	void RotateActorYawToVector(FVector AimVector, float DeltaTime = 0);
 	void RotateActorPitchToVector(FVector AimVector, float DeltaTime = 0);
 		void RotateActorYawPitchToVector(FVector AimVector, float DeltaTime = 0);	//Old
@@ -220,11 +227,17 @@ public:
 	UPhysicalMaterial* DetectPhysMaterial();
 
 #pragma region Prompt Area
+	/**
+	* To avoid the player locking the game in case they spam the cancel and activate button
+	*/
+	FTimerHandle TH_BetweenPromptActivations;
+	float Prompt_BetweenPromptActivations_Timer{ 0.8f };
 	/* Player within prompt area */
 	UPROPERTY(BlueprintReadOnly)
 		EPromptState m_PromptState = EPromptState::None;
-	FVector m_PromptLocation;
 	class ADialoguePrompt* m_PromptActor{ nullptr };
+	UPROPERTY(BlueprintReadWrite)
+		bool bInPrompt{};
 
 	UPROPERTY(BlueprintReadOnly)
 		bool bCameraLerpBack_PostPrompt{};
@@ -236,7 +249,24 @@ public:
 	void LeavePromptArea();
 
 	bool ActivatePrompt();
-	bool ExitPrompt();
+	UFUNCTION(BlueprintCallable)
+		bool PlayerExitPrompt();
+
+	UFUNCTION(BlueprintCallable)
+		ELoseSapType GetLoseSapType();
+	UFUNCTION(BlueprintCallable)
+		void LoseSaps(int amount = -1);
+	void StartSapLoss();
+	void IncrementSapLoss();
+	UPROPERTY(BlueprintReadOnly)
+		int SapsToBeLost{};
+	int CurrentSapsLost{};
+	UPROPERTY(EditAnywhere, Category = "HUD")
+		float SapLoss_Start_Timer{ 0.7 };
+	UPROPERTY(EditAnywhere, Category = "HUD")
+		float SapLoss_Start_Update{ 0.1 };
+	FTimerHandle TH_SapLoss_Start;
+	FTimerHandle TH_SapLoss_Update;
 #pragma endregion				// Prompt Area
 #pragma region Audio
 	UPROPERTY(EditAnywhere, Category = "Audio")
@@ -660,7 +690,7 @@ public: // Animation
 		void TL_Dash(float value);
 	void TL_Dash_End();
 	bool Can_Dash_Start() const;
-#pragma endregion //Dash
+#pragma endregion					//Dash
 #pragma region Bounce
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		class UBouncyShroomActorComponent* BounceComp;
@@ -1145,7 +1175,8 @@ public: /* ------- Native Variables and functions -------- */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks", meta = (UIMin = "0", UIMax = "1"))
 		float Grapplesmack_DirectionMultiplier		/*UMETA(DisplayName = "Input Strength Multiplier")*/ { 0.2 };
 
-	bool IsSmackAttacking() const;
+	UFUNCTION(BlueprintCallable)
+		bool IsSmackAttacking() const;
 
 	bool bCanBeSmackAttacked{ true };
 

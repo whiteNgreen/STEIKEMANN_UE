@@ -27,19 +27,12 @@ ADialoguePrompt::ADialoguePrompt()
 
 	Prompt = CreateDefaultSubobject<USceneComponent>("Prompt");
 	Prompt->SetupAttachment(Volume);
-
-	Camera_One = CreateDefaultSubobject<UCameraComponent>("CameraOne");
-	Camera_One->SetupAttachment(Volume);
-
-	Camera_Two = CreateDefaultSubobject<UCameraComponent>("CameraTwo");
-	Camera_Two->SetupAttachment(Volume);
 }
 
 // Called when the game starts or when spawned
 void ADialoguePrompt::BeginPlay()
 {
 	Super::BeginPlay();
-
 	Volume->OnComponentBeginOverlap.AddDynamic(this, &ADialoguePrompt::OnVolumeBeginOverlap);
 	Volume->OnComponentEndOverlap.AddDynamic(this, &ADialoguePrompt::OnVolumeEndOverlap);
 }
@@ -48,12 +41,35 @@ void ADialoguePrompt::BeginPlay()
 void ADialoguePrompt::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+}
 
+void ADialoguePrompt::SceneComponentLookAt(USceneComponent* Comp, USceneComponent* Target)
+{
+	if (!Comp || !Target) {
+		PRINTLONG(2.f, "Invalid Comp");
+		return;
+	}
+	FVector Direction = FVector(Target->GetComponentLocation() - Comp->GetComponentLocation()).GetSafeNormal();
+	FRotator Rotation = Direction.Rotation();
+	Comp->SetWorldRotation(Rotation);
+}
+
+float ADialoguePrompt::LerpSceneComponentTransformToSceneComponent(USceneComponent* Comp, USceneComponent* Target, float LerpAlpha, float DeltaTime)
+{
+	if (!Comp || !Target) return 0.f;
+	float alpha = FMath::Clamp(LerpAlpha + (DeltaTime * CameraLerpSpeed), 0.f, 1.f);
+	FTransform t1 = Comp->GetComponentTransform();
+	FTransform t2 = Target->GetComponentTransform();
+	FTransform NewTransform; 
+	NewTransform.Blend(t1, t2, alpha);
+	Comp->SetWorldTransform(NewTransform);
+	return alpha;
 }
 
 void ADialoguePrompt::OnVolumeBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	TFunction<void()> playerCollision = [this]() {
+	TFunction<void()> playerCollision = [this]() 
+	{
 		bPlayerWithinVolume = true;
 		auto player = (ASteikemannCharacter*)m_Player;
 		m_PlayerCamera = player->Camera;
@@ -71,12 +87,11 @@ void ADialoguePrompt::OnVolumeBeginOverlap(UPrimitiveComponent* OverlappedComp, 
 
 	auto ITag = Cast<IGameplayTagAssetInterface>(OtherActor);
 	if (!ITag) return;
-
 	FGameplayTagContainer tags;
 	ITag->GetOwnedGameplayTags(tags);
 	if (tags.HasTag(Tag::Player()))
 	{
-		m_Player = OtherActor;
+		m_Player = Cast<ASteikemannCharacter>(OtherActor);
 		playerCollision();
 		return;
 	}
@@ -86,7 +101,6 @@ void ADialoguePrompt::OnVolumeEndOverlap(UPrimitiveComponent* OverlappedComp, AA
 {
 	if (OtherActor != m_Player) return;
 	if (!OtherComp->IsA(UCapsuleComponent::StaticClass())) return;
-
 	auto player = (ASteikemannCharacter*)m_Player;
 	player->LeavePromptArea();
 	EndPrompt();
@@ -97,44 +111,15 @@ void ADialoguePrompt::PromptChange_Pure()
 	PromptChange();
 }
 
-bool ADialoguePrompt::GetNextPromptState(ASteikemannCharacter* player, int8 promptIndex)
+void ADialoguePrompt::GetNextPromptState_Pure(ASteikemannCharacter* player, int promptIndex)
 {
-	bool returnBool{};
-	if (promptIndex != -1) {
-		m_PromptIndex = promptIndex;
-	}
+	if (!player)
+		return;
+	if (promptIndex != -1) 
+		m_PromptIndex_Internal = promptIndex;
+	GetNextPromptState(player, m_PromptIndex_Internal);
 	PromptChange_Pure();
-	switch (m_PromptIndex)
-	{
-	case 0:
-		/* Save camera transform, to lerp back to the correct spot */
-		player->m_CameraTransform = m_PlayerCamera->GetComponentTransform();	
-		m_ECameraLerp = ECameraLerp::First;
-		returnBool = true;
-		break;
-	case 1:
-		m_ECameraLerp = ECameraLerp::Second;
-		returnBool = true;
-		break;
-	case 2:
-		returnBool = true;
-		break;
-	case 3:
-		m_ECameraLerp = ECameraLerp::None;
-		player->ExitPrompt();
-		return true;
-	case 4:
-		return false;
-	default:
-		break;
-	}
-	m_PromptIndex++;
-	return returnBool;
+	m_PromptIndex_Internal++;
 }
 
-void ADialoguePrompt::ExitPrompt_Pure()
-{
-	ExitPrompt();
-	m_ECameraLerp = ECameraLerp::None;
-	m_PromptIndex = 0;
-}
+

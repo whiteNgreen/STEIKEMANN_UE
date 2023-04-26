@@ -45,10 +45,14 @@ public:
 	UFUNCTION(BlueprintImplementableEvent)
 		void HealthUpdate(int newhealth);
 	void Death();
+	UFUNCTION(BlueprintImplementableEvent)
+		void Death_IMPL();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		TArray<ACorruptionTendril*> ConnectedTendrils;
-	void DestroyConnectedTendrils();
+	
+	UFUNCTION(BlueprintCallable)
+		void DestroyConnectedTendrils();
 
 	UPROPERTY(EditAnywhere)
 		TSubclassOf<AActor> SpawnedCollectible;

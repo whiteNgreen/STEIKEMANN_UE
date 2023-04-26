@@ -113,3 +113,4 @@ class STEIKEMANN_UE_API UANStartControlRigLerp : public UAnimNotify
 public:
 	virtual void Notify(class USkeletalMeshComponent* MeshComp, class UAnimSequenceBase* Animation) override;
 };
+

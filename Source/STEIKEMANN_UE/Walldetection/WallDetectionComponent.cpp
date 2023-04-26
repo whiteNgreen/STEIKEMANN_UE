@@ -95,7 +95,7 @@ bool UWallDetectionComponent::DetectStickyWall(const AActor* actor, const FVecto
 			DrawDebugPoint(GetWorld(), it.ImpactPoint, 5.f, FColor::Blue, false, 1, 1);
 
 	// Get Valid point on wall, used for WallJump and Ledgegrab
-	b = DetermineValidPoints_IMPL(Hits, Location);
+	//b = DetermineValidPoints_IMPL(Hits, Location);
 	if (!b) return false;
 	GetWallPoint_IMPL(walldata, Hits);
 
@@ -123,6 +123,22 @@ bool UWallDetectionComponent::DetectStickyWall(const AActor* actor, const FVecto
 			return true;
 	}
 
+	return false;
+}
+
+bool UWallDetectionComponent::DetectStickyWallOnNormalWithinAngle(FVector actorlocation, const float dotprodlimit, FVector normal)
+{
+	TArray<FHitResult> Hits;
+	FCollisionQueryParams Params = FCollisionQueryParams("", false, GetOwner());
+	if (GetWorld()->SweepMultiByChannel(Hits, actorlocation, actorlocation + FVector::ForwardVector, FQuat(1.f, 0, 0, 0), ECC_StickyWall, m_capsule, Params))
+	{
+		for (const auto& Hit : Hits) {
+			const FVector ToPoint = FVector(actorlocation - Hit.ImpactPoint).GetSafeNormal();
+			const float Dot = FVector::DotProduct(normal, ToPoint);
+			if (Dot > dotprodlimit) 
+				return true;
+		}
+	}
 	return false;
 }
 
