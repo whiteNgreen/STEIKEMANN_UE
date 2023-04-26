@@ -42,17 +42,8 @@ public: // AttackInterface
 	virtual void Gen_ReceiveAttack(const FVector Direction, const float Strength, const EAttackType AType, const float Delaytime = -1.f);
 
 public: // Animations
-	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
-		void Anim_SetIdle();
-	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
-		void Anim_ClutchStomach();
-	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
-		void Anim_BopUpDown();
-	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
-		void Anim_NeedSaps();
-	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
-		void Anim_GiveMeSapsPlz();
-
 	UPROPERTY(BlueprintReadWrite)
 		EOrangeGirlState m_EOrangeGirlState;
+	UFUNCTION(BlueprintCallable)
+		void Anim_State(EOrangeGirlState NewState) { m_EOrangeGirlState = NewState; }
 };

@@ -91,7 +91,7 @@ void ADialoguePrompt::OnVolumeBeginOverlap(UPrimitiveComponent* OverlappedComp, 
 	ITag->GetOwnedGameplayTags(tags);
 	if (tags.HasTag(Tag::Player()))
 	{
-		m_Player = OtherActor;
+		m_Player = Cast<ASteikemannCharacter>(OtherActor);
 		playerCollision();
 		return;
 	}

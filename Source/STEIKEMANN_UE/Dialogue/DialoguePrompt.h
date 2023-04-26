@@ -49,7 +49,8 @@ public:
 		float LerpSceneComponentTransformToSceneComponent(USceneComponent* Comp, USceneComponent* TargetComp, float LerpAlpha, float DeltaTime);
 
 public:
-	AActor* m_Player{ nullptr };
+	UPROPERTY(BlueprintReadOnly)
+		ASteikemannCharacter* m_Player{ nullptr };
 	UPROPERTY(BlueprintReadOnly)
 		bool bPlayerWithinVolume{};
 	UPROPERTY(BlueprintReadOnly)

@@ -199,8 +199,7 @@ void ASteikemannCharacter::NS_Land_Implementation(const FHitResult& Hit)
 	float Velocity = GetVelocity().Size();
 	UNiagaraComponent* NiagaraPlayer{ nullptr };
 
-	if (Component_Niagara->IsComplete())
-	{
+	if (Component_Niagara->IsComplete()){
 		NiagaraPlayer = Component_Niagara;
 	}
 	else
@@ -501,6 +500,7 @@ void ASteikemannCharacter::EnterPromptArea(ADialoguePrompt* promptActor, FVector
 {
 	m_PromptActor = promptActor;
 	m_PromptState = EPromptState::WithingArea;
+	RotateActorYawToVector(FVector(promptLocation - GetActorLocation()));
 }
 
 void ASteikemannCharacter::LeavePromptArea()
@@ -554,6 +554,43 @@ bool ASteikemannCharacter::PlayerExitPrompt()
 	m_CameraLerpAlpha_PostPrompt = 0.f;
 	bCameraLerpBack_PostPrompt = true;
 	return false;
+}
+
+ELoseSapType ASteikemannCharacter::GetLoseSapType()
+{
+	if (CollectibleCommon <= 0)
+		return ELoseSapType::PlayerHasNoSaps;
+	if (CollectibleCommon < 100)
+		return ELoseSapType::PlayerHasNotEnough;
+	return ELoseSapType::LoseAllSaps;
+}
+
+void ASteikemannCharacter::LoseSaps(int amount)
+{
+	UpdateSapCollectible();
+	if (CollectibleCommon <= 0)
+		return;
+	if (CollectibleCommon < 100)
+		return;
+	CurrentSapsLost = 0;
+	SapsToBeLost = amount;
+	if (amount == -1)
+		SapsToBeLost = CollectibleCommon;
+	TimerManager.SetTimer(TH_SapLoss_Start, this, &ASteikemannCharacter::StartSapLoss, SapLoss_Start_Timer);
+}
+
+void ASteikemannCharacter::StartSapLoss()
+{
+	IncrementSapLoss();
+}
+
+void ASteikemannCharacter::IncrementSapLoss()
+{
+	CollectibleCommon--;
+	CurrentSapsLost++;
+	if (CurrentSapsLost < SapsToBeLost)
+		TimerManager.SetTimer(TH_SapLoss_Start, this, &ASteikemannCharacter::StartSapLoss, SapLoss_Start_Update);
+	UpdateSapCollectible();
 }
 
 bool ASteikemannCharacter::LerpCameraBackToBoom(float DeltaTime)
