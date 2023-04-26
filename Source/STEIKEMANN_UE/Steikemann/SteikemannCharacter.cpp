@@ -500,7 +500,6 @@ void ASteikemannCharacter::EnterPromptArea(ADialoguePrompt* promptActor, FVector
 {
 	m_PromptActor = promptActor;
 	m_PromptState = EPromptState::WithingArea;
-	RotateActorYawToVector(FVector(promptLocation - GetActorLocation()));
 }
 
 void ASteikemannCharacter::LeavePromptArea()
@@ -518,6 +517,7 @@ bool ASteikemannCharacter::ActivatePrompt()
 
 	case EPromptState::WithingArea:
 		Cancel_SmackAttack();
+		RotateActorYawToVector(FVector(m_PromptActor->GetActorLocation() - GetActorLocation()));
 		m_CameraTransform = Camera->GetComponentTransform();
 		m_PromptState = EPromptState::InPrompt;
 		// Get first prompt state
