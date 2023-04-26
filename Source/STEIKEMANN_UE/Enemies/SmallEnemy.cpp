@@ -958,6 +958,10 @@ void ASmallEnemy::Tl_Smacked(float value)
 
 void ASmallEnemy::Receive_Pogo_GroundPound_Pure()
 {
+	// Don't detach from the wall if it detects a sticky wall below
+	if (WallDetector->DetectStickyWallOnNormalWithinAngle(GetActorLocation(), 0.9f, FVector::UpVector))
+		return;
+
 	FVector Direction = FVector::DownVector;
 	if (IsStuck_Pure())
 		Direction = (FVector::DownVector * (1.f - PB_Groundpound_LaunchWallNormal)) + (m_WallData.Normal * PB_Groundpound_LaunchWallNormal);

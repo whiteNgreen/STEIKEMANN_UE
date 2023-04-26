@@ -220,11 +220,17 @@ public:
 	UPhysicalMaterial* DetectPhysMaterial();
 
 #pragma region Prompt Area
+	/**
+	* To avoid the player locking the game in case they spam the cancel and activate button
+	*/
+	FTimerHandle TH_BetweenPromptActivations;
+	float Prompt_BetweenPromptActivations_Timer{ 0.8f };
 	/* Player within prompt area */
 	UPROPERTY(BlueprintReadOnly)
 		EPromptState m_PromptState = EPromptState::None;
-	FVector m_PromptLocation;
 	class ADialoguePrompt* m_PromptActor{ nullptr };
+	UPROPERTY(BlueprintReadWrite)
+		bool bInPrompt{};
 
 	UPROPERTY(BlueprintReadOnly)
 		bool bCameraLerpBack_PostPrompt{};
@@ -236,7 +242,8 @@ public:
 	void LeavePromptArea();
 
 	bool ActivatePrompt();
-	bool ExitPrompt();
+	UFUNCTION(BlueprintCallable)
+		bool PlayerExitPrompt();
 #pragma endregion				// Prompt Area
 #pragma region Audio
 	UPROPERTY(EditAnywhere, Category = "Audio")

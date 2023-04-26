@@ -501,7 +501,6 @@ void ASteikemannCharacter::EnterPromptArea(ADialoguePrompt* promptActor, FVector
 {
 	m_PromptActor = promptActor;
 	m_PromptState = EPromptState::WithingArea;
-	m_PromptLocation = promptLocation;
 }
 
 void ASteikemannCharacter::LeavePromptArea()
@@ -511,34 +510,45 @@ void ASteikemannCharacter::LeavePromptArea()
 
 bool ASteikemannCharacter::ActivatePrompt()
 {
-	bool b{};
+	if (TimerManager.IsTimerActive(TH_BetweenPromptActivations))
+		return false;
 	switch (m_PromptState)
 	{
 	case EPromptState::None:			return false;
 
 	case EPromptState::WithingArea:
-		m_EMovementInputState = EMovementInput::Locked;
+		Cancel_SmackAttack();
+		m_CameraTransform = Camera->GetComponentTransform();
 		m_PromptState = EPromptState::InPrompt;
 		// Get first prompt state
-		return m_PromptActor->GetNextPromptState(this, 0);
+		m_PromptActor->GetNextPromptState_Pure(this, 0);
+		if (bInPrompt)
+			m_EMovementInputState = EMovementInput::Locked;
+		break;
+		//return b;
 
 	case EPromptState::InPrompt:
 		// Get next prompt state
-		b = m_PromptActor->GetNextPromptState(this);
-		if (!b) m_EMovementInputState = EMovementInput::Open;
-		return b;
+		m_PromptActor->GetNextPromptState_Pure(this);
+		if (!bInPrompt) {
+			PlayerExitPrompt();
+			m_EMovementInputState = EMovementInput::Open;
+			return true;
+		}
+		break;
 	default:
 		break;
 	}
-	return b;
+	return bInPrompt;
 }
 
-bool ASteikemannCharacter::ExitPrompt()
+bool ASteikemannCharacter::PlayerExitPrompt()
 {
+	TimerManager.SetTimer(TH_BetweenPromptActivations, Prompt_BetweenPromptActivations_Timer, false);
 	m_EMovementInputState = EMovementInput::Open;
 	m_PromptState = EPromptState::WithingArea;
 	// Notify DialoguePrompt of exiting
-	m_PromptActor->ExitPrompt_Pure();
+	m_PromptActor->ExitPrompt(Prompt_BetweenPromptActivations_Timer);
 
 	// Start lerping camera back to default position
 	m_CameraLerpAlpha_PostPrompt = 0.f;
@@ -2289,7 +2299,7 @@ bool ASteikemannCharacter::ShroomBounce(FVector direction, float strength)
 void ASteikemannCharacter::Click_RightFacebutton()
 {
 	if (m_PromptState == EPromptState::InPrompt)
-		ExitPrompt();
+		PlayerExitPrompt();
 	
 	switch (m_EState)
 	{
@@ -3012,6 +3022,7 @@ void ASteikemannCharacter::Cancel_SmackAttack()
 	EndAttackBufferPeriod();
 	Deactivate_AttackCollider();
 	Stop_Attack();
+	StopAnimMontage();
 
 	AttackComboCount = 0;
 	AttackContactedActors.Empty();
@@ -3136,7 +3147,8 @@ void ASteikemannCharacter::OnAttackColliderBeginOverlap(UPrimitiveComponent* Ove
 		/* Attacking a corruption core || Enemy Spawner || InkFlower*/
 		if (TCon.HasTag(Tag::CorruptionCore()) || 
 			TCon.HasTag(Tag::InkFlower()) || 
-			TCon.HasTag(Tag::EnemySpawner()))
+			TCon.HasTag(Tag::EnemySpawner()) ||
+			TCon.HasTag(Tag::OrangeGirl()))
 		{
 			Gen_Attack(IAttack, OtherActor, AType);
 		}
