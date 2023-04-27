@@ -703,7 +703,11 @@ public: // Animation
 #pragma endregion		//Right Facebutton
 #pragma region Collectibles & Health
 public:
-	void ReceiveCollectible(ECollectibleType type);
+	//void ReceiveCollectible(ECollectibleType type);
+	void ReceiveCollectible(class ACollectible* collectible);
+	void ReceiveCollectible(class ACollectible_Static* collectible);
+	UFUNCTION(BlueprintImplementableEvent)
+		void ReceiveNewspaper(int index);
 
 	UPROPERTY(BlueprintReadWrite, Category = "Collectibles")
 		int CollectibleCommon{};

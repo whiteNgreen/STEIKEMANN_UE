@@ -77,6 +77,7 @@ void ACollectible_Static::BeginPlay()
 }
 void ACollectible_Static::Destruction()
 {
+	Root->SetVisibility(false, true);
 	Destruction_IMPL();
 	/* Particles and disable mesh + collision */
 	//UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), DeathParticles, GetActorLocation());	// SPAWN PARTICLE IN BLUEPRINT TO AVOID NIAGARA INCLUDE
@@ -85,3 +86,4 @@ void ACollectible_Static::Destruction()
 	/* Destroy object after 2.f seconds */
 	GetWorldTimerManager().SetTimer(FTHDestruction, [this]() { Destroy(); }, 2.f, false);
 }
+

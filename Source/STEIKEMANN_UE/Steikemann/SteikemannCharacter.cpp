@@ -2378,8 +2378,9 @@ void ASteikemannCharacter::UnClick_RightFacebutton()
 	bPressedCancelButton = false;
 }
 
-void ASteikemannCharacter::ReceiveCollectible(ECollectibleType type)
+void ASteikemannCharacter::ReceiveCollectible(ACollectible* collectible)
 {
+	ECollectibleType type = collectible->CollectibleType;
 	switch (type)
 	{
 	case ECollectibleType::Common:
@@ -2395,6 +2396,34 @@ void ASteikemannCharacter::ReceiveCollectible(ECollectibleType type)
 	default:
 		break;
 	}
+	collectible->Destruction();
+}
+
+void ASteikemannCharacter::ReceiveCollectible(ACollectible_Static* collectible)
+{
+	ECollectibleType type = collectible->CollectibleType;
+	switch (type)
+	{
+	case ECollectibleType::Common:
+		CollectibleCommon++;
+		UpdateSapCollectible();
+		break;
+	case ECollectibleType::Health:
+		GainHealth(1);
+		break;
+	case ECollectibleType::CorruptionCore:
+		CollectibleCorruptionCore++;
+		break;
+	case ECollectibleType::Newspaper:
+	{
+		if (ANewspaper* news = Cast<ANewspaper>(collectible))
+			ReceiveNewspaper(news->NewspaperIndex);
+		break;
+	}
+	default:
+		break;
+	}
+	collectible->Destruction();
 }
 
 void ASteikemannCharacter::GainHealth(int amount)
@@ -2729,13 +2758,15 @@ void ASteikemannCharacter::OnCapsuleComponentBeginOverlap(UPrimitiveComponent* O
 	if (tags.HasTag(Tag::Collectible())) {
 		if (ACollectible* collectible = Cast<ACollectible>(OtherActor))
 		{
-			ReceiveCollectible(collectible->CollectibleType);
-			collectible->Destruction();
+			ReceiveCollectible(collectible);
+			//ReceiveCollectible(collectible->CollectibleType);
+			//collectible->Destruction();
 		}
 		else if (ACollectible_Static* collectible_static = Cast<ACollectible_Static>(OtherActor))
 		{
-			ReceiveCollectible(collectible_static->CollectibleType);
-			collectible_static->Destruction();
+			ReceiveCollectible(collectible_static);
+			//ReceiveCollectible(collectible_static->CollectibleType);
+			//collectible_static->Destruction();
 		}
 	}
 
