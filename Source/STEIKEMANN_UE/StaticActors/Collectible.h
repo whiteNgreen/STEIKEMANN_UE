@@ -89,3 +89,12 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 };
+
+UCLASS()
+class STEIKEMANN_UE_API ANewspaper : public ACollectible_Static
+{
+	GENERATED_BODY()
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Type")
+		int NewspaperIndex{ 0 };
+};

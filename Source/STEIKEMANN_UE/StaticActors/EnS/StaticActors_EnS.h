@@ -6,5 +6,6 @@ enum class ECollectibleType : uint8
 {
 	Common,
 	Health,
-	CorruptionCore
+	CorruptionCore,
+	Newspaper
 };

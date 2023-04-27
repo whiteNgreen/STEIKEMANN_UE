@@ -500,7 +500,6 @@ void ASteikemannCharacter::EnterPromptArea(ADialoguePrompt* promptActor, FVector
 {
 	m_PromptActor = promptActor;
 	m_PromptState = EPromptState::WithingArea;
-	RotateActorYawToVector(FVector(promptLocation - GetActorLocation()));
 }
 
 void ASteikemannCharacter::LeavePromptArea()
@@ -518,6 +517,7 @@ bool ASteikemannCharacter::ActivatePrompt()
 
 	case EPromptState::WithingArea:
 		Cancel_SmackAttack();
+		RotateActorYawToVector(FVector(m_PromptActor->GetActorLocation() - GetActorLocation()));
 		m_CameraTransform = Camera->GetComponentTransform();
 		m_PromptState = EPromptState::InPrompt;
 		// Get first prompt state
@@ -525,7 +525,6 @@ bool ASteikemannCharacter::ActivatePrompt()
 		if (bInPrompt)
 			m_EMovementInputState = EMovementInput::Locked;
 		break;
-		//return b;
 
 	case EPromptState::InPrompt:
 		// Get next prompt state
@@ -1833,7 +1832,6 @@ void ASteikemannCharacter::Landed(const FHitResult& Hit)
 		return;
 	}
 
-	UE_LOG(LogTemp, Display, TEXT("Landed"));
 	switch (m_EState)
 	{
 	case EState::STATE_None:
@@ -2205,10 +2203,11 @@ bool ASteikemannCharacter::PB_Groundpound_Predeterminehit()
 
 	// Ground
 	FHitResult GroundHit;
-	bool ground = GetWorld()->LineTraceSingleByChannel(GroundHit, GetActorLocation() + FVector(0,0, 150.f), GetActorLocation() - FVector(0, 0, 1000.f), ECC_WorldStatic, Params);
+	FCollisionShape SweepSphere = FCollisionShape::MakeSphere(GetCapsuleComponent()->GetScaledCapsuleRadius());
+	bool ground = GetWorld()->SweepSingleByChannel(GroundHit, GetActorLocation() + FVector(0,0, 150.f), GetActorLocation() - FVector(0, 0, 1000.f), FQuat(), ECC_WorldStatic, SweepSphere, Params);
 	if (!ground)
 	{
-		ground = GetWorld()->LineTraceSingleByChannel(GroundHit, GetActorLocation() + FVector(0, 0, 150.f), GetActorLocation() - FVector(0, 0, 1000.f), ECC_PogoCollision, Params);
+		ground = GetWorld()->SweepSingleByChannel(GroundHit, GetActorLocation() + FVector(0, 0, 150.f), GetActorLocation() - FVector(0, 0, 1000.f), FQuat(), ECC_PogoCollision, SweepSphere, Params);
 		if (!ground)
 			return false;
 	}
@@ -2378,8 +2377,9 @@ void ASteikemannCharacter::UnClick_RightFacebutton()
 	bPressedCancelButton = false;
 }
 
-void ASteikemannCharacter::ReceiveCollectible(ECollectibleType type)
+void ASteikemannCharacter::ReceiveCollectible(ACollectible* collectible)
 {
+	ECollectibleType type = collectible->CollectibleType;
 	switch (type)
 	{
 	case ECollectibleType::Common:
@@ -2395,6 +2395,48 @@ void ASteikemannCharacter::ReceiveCollectible(ECollectibleType type)
 	default:
 		break;
 	}
+	collectible->Destruction();
+}
+
+void ASteikemannCharacter::ReceiveCollectible(ACollectible_Static* collectible)
+{
+	ECollectibleType type = collectible->CollectibleType;
+	switch (type)
+	{
+	case ECollectibleType::Common:
+		CollectibleCommon++;
+		UpdateSapCollectible();
+		break;
+	case ECollectibleType::Health:
+		GainHealth(1);
+		break;
+	case ECollectibleType::CorruptionCore:
+		CollectibleCorruptionCore++;
+		break;
+	case ECollectibleType::Newspaper:
+	{
+		if (ANewspaper* news = Cast<ANewspaper>(collectible))
+			ReceiveNewspaper_Pure(news->NewspaperIndex);
+		break;
+	}
+	default:
+		break;
+	}
+	collectible->Destruction();
+}
+
+void ASteikemannCharacter::ReceiveNewspaper_Pure(int index)
+{
+	CollectedNewspapers.AddUnique(index);
+	CollectedNewspapers.Sort([](int A, int b) { return A < b; });
+	TArray<int> tmp;
+	for (const auto& i : CollectedNewspapers){
+		int a = i * 2;
+		tmp.Add(a);
+		tmp.Add(a + 1);
+	}
+	CollectedNewspapers_WidgetIndexes = tmp;
+	ReceiveNewspaper();
 }
 
 void ASteikemannCharacter::GainHealth(int amount)
@@ -2729,13 +2771,15 @@ void ASteikemannCharacter::OnCapsuleComponentBeginOverlap(UPrimitiveComponent* O
 	if (tags.HasTag(Tag::Collectible())) {
 		if (ACollectible* collectible = Cast<ACollectible>(OtherActor))
 		{
-			ReceiveCollectible(collectible->CollectibleType);
-			collectible->Destruction();
+			ReceiveCollectible(collectible);
+			//ReceiveCollectible(collectible->CollectibleType);
+			//collectible->Destruction();
 		}
 		else if (ACollectible_Static* collectible_static = Cast<ACollectible_Static>(OtherActor))
 		{
-			ReceiveCollectible(collectible_static->CollectibleType);
-			collectible_static->Destruction();
+			ReceiveCollectible(collectible_static);
+			//ReceiveCollectible(collectible_static->CollectibleType);
+			//collectible_static->Destruction();
 		}
 	}
 
