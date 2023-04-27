@@ -868,7 +868,7 @@ void ASmallEnemy::Receive_SmackAttack_Pure(const FVector Direction, const float 
 	if (!GetCanBeSmackAttacked()) return;
 	/* Sets a timer before character can be damaged by the same attack */
 	TimerManager.SetTimer(THandle_GotSmackAttacked, this, &ASmallEnemy::ResetCanBeSmackAttacked, SmackAttack_InternalTimer, false);
-	//DisableCollisions(SmackAttack_InternalTimer);
+	DisableCollisions(0.1f);
 	EnableGravity();
 	/* Weaker smack attack if actor on ground than in air */
 	float s = Strength;
