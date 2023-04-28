@@ -237,6 +237,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 
 	/* PRINTING STATE MACHINE INFO */
 #ifdef UE_BUILD_DEBUG
+	PRINTPAR("DeltaTime: %f", DeltaTime);
 	//Print_State();
 	//PRINTPAR("Attack State :: %i", m_EAttackState);
 	//PRINTPAR("Attack type :: %i", m_EAttackType);

@@ -22,10 +22,7 @@ void AEnvironmentalHazard::BeginPlay()
 	GTagContainer.AddTag(Tag::EnvironmentHazard());
 }
 
-// Called every frame
-void AEnvironmentalHazard::Tick(float DeltaTime)
+void AEnvironmentalHazard_Empty::BeginPlay()
 {
-	Super::Tick(DeltaTime);
-
+	GTagContainer.AddTag(Tag::EnvironmentHazard());
 }
-

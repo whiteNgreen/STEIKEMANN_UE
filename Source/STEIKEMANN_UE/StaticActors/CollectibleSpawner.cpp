@@ -29,7 +29,7 @@ void ACollectibleSpawner::SpawnCollectibles()
 }
 
 void ACollectibleSpawner::InitRandomSeed()
-{
+ {
 	srand(RandomSeed);
 }
 
