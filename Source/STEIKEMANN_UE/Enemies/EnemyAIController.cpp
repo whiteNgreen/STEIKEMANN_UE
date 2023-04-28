@@ -12,6 +12,7 @@
 #include "BaseClasses/StaticVariables.h"
 
 #include "Perception/PawnSensingComponent.h"
+#include "../WorldStatics/SteikeWorldStatics.h"
 
 AEnemyAIController::AEnemyAIController()
 {
@@ -30,34 +31,37 @@ void AEnemyAIController::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	if (!m_PawnOwner) return;
-
-	TM_AI.Tick(DeltaTime);
-	
-	switch (m_AIState)
+	FVector playerLoc = SteikeWorldStatics::PlayerLocation;
+	if (FVector::DistSquared(m_PawnOwner->GetActorLocation(), playerLoc) < _Statics_PlayerDistaceToActive)
 	{
-	case ESmallEnemyAIState::RecentlySpawned:
-		break;
-	case ESmallEnemyAIState::Idle:
-		IdleUpdate(DeltaTime);
-		break;
-	case ESmallEnemyAIState::Alerted:
-		AlertedUpdate(DeltaTime);
-		break;
-	case ESmallEnemyAIState::ChasingTarget:
-		ChaseUpdate(DeltaTime);
-		break;
-	case ESmallEnemyAIState::GuardSpawn:
-		GuardSpawnUpdate(DeltaTime);
-		break;
-	case ESmallEnemyAIState::Attack:
-		break;
-	case ESmallEnemyAIState::Incapacitated:
-		StopMovement();
-		break;
-	case ESmallEnemyAIState::None:
-		break;
-	default:
-		break;
+		TM_AI.Tick(DeltaTime);
+
+		switch (m_AIState)
+		{
+		case ESmallEnemyAIState::RecentlySpawned:
+			break;
+		case ESmallEnemyAIState::Idle:
+			IdleUpdate(DeltaTime);
+			break;
+		case ESmallEnemyAIState::Alerted:
+			AlertedUpdate(DeltaTime);
+			break;
+		case ESmallEnemyAIState::ChasingTarget:
+			ChaseUpdate(DeltaTime);
+			break;
+		case ESmallEnemyAIState::GuardSpawn:
+			GuardSpawnUpdate(DeltaTime);
+			break;
+		case ESmallEnemyAIState::Attack:
+			break;
+		case ESmallEnemyAIState::Incapacitated:
+			StopMovement();
+			break;
+		case ESmallEnemyAIState::None:
+			break;
+		default:
+			break;
+		}
 	}
 	//PRINT_STATE();
 }
