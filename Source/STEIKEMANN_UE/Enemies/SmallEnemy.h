@@ -47,6 +47,9 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	UPROPERTY(BlueprintReadWrite)
+		bool bIsActive{ true };
+
 public:	// Components
 	// Collision
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
@@ -182,9 +185,14 @@ public:	// STATES
 
 	virtual void Landed(const FHitResult& Hit) override;
 
-	void Gravity_Tick(float DeltaTime);
+	void Gravity_Tick();
 	void EnableGravity();
 	void DisableGravity();
+
+	UFUNCTION(BlueprintCallable)
+		void EnableGravity_Force();
+	UFUNCTION(BlueprintCallable)
+		void DisableGravity_Force();
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "States|Incapacitated")
 		float Incapacitated_LandedStunTime{ 2.f };

@@ -93,7 +93,7 @@ void ASmallEnemy::BeginPlay()
 		Incapacitate(EAIIncapacitatedType::StuckToWall);
 
 		StickToWall();
-		Gravity_Tick(0.f);
+		Gravity_Tick();
 	}
 }
 
@@ -103,8 +103,12 @@ void ASmallEnemy::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	FVector playerLoc = SteikeWorldStatics::PlayerLocation;
 
-	if (FVector::DistSquared(GetActorLocation(), playerLoc) < _Statics_PlayerDistaceToActive)
+	//if (FVector::DistSquared(GetActorLocation(), playerLoc) < _Statics_PlayerDistaceToActive)
+	if (bIsActive)
 	{
+		//const auto c = GetCharacterMovement();
+		//if (c->IsActive())
+			//c->SetActive(false);
 		//if (bPrintDebugStatus)
 		//	PRINT("Active");
 
@@ -138,16 +142,19 @@ void ASmallEnemy::Tick(float DeltaTime)
 			break;
 		}
 
-		Gravity_Tick(DeltaTime);
+		Gravity_Tick();
 
 		EndTick(DeltaTime);
 
 		//PrintState();
 	}
-	//else {
+	else {
+		//const auto c = GetCharacterMovement();
+		//if (c->IsActive())
+		//	c->SetActive(false);
 	//	if (bPrintDebugStatus)
 	//		PRINT("In_Active");
-	//}
+	}
 }
 
 void ASmallEnemy::Anim_Attacked_Pure(FVector direction)
@@ -336,7 +343,7 @@ void ASmallEnemy::Landed(const FHitResult& Hit)
 	NS_Stop_Trail();
 }
 
-void ASmallEnemy::Gravity_Tick(float DeltaTime)
+void ASmallEnemy::Gravity_Tick()
 {
 	// Gravity State
 	auto i = GetCharacterMovement();
@@ -368,6 +375,18 @@ void ASmallEnemy::EnableGravity()
 void ASmallEnemy::DisableGravity()
 {
 	m_GravityState = EGravityState::ForcedNone;
+}
+
+void ASmallEnemy::EnableGravity_Force()
+{
+	EnableGravity();
+	Gravity_Tick();
+}
+
+void ASmallEnemy::DisableGravity_Force()
+{
+	DisableGravity();
+	Gravity_Tick();
 }
 
 void ASmallEnemy::ChompCollisionOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
