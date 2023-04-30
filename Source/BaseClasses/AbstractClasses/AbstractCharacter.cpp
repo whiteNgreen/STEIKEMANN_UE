@@ -11,18 +11,13 @@
 
 ABaseCharacter::ABaseCharacter()
 {
-	BaseComponentInit();
 }
 
 ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
-	BaseComponentInit();
 }
 
-void ABaseCharacter::BaseComponentInit()
-{
-}
 
 void ABaseCharacter::BeginPlay()
 {
@@ -30,9 +25,15 @@ void ABaseCharacter::BeginPlay()
 	AttackContactDelegate.AddUObject(this, &ABaseCharacter::AttackContact);
 	//AttackContactDelegate_Instigator.AddUObject(this, &ABaseCharacter::AttackContact_Instigator);
 
-	auto i = GetCharacterMovement();
+	const auto i = GetCharacterMovement();
 	m_GravityScale = i->GravityScale;
 	m_BaseGravityZ = i->GetGravityZ();
+}
+
+void ABaseCharacter::BeginDestroy()
+{
+	Cancel_AttackContact();
+	Super::BeginDestroy();
 }
 
 void ABaseCharacter::Tick(float DeltaTime)
@@ -84,8 +85,15 @@ void ABaseCharacter::AttackContact(AActor* target)
 		return;
 	target->CustomTimeDilation = Statics::AttackContactTimeDilation;
 	GetWorldTimerManager().SetTimer(TH_AttackContact_Instigator, [this]() {		// Using world timer manager for timers meant to run in realtime
-		this->CustomTimeDilation = 1.f;
+		if (this)
+			this->CustomTimeDilation = 1.f;
 		}, AttackContactTimer, false);
+}
+
+void ABaseCharacter::Cancel_AttackContact()
+{
+	if (GetWorld())
+		GetWorldTimerManager().ClearTimer(TH_AttackContact_Instigator);
 }
 
 bool ABaseCharacter::ShroomBounce(FVector direction, float strength)

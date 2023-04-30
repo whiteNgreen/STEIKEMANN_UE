@@ -244,29 +244,8 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 
 	/* PRINTING STATE MACHINE INFO */
 #ifdef UE_BUILD_DEBUG
-	PRINTPAR("DeltaTime: %f", DeltaTime);
+	//PRINTPAR("DeltaTime: %f seconds", DeltaTime);
 	//Print_State();
-	//PRINTPAR("Attack State :: %i", m_EAttackState);
-	//PRINTPAR("Attack type :: %i", m_EAttackType);
-	//PRINTPAR("Grapple State :: %i", m_EGrappleState);
-	//PRINTPAR("Grapple Type  :: %i", m_EGrappleType);
-	//PRINTPAR("Smack Attack Type :: %i", m_ESmackAttackType);
-	//PRINTPAR("MovementInputState = %i", m_EMovementInputState);
-	//PRINTPAR("Air State :: %i", m_EAirState);
-	//PRINTPAR("Ground State :: %i", m_EGroundState);
-	//PRINTPAR("Pogo Type :: %i", m_EPogoType);
-	//PRINTPAR("Jump Count = %i", JumpCurrentCount);
-	//switch (m_EInputType)
-	//{
-	//case EInputType::MouseNKeyboard:
-	//	PRINT("Input Mode: MouseNKeyboard");
-	//	break;
-	//case EInputType::Gamepad:
-	//	PRINT("Input Mode: Gamepad");
-	//	break;
-	//default:
-	//	break;
-	//}
 #endif
 
 	/*		Resets Rotation Pitch and Roll		*/
@@ -443,22 +422,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	GuideCamera(DeltaTime);
 	GuideCamera_Movement(DeltaTime);
 
-	/* --------------- ANIMATION -------------------- */
-	//float IK_RaycastLength{ 50.f };
-	//if (bIK_Foot_L) {
-	//	FIK_RaycastReturn RR = RaycastForIKPlacement(FName("Foot_Socket_L"), IK_RaycastLength);
-	//	if (GetAnimInstance())
-	//		GetAnimInstance()->IK_Surface_L = RR;
-	//}
-	//if (bIK_Foot_R) {
-	//	FIK_RaycastReturn RR = RaycastForIKPlacement(FName("Foot_Socket_R"), IK_RaycastLength);
-	//	if (GetAnimInstance())
-	//		GetAnimInstance()->IK_Surface_R = RR;
-	//}
-
 	EndTick(DeltaTime);
-
-	PRINTPAR("Player tick = %f", time.End());
 }
 
 // Called to bind functionality to input
@@ -742,10 +706,9 @@ void ASteikemannCharacter::RightTriggerClick()
 {
 	if (ActionLocked()) return;
 	if (bGrappleClick) return;
-	//if (bAttackPress)   return;
-
-	//if (TFunc_GrappleLaunchFunction)	return;
 	bGrappleClick = true;
+	//if (bAttackPress)   return;
+	//if (TFunc_GrappleLaunchFunction)	return;
 
 	GH_Click();
 }
@@ -1198,6 +1161,7 @@ void ASteikemannCharacter::Cause_LeewayPause_Pure(float Pausetime)
 	for (auto& target : InReachGrappleTargets)
 	{
 		if (target == Active_GrappledActor) continue;
+		if (target == GrappledActor) continue;
 		if (auto iattack = Cast<IAttackInterface>(target)) {
 			iattack->Receive_LeewayPause_Pure(Pausetime);
 		}
@@ -2519,6 +2483,10 @@ void ASteikemannCharacter::PTakeDamage(int damage, AActor* otheractor, int i/* =
 
 	// Hair Material Change
 	HealthHairColor(Health);
+
+	// Cancel effects
+	GH_Cancel();
+	
 }
 
 void ASteikemannCharacter::PTakeDamage(int damage, const FVector& Direction, int i)

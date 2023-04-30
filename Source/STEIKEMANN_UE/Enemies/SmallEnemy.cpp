@@ -97,6 +97,13 @@ void ASmallEnemy::BeginPlay()
 	}
 }
 
+void ASmallEnemy::BeginDestroy()
+{
+	if (GetWorld())
+		GetWorldTimerManager().ClearTimer(TH_IAttack_LeewayPause);
+	Super::BeginDestroy();
+}
+
 // Called every frame
 void ASmallEnemy::Tick(float DeltaTime)
 {
@@ -497,7 +504,6 @@ void ASmallEnemy::RedetermineIncapacitateState()
 
 void ASmallEnemy::IncapacitatedLand()
 {
-	//PRINTPARLONG(3.f, "%s Stunned for %f seconds", *GetName(), Incapacitated_LandedStunTime);
 	Incapacitate(EAIIncapacitatedType::Stunned, Incapacitated_LandedStunTime);
 }
 
@@ -509,7 +515,6 @@ void ASmallEnemy::StunnedLand()
 
 void ASmallEnemy::PostChompLand()
 {
-	PRINTPARLONG(PostChomp_StunTime, "Post Chomp pause for %f seconds", PostChomp_StunTime);
 	Incapacitate(EAIIncapacitatedType::Stunned, PostChomp_StunTime);
 	TimerManager.SetTimer(TH_PostChompStun, this, &ASmallEnemy::RedetermineIncapacitateState, PostChomp_StunTime);
 }
@@ -722,6 +727,12 @@ bool ASmallEnemy::DogEnvironmentCollision(const FHitResult& SweepHit)
 	return false;
 }
 
+void ASmallEnemy::CancelCollisionLaunch()
+{
+	TimerManager.ClearTimer(TH_CollisionLaunchFreeze);
+	TimerManager.ClearTimer(TH_FreezeCollisionLaunchCooldown);
+}
+
 void ASmallEnemy::LC_SpawnEffect_Pure(float Time, float VelocityMultiplier, FVector SurfaceNormal, FVector SurfaceLocation)
 {
 	LC_GetEffectLocation(SurfaceLocation, SurfaceNormal);
@@ -789,20 +800,23 @@ void ASmallEnemy::HookedPure(const FVector InstigatorLocation, bool OnGround, bo
 		//AI
 		IncapacitateUndeterminedTime(EAIIncapacitatedType::Grappled, &ASmallEnemy::Capacitate_Grappled);
 		Cancel_CHOMP();
-
+		CancelCollisionLaunch();
 		FVector Direction = InstigatorLocation - GetActorLocation();
 		RotateActorYawToVector(Direction.GetSafeNormal());
+		m_State = EEnemyState::STATE_Grappled;
 		m_GravityState = EGravityState::ForcedNone;
 		return;
 	}
 
 	if (bCanBeGrappleHooked)
 	{
-
 		// Enable Gravity and Disable Collisions
+		m_State = EEnemyState::STATE_Launched;
 		m_GravityState = EGravityState::Default;
+		Cancel_AttackContact();
 		GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Falling);
 		DisableCollisions(FMath::Clamp(GrappledLaunchTime - GrappledLaunchTime_CollisionActivation, 0.f, GrappledLaunchTime));
+		IncapacitateUndeterminedTime(EAIIncapacitatedType::Grappled, &ASmallEnemy::Capacitate_Grappled);
 
 		/* Rotate again towards Instigator - Yaw*/
 		GrappleLaunchToInstigator(InstigatorLocation, GrappledLaunchTime, OnGround);
@@ -952,11 +966,12 @@ void ASmallEnemy::Receive_GroundPound_Pure(const FVector& PoundDirection, const 
 
 void ASmallEnemy::Receive_LeewayPause_Pure(float Pausetime)
 {
+	if (m_State == EEnemyState::STATE_Grappled) return;
 	CustomTimeDilation = AttackInterface_LeewayPause_Timedilation;
-	FTimerHandle h;
-	//if (GetWorld())
-		//GetWorldTimerManager().SetTimer(h, [this]() { if(GetWorld() && this)CustomTimeDilation = 1.f; }, Pausetime, false);
-		TimerManager.SetTimer(h, [this]() { CustomTimeDilation = 1.f; }, Pausetime, false);
+	//FTimerHandle h;
+	if (GetWorld())
+		GetWorldTimerManager().SetTimer(TH_IAttack_LeewayPause, [this]() { if(GetWorld() && this)CustomTimeDilation = 1.f; }, Pausetime, false);
+		//TimerManager.SetTimer(TH_IAttack_LeewayPause, [this]() { CustomTimeDilation = 1.f; }, Pausetime, false);
 }
 
 void ASmallEnemy::ChompingAnotherEnemy(IAttackInterface* OtherInterface, AActor* OtherActor)

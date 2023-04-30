@@ -16,11 +16,6 @@ DECLARE_DELEGATE(FStunnedLandDelegation)
 DECLARE_DELEGATE(FIncapacitatedCollision)
 DECLARE_DELEGATE_OneParam(FLaunchedLand, const FHitResult& LandHit)
 
-/************************ ENUMS *****************************/
-
-
-
-
 /* Forward Declarations */
 class UTimelineComponent;
 class AEnemyAIController;
@@ -43,6 +38,7 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	virtual void BeginDestroy() override;
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -265,7 +261,7 @@ private:
 public:
 	FTimerHandle TH_FreezeCollisionLaunchCooldown;
 	FTimerHandle TH_CollisionLaunchFreeze;
-	FTimerHandle TH_InternalDogToDogCollision;
+	//FTimerHandle TH_InternalDogToDogCollision;
 	FVector CollisionLaunchDirection;
 	FVector MeshInitialPosition;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Launched Reflected Collision")
@@ -306,6 +302,9 @@ public:
 	void DogToDogCollision(const FHitResult& SweepHit, ASmallEnemy* OtherDog);
 	void GettingDogCollision(FVector SurfaceNormal, FVector SurfaceLocation);
 	bool DogEnvironmentCollision(const FHitResult& SweepHit);
+
+	UFUNCTION(BlueprintCallable)
+		void CancelCollisionLaunch();
 
 public:	// Visual effects
 	void LC_SpawnEffect_Pure(float Time, float VelocityMultiplier, FVector SurfaceNormal, FVector SurfaceLocation);

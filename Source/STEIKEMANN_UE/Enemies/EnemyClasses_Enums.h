@@ -19,6 +19,7 @@ enum class EEnemyState : int8
 
 	STATE_OnGround,
 	STATE_InAir,
+	STATE_Grappled,
 	STATE_PreLaunched,
 	STATE_Launched,
 
@@ -28,9 +29,7 @@ UENUM()
 enum class EWall : int8
 {
 	WALL_None,
-
 	WALL_Stuck,
-
 	WALL_Leaving
 };
 struct SpawnPointData

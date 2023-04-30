@@ -63,8 +63,8 @@ class BASECLASSES_API ABaseCharacter : public AAbstractCharacter
 public:
 	ABaseCharacter();
 	ABaseCharacter(const FObjectInitializer& ObjectInitializer);
-	void BaseComponentInit();
 	virtual void BeginPlay() override;
+	virtual void BeginDestroy() override;
 	virtual void Tick(float DeltaTime) override;
 	virtual void EndTick(float DeltaTime);
 
@@ -91,6 +91,7 @@ public:
 
 	TArray<AActor*> AttackContactedActors;
 	virtual void AttackContact(AActor* target);
+	virtual void Cancel_AttackContact();
 
 	bool bCanBounce{ true };
 	virtual bool ShroomBounce(FVector direction, float strength);

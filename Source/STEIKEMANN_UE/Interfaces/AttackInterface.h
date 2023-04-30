@@ -59,6 +59,7 @@ public:
 	virtual void Receive_Pogo_GroundPound_Pure(){}
 
 
+	FTimerHandle TH_IAttack_LeewayPause;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AttackInterface|Grapplehook")
 		float AttackInterface_LeewayPause_Time{ 1.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AttackInterface|Grapplehook")

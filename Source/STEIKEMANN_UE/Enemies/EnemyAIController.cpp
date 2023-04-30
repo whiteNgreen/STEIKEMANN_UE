@@ -303,8 +303,8 @@ bool AEnemyAIController::AlertedByPack()
 
 bool AEnemyAIController::CanAttack_AI() const
 {
-	if (m_AIState == ESmallEnemyAIState::Incapacitated)		return false;
-	if (!m_PawnOwner->CanAttack_Pawn())						return false;
+	if (m_AIState == ESmallEnemyAIState::Incapacitated)			return false;
+	if (!m_PawnOwner->CanAttack_Pawn())							return false;
 	return true;
 }
 
