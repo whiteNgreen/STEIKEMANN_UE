@@ -4,3 +4,4 @@
 #include "SteikeWorldStatics.h"
 
 FVector SteikeWorldStatics::PlayerLocation = FVector();
+FVector SteikeWorldStatics::CameraLocation = FVector();

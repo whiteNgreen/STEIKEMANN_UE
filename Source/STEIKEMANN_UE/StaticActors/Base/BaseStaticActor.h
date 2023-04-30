@@ -27,6 +27,11 @@ public:
 
 	FTimerManager TimerManager;
 
+	/**
+	* skriv en funksjon som lar actor sjekke opp mot SteikeWorldStatics::PlayerLocation for å se om den skal gjøre noe når spilleren er nærme nok
+	*/
+
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;

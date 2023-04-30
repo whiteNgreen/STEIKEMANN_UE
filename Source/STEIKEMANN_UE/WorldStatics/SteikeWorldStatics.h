@@ -12,4 +12,5 @@ class STEIKEMANN_UE_API SteikeWorldStatics
 {
 public:
 	static FVector PlayerLocation;
+	static FVector CameraLocation;
 };

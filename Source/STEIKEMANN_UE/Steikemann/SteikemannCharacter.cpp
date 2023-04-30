@@ -183,6 +183,13 @@ void ASteikemannCharacter::BeginPlay()
 	/* Adding GameplayTags to the GameplayTagsContainer */
 	GameplayTags.AddTag(Tag::Player());
 	mFocusPoints.Empty();
+
+	/** Updating the players location to a static class that can be checked by other objects to determine their tick rate or activation range */
+	FTimerHandle h;
+	TimerManager.SetTimer(h, [this]() {
+		SteikeWorldStatics::PlayerLocation = GetActorLocation(); 
+		SteikeWorldStatics::CameraLocation = Camera->GetComponentLocation();
+		}, 0.05f, true);
 }
 
 void ASteikemannCharacter::Material_UpdateParameterCollection_Player(float DeltaTime)
@@ -220,8 +227,8 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	SteikeWorldStatics::PlayerLocation = GetActorLocation();
-
+	TIMER time;
+	time.Start();
 	if (bIsDead) { return; }
 
 	/* Rotate Inputvector to match the playercontroller */
@@ -450,6 +457,8 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	//}
 
 	EndTick(DeltaTime);
+
+	PRINTPAR("Player tick = %f", time.End());
 }
 
 // Called to bind functionality to input
@@ -3179,7 +3188,6 @@ void ASteikemannCharacter::AttackContact_Particles(FVector location, FQuat direc
 
 void ASteikemannCharacter::Activate_AttackCollider()
 {
-	AttackCollider->SetHiddenInGame(false);	// For Debugging
 	AttackCollider->SetGenerateOverlapEvents(true);
 	AttackCollider->SetRelativeScale3D(AttackColliderScale);
 }
@@ -3189,7 +3197,6 @@ void ASteikemannCharacter::Deactivate_AttackCollider()
 	AttackDirection *= 0;
 	AttackContactedActors.Empty();
 
-	AttackCollider->SetHiddenInGame(true);	// For Debugging
 	AttackCollider->SetGenerateOverlapEvents(false);
 	AttackCollider->SetRelativeScale3D(FVector(0, 0, 0));
 }
