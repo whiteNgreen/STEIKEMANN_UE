@@ -1086,6 +1086,24 @@ void ASteikemannCharacter::StartAnimLerp_ControlRig()
 	bGH_LerpControlRig = true;
 }
 
+void ASteikemannCharacter::GH_AimIndicator_LocationDirection_Pure(FVector Location, FVector Normal, FVector Direction, FVector CameraDirection)
+{
+	GH_AimIndicator_LocationComplex(Location, Normal);
+	GH_AimIndicator_LocationDirection(Location, Normal, Direction, CameraDirection);
+}
+
+void ASteikemannCharacter::GH_AimIndicator_LocationComplex(FVector& SurfaceLocation, FVector& SurfaceNormal)
+{
+	float length = 100.f;
+	FHitResult Hit;
+	FCollisionQueryParams Params("", true, this);
+	if (GetWorld()->LineTraceSingleByChannel(Hit, SurfaceLocation + (SurfaceNormal * length), SurfaceLocation + (SurfaceNormal * -length), ECC_WorldStatic, Params))
+	{
+		SurfaceLocation = Hit.ImpactPoint;
+		SurfaceNormal = Hit.ImpactNormal;
+	}
+}
+
 FVector ASteikemannCharacter::GH_GrappleSmackAiming_MNK(AActor* Target)
 {
 	if (!Target) return FVector();
@@ -1143,12 +1161,12 @@ void ASteikemannCharacter::GH_ShowGrappleSmackCurve(float DeltaTime, FVector Dir
 	FVector Velocity = Direction * SmackStrength;
 	FVector Gravity = FVector(0.f, 0.f, GetWorld()->GetGravityZ() * 4.f);
 	float time = DeltaTime;
-	FVector start = GetActorLocation();
+	FVector start = GetActorLocation() + (GetActorForwardVector() * 114.f);
 	FVector end = start + Velocity * DeltaTime;
 	for (; time < 4.f; time += DeltaTime)
 	{
-		if (GH_ShowGrappleSmackImpactIndicator(start, end, DrawTime)) break;
-		//DrawDebugLine(GetWorld(), start, end, FColor::Blue, false, DrawTime, -1, 6.f);
+		if (GH_ShowGrappleSmackImpactIndicator(start, end, DrawTime) && time > 0.2f) break;
+		DrawDebugLine(GetWorld(), start, end, FColor(100.f, 100.f, 255.f), false, DrawTime, 0, 10.f);
 		Velocity += Gravity * DeltaTime;
 		start = end;
 		end += Velocity * DeltaTime;
@@ -1157,12 +1175,14 @@ void ASteikemannCharacter::GH_ShowGrappleSmackCurve(float DeltaTime, FVector Dir
 
 bool ASteikemannCharacter::GH_ShowGrappleSmackImpactIndicator(FVector start, FVector end, float DrawTime)
 {
+	if (!Active_GrappledActor.IsValid()) return false;
 	FHitResult Hit;
 	FCollisionQueryParams Params("", false, this);
-	if (GetWorld()->LineTraceSingleByChannel(Hit, start, end, ECC_Visibility, Params))
+	Params.AddIgnoredActor(Active_GrappledActor.Get());
+	FCollisionShape sphere = FCollisionShape::MakeSphere(100.f);
+	if (GetWorld()->SweepSingleByChannel(Hit, start, end, FQuat(), ECC_WorldStatic, sphere, Params))
 	{
-		//DrawDebugPoint(GetWorld(), Hit.ImpactPoint, 20.f, FColor::Orange, false, DrawTime);
-		GH_AimIndicator_LocationDirection(Hit.ImpactPoint, Hit.ImpactNormal, FVector(start - end).GetSafeNormal(), FVector(Hit.ImpactPoint - Camera->GetComponentLocation()).GetSafeNormal());
+		GH_AimIndicator_LocationDirection_Pure(Hit.ImpactPoint, Hit.ImpactNormal, FVector(start - end).GetSafeNormal(), FVector(Hit.ImpactPoint - Camera->GetComponentLocation()).GetSafeNormal());
 		return true;
 	}
 	return false;

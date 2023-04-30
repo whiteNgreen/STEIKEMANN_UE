@@ -249,7 +249,9 @@ FGameplayTag ASmallEnemy::SensingPawn(APawn* pawn)
 
 void ASmallEnemy::Alert(const APawn& instigator)
 {
-	const bool alerted = m_AI->AlertedByPack();
+	bool alerted{};
+	if (m_AI)
+		alerted = m_AI->AlertedByPack();
 	
 	// Anim
 	if (alerted)
@@ -618,7 +620,7 @@ void ASmallEnemy::ReflectedCollisionLaunch_PreLaunch(FVector SurfaceNormal, FVec
 		TimerManager.SetTimer(TH_CollisionLaunchFreeze, this, &ASmallEnemy::ReflectedCollisionLaunch_Launch, time);
 		TimerManager.SetTimer(TH_FreezeCollisionLaunchCooldown, LaunchedCollision_FreezeCooldown + time, false);
 	}
-	LC_SpawnEffect(time, FMath::Max(Multiplier, 0.4f), SurfaceNormal, SurfaceLocation);
+	LC_SpawnEffect_Pure(time, FMath::Max(Multiplier, 0.4f), SurfaceNormal, SurfaceLocation);
 }
 
 void ASmallEnemy::ReflectedCollisionLaunch_Launch()
@@ -644,7 +646,7 @@ void ASmallEnemy::LaunchedLandCollision_PreLaunch(FVector SurfaceNormal, FVector
 	TimerManager.SetTimer(TH_CollisionLaunchFreeze, this, &ASmallEnemy::LaunchedLandCollision_Launch, time);
 	TimerManager.SetTimer(TH_FreezeCollisionLaunchCooldown, LaunchedCollision_FreezeCooldown + time, false);
 
-	LC_SpawnEffect(time, FMath::Max(Multiplier, 0.4f), SurfaceNormal, SurfaceLocation);
+	LC_SpawnEffect_Pure(time, FMath::Max(Multiplier, 0.4f), SurfaceNormal, SurfaceLocation);
 }
 
 void ASmallEnemy::LaunchedLandCollision_Launch()
@@ -718,6 +720,25 @@ bool ASmallEnemy::DogEnvironmentCollision(const FHitResult& SweepHit)
 		}
 	}
 	return false;
+}
+
+void ASmallEnemy::LC_SpawnEffect_Pure(float Time, float VelocityMultiplier, FVector SurfaceNormal, FVector SurfaceLocation)
+{
+	LC_GetEffectLocation(SurfaceLocation, SurfaceNormal);
+	LC_SpawnEffect(Time, VelocityMultiplier, SurfaceNormal, SurfaceLocation);
+}
+
+void ASmallEnemy::LC_GetEffectLocation(FVector& SurfaceLocation, FVector& SurfaceNormal)
+{
+	float length = 100.f;
+	FHitResult Hit;
+	FCollisionQueryParams Params("", true, this);
+	if (GetWorld()->LineTraceSingleByChannel(Hit, SurfaceLocation + (SurfaceNormal * length), SurfaceLocation + (SurfaceNormal * -length), ECC_Visibility, Params))
+	{
+		SurfaceLocation = Hit.ImpactPoint;
+		SurfaceNormal = Hit.ImpactNormal;
+	}
+	
 }
 
 void ASmallEnemy::SpottingPlayer_Begin()
@@ -933,8 +954,9 @@ void ASmallEnemy::Receive_LeewayPause_Pure(float Pausetime)
 {
 	CustomTimeDilation = AttackInterface_LeewayPause_Timedilation;
 	FTimerHandle h;
-	if (GetWorld())
-		GetWorldTimerManager().SetTimer(h, [this]() { if(GetWorld() && this)CustomTimeDilation = 1.f; }, Pausetime, false);
+	//if (GetWorld())
+		//GetWorldTimerManager().SetTimer(h, [this]() { if(GetWorld() && this)CustomTimeDilation = 1.f; }, Pausetime, false);
+		TimerManager.SetTimer(h, [this]() { CustomTimeDilation = 1.f; }, Pausetime, false);
 }
 
 void ASmallEnemy::ChompingAnotherEnemy(IAttackInterface* OtherInterface, AActor* OtherActor)

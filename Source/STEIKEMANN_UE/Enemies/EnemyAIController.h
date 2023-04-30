@@ -31,6 +31,8 @@ public:	// Functions
 	virtual void Tick(float DeltaTime) override;
 	virtual void OnPossess(APawn* InPawn) override;
 
+	FTimerManager TimerManager;
+
 	// Recently Spawned
 	void RecentlySpawnedBegin();
 

@@ -946,8 +946,12 @@ public: // Aiming and Visual Aid
 		void GH_GrappleDynamic_Start();
 	UFUNCTION(BlueprintImplementableEvent)
 		void GH_GrappleDynamic_End();
+
+	void GH_AimIndicator_LocationDirection_Pure(FVector Location, FVector Normal, FVector Direction, FVector CameraDirection);
 	UFUNCTION(BlueprintImplementableEvent)
 		void GH_AimIndicator_LocationDirection(FVector Location, FVector Normal, FVector Direction, FVector CameraDirection);
+	UFUNCTION(BlueprintCallable)
+		void GH_AimIndicator_LocationComplex(FVector& SurfaceLocation, FVector& SurfaceNormal);
 
 	FVector GH_GrappleSmackAiming_MNK(AActor* Target);
 	void GH_ShowGrappleSmackCurveIndicator_Gamepad(float DeltaTime, float DrawTime);

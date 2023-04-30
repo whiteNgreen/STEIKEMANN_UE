@@ -23,8 +23,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 		void RespawnPickup();
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		TSubclassOf<class ACollectible> m_PickupClass;
-	//UFUNCTION(BlueprintImplementableEvent)
+		TSubclassOf<class ACollectible_Static> m_PickupClass;
 	void SpawnPickup();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

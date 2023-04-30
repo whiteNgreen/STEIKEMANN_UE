@@ -308,8 +308,11 @@ public:
 	bool DogEnvironmentCollision(const FHitResult& SweepHit);
 
 public:	// Visual effects
+	void LC_SpawnEffect_Pure(float Time, float VelocityMultiplier, FVector SurfaceNormal, FVector SurfaceLocation);
 	UFUNCTION(BlueprintImplementableEvent)
 		void LC_SpawnEffect(float Time, float VelocityMultiplier, FVector SurfaceNormal, FVector SurfaceLocation);
+	UFUNCTION(BlueprintCallable)
+		void LC_GetEffectLocation(FVector& SurfaceLocation, FVector& SurfaceNormal);
 #pragma endregion //LaunchedCollision
 #pragma region GrappleHooked
 public: 

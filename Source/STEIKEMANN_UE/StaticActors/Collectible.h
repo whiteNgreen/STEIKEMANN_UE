@@ -43,11 +43,7 @@ public:
 		float RotationSpeed_LerpSpeed{ 2.f };
 	float RotationSpeed_Internal{};
 
-	/* Buffer/Timer before collectible can be collected */
-	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "OnSpawn")
-		//float InitTimer{ 0.5f };
-	//FTimerHandle FTHInit;
-	//void Init();
+
 	bool bWasSpawnedByOwner{};
 	AActor* SpawningOwner{ nullptr };
 	FTimerHandle FTHDestruction;
@@ -79,6 +75,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Type")
 		ECollectibleType CollectibleType;
+
+	bool bWasSpawnedByOwner{};
+	AActor* SpawningOwner{ nullptr };
 
 	FTimerHandle FTHDestruction;
 	UFUNCTION(BlueprintImplementableEvent)

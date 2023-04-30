@@ -59,7 +59,8 @@ void ACollectible::Destruction()
 	}
 
 	/* Destroy object after 2.f seconds */
-	GetWorldTimerManager().SetTimer(FTHDestruction, [this]() { Destroy(); }, 2.f, false);
+	//GetWorldTimerManager().SetTimer(FTHDestruction, [this]() { Destroy(); }, 2.f, false);
+	TimerManager.SetTimer(FTHDestruction, [this]() { Destroy(); }, 2.f, false);
 }
 
 /// <summary>
@@ -80,10 +81,14 @@ void ACollectible_Static::Destruction()
 	Root->SetVisibility(false, true);
 	Destruction_IMPL();
 	/* Particles and disable mesh + collision */
-	//UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), DeathParticles, GetActorLocation());	// SPAWN PARTICLE IN BLUEPRINT TO AVOID NIAGARA INCLUDE
 	Sphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-
+	if (SpawningOwner && bWasSpawnedByOwner)
+	{
+		APickupSpawner* owner = Cast<APickupSpawner>(SpawningOwner);
+		owner->RespawnPickup();
+	}
 	/* Destroy object after 2.f seconds */
-	GetWorldTimerManager().SetTimer(FTHDestruction, [this]() { Destroy(); }, 2.f, false);
+	//GetWorldTimerManager().SetTimer(FTHDestruction, [this]() { Destroy(); }, 2.f, false);
+	TimerManager.SetTimer(FTHDestruction, [this]() { Destroy(); }, 2.f, false);
 }
 

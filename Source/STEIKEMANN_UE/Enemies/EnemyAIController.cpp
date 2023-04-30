@@ -31,6 +31,7 @@ void AEnemyAIController::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	if (!m_PawnOwner) return;
+	TimerManager.Tick(DeltaTime);
 	FVector playerLoc = SteikeWorldStatics::PlayerLocation;
 	if (FVector::DistSquared(m_PawnOwner->GetActorLocation(), playerLoc) < _Statics_PlayerDistaceToActive)
 	{
@@ -638,7 +639,8 @@ void AEnemyAIController::GetPlayerPtr()
 	m_Player = player;
 	if (!player) {
 		FTimerHandle h;
-		GetWorldTimerManager().SetTimer(h, this, &AEnemyAIController::GetPlayerPtr, 0.5f);
+		//GetWorldTimerManager().SetTimer(h, this, &AEnemyAIController::GetPlayerPtr, 0.5f);
+		TimerManager.SetTimer(h, this, &AEnemyAIController::GetPlayerPtr, 0.5f);
 	}
 }
 
