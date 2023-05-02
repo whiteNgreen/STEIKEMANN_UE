@@ -461,8 +461,10 @@ void AEnemyAIController::IncapacitateEnd()
 
 void AEnemyAIController::IncapacitateAI(const EAIIncapacitatedType& IncapacitateType, float Time/*, const ESmallEnemyAIState& NextState*/)
 {
-	if (Time > 0.f)	
+	if (Time > 0.f)
 		TM_AI.SetTimer(TH_IncapacitateTimer, this, &AEnemyAIController::Post_Incapacitate_GettingSmacked, Time);
+	else
+		TM_AI.ClearTimer(TH_IncapacitateTimer);
 	SetState(ESmallEnemyAIState::Incapacitated);
 	m_AIIncapacitatedType = IncapacitateType;
 	//PRINTPARLONG(Time, "Incapacitated for %f seconds", Time);

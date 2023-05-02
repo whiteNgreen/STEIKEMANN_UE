@@ -28,6 +28,7 @@ void UEnemyAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 void UEnemyAnimInstance::SetLaunchedInAir(FVector direction)
 {
 	bIsLaunchedInAir = true;
+	m_AnimState = EEnemyAnimState::Launched;
 	Launched_SpinAngle = direction.Rotation();
 	Launched_SpinAngle.Pitch = 0.f;
 	Launched_SpinAngle.Yaw = Owner->GetActorRotation().Yaw + 85.f;

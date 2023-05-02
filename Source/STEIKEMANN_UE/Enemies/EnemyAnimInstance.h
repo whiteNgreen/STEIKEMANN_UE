@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Animation/AnimInstance.h"
+#include "EnemyClasses_Enums.h"
 #include "EnemyAnimInstance.generated.h"
 
 /**
@@ -23,6 +24,9 @@ public:
 		class ASmallEnemy* Owner;
 
 public:	// Variables
+	UPROPERTY(BlueprintReadWrite)
+		EEnemyAnimState m_AnimState;
+
 	UPROPERTY(BlueprintReadOnly)
 		float Speed{};
 	UPROPERTY(BlueprintReadOnly)

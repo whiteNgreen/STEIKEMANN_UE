@@ -128,6 +128,7 @@ void ASmallEnemy::Tick(float DeltaTime)
 			PlayerPogoDetection->SetSphereRadius(PB_SphereRadius_Stuck);
 			// AI
 			Incapacitate(EAIIncapacitatedType::StuckToWall);
+			StickToWall();
 		}
 
 		// State 
@@ -143,7 +144,6 @@ void ASmallEnemy::Tick(float DeltaTime)
 			RotateActorYawToVector(GetVelocity() * -1.f);
 			break;
 		case EEnemyState::STATE_OnWall:
-			StickToWall();
 			break;
 		default:
 			break;
@@ -271,11 +271,13 @@ void ASmallEnemy::Alert(const APawn& instigator)
 void ASmallEnemy::SleepingBegin()
 {
 	m_Anim->bIsSleeping = true;
+	//m_Anim->m_AnimState = EEnemyAnimState::Sleeping;
 }
 
 void ASmallEnemy::SleepingEnd()
 {
 	m_Anim->bIsSleeping = false;
+	//m_Anim->m_AnimState = EEnemyAnimState::SpottingPlayer;
 }
 
 void ASmallEnemy::AttackJump()
@@ -335,9 +337,21 @@ void ASmallEnemy::Landed(const FHitResult& Hit)
 	//	if (IncapacitatedLandDelegation.ExecuteIfBound())
 	//		IncapacitatedLandDelegation.Unbind();
 
+	IGameplayTagAssetInterface* itag = Cast<IGameplayTagAssetInterface>(Hit.GetActor());
+
+	m_Anim->m_AnimState = EEnemyAnimState::Idle_Run;
 	if (!Delegate_LaunchedLand.IsBound())
-		if (Delegate_StunnedLand.ExecuteIfBound())
+	{
+		bool InvalidStunnedLand{};
+		if (itag)
+			InvalidStunnedLand = 
+				itag->HasMatchingGameplayTag(Tag::BouncyShroom()) ||
+				itag->HasMatchingGameplayTag(Tag::Player()) ||
+				itag->HasMatchingGameplayTag(Tag::Enemy());
+
+		if (Delegate_StunnedLand.ExecuteIfBound() && !InvalidStunnedLand)
 			Delegate_StunnedLand.Unbind();
+	}	
 	if (Delegate_LaunchedLand.ExecuteIfBound(Hit))
 		Delegate_LaunchedLand.Unbind();
 
@@ -349,6 +363,7 @@ void ASmallEnemy::Landed(const FHitResult& Hit)
 
 	m_State = EEnemyState::STATE_OnGround;
 	m_Anim->bIsLaunchedInAir = false;
+
 	NS_Stop_Trail();
 }
 
@@ -499,6 +514,7 @@ void ASmallEnemy::RedetermineIncapacitateState()
 		m_AI->RedetermineIncapacitateState();
 		IncapacitatedCollisionDelegate.Unbind();
 		IncapacitatedLandDelegation.Unbind();
+		m_Anim->m_AnimState = EEnemyAnimState::Idle_Run;
 	}
 }
 
@@ -511,6 +527,9 @@ void ASmallEnemy::StunnedLand()
 {
 	Incapacitate(EAIIncapacitatedType::Stunned, Incapacitated_LandedStunTime);
 	TimerManager.SetTimer(TH_RedetermineIncapacitate, this, &ASmallEnemy::RedetermineIncapacitateState, Incapacitated_LandedStunTime);
+	m_Anim->m_AnimState = EEnemyAnimState::Stunned;
+	Anim_Attacked();
+	SpawnStunnedEffect(Incapacitated_LandedStunTime);
 }
 
 void ASmallEnemy::PostChompLand()
@@ -562,11 +581,31 @@ void ASmallEnemy::RotateActorYawToVector(FVector AimVector, float DeltaTime)
 
 }
 
+bool ASmallEnemy::ShroomBounce(FVector direction, float strength)
+{
+	const bool b = (Super::ShroomBounce(direction, strength));
+	if (b)
+	{
+		// Incapacitate Launch
+		Incapacitate(EAIIncapacitatedType::Stunned);
+		// land delegation
+		Launched();
+		Delegate_StunnedLand.BindUObject(this, &ASmallEnemy::StunnedLand);
+		Delegate_LaunchedLand.BindUObject(this, &ASmallEnemy::LandedLaunched);
+		DeleteStunnedEffect();
+		TimerManager.ClearTimer(TH_RedetermineIncapacitate);
+	}
+	return b;
+}
+
 void ASmallEnemy::StickToWall()
 {
 	m_GravityState = EGravityState::ForcedNone;
 	//AI
 	IncapacitateUndeterminedTime(EAIIncapacitatedType::StuckToWall);
+
+	m_Anim->m_AnimState = EEnemyAnimState::StuckToThornbush;
+	Effect_StuckToThornwall_Start();
 }
 
 void ASmallEnemy::LeaveWall()
@@ -577,6 +616,9 @@ void ASmallEnemy::LeaveWall()
 
 	//AI - Register collision delegate
 	IncapacitateUndeterminedTime(EAIIncapacitatedType::Grappled, &ASmallEnemy::CollisionDelegate);
+
+	m_Anim->m_AnimState = EEnemyAnimState::Idle_Run;
+	Effect_StuckToThornwall_End();
 }
 
 void ASmallEnemy::Tl_LaunchedCollision_End()
@@ -789,6 +831,7 @@ void ASmallEnemy::OutofReach_Pure()
 
 void ASmallEnemy::HookedPure()
 {
+	Anim_Attacked();
 	Execute_Hooked(this);
 }
 
@@ -805,6 +848,11 @@ void ASmallEnemy::HookedPure(const FVector InstigatorLocation, bool OnGround, bo
 		RotateActorYawToVector(Direction.GetSafeNormal());
 		m_State = EEnemyState::STATE_Grappled;
 		m_GravityState = EGravityState::ForcedNone;
+		Anim_Attacked();
+		// If stunned, delete the stunned effect
+		if (TimerManager.IsTimerActive(TH_RedetermineIncapacitate)) {
+			DeleteStunnedEffect();
+		}
 		return;
 	}
 
@@ -944,6 +992,11 @@ void ASmallEnemy::Receive_SmackAttack_Pure(const FVector Direction, const float 
 
 	Delegate_StunnedLand.BindUObject(this, &ASmallEnemy::StunnedLand);
 	Delegate_LaunchedLand.BindUObject(this, &ASmallEnemy::LandedLaunched);
+
+	// If stunned, delete the stunned effect
+	if (TimerManager.IsTimerActive(TH_RedetermineIncapacitate)) {
+		DeleteStunnedEffect();
+	}
 }
 void ASmallEnemy::Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength)
 {
@@ -962,6 +1015,11 @@ void ASmallEnemy::Receive_GroundPound_Pure(const FVector& PoundDirection, const 
 
 	Delegate_StunnedLand.BindUObject(this, &ASmallEnemy::StunnedLand);
 	Delegate_LaunchedLand.BindUObject(this, &ASmallEnemy::LandedLaunched);
+
+	// If stunned, delete the stunned effect
+	if (TimerManager.IsTimerActive(TH_RedetermineIncapacitate)) {
+		DeleteStunnedEffect();
+	}
 }
 
 void ASmallEnemy::Receive_LeewayPause_Pure(float Pausetime)
@@ -1026,9 +1084,15 @@ void ASmallEnemy::Receive_Pogo_GroundPound_Pure()
 	m_State = EEnemyState::STATE_None;
 
 	GetCharacterMovement()->AddImpulse(Direction * PB_Groundpound_LaunchStrength, true);
-
+	Execute_Receive_Pogo_GroundPound(this);
 	// Particles
 	//UNiagaraFunctionLibrary::SpawnSystemAtLocation()
+}
+
+void ASmallEnemy::IA_Receive_Pogo_Pure()
+{
+	Incapacitate(EAIIncapacitatedType::Stunned, 0.3f);
+	Execute_IA_Receive_Pogo(this);
 }
 
 void ASmallEnemy::PrintState()

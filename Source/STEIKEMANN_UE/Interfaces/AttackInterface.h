@@ -38,12 +38,12 @@ public:
 	virtual void ResetCanbeDamaged() { bAICanBeDamaged = true; }
 	virtual bool CanBeAttacked() = 0;
 	virtual void Gen_Attack(IAttackInterface* OtherInterface, AActor* OtherActor, const EAttackType AType){}
-	UFUNCTION(BlueprintNativeEvent, Category = "Attack|GenAttack")
+	UFUNCTION(BlueprintNativeEvent, Category = "AttackInterface|GenAttack")
 		void Gen_ReceiveAttack_IMPL(const FVector& Dircetion, const float Strength, const EAttackType AType);
 	virtual void Gen_ReceiveAttack(const FVector Direction, const float Strength, const EAttackType AType, const float Delaytime = -1.f){}
 	FTimerHandle TH_Gen_ReceiveAttackDelay;
 
-	UFUNCTION(BlueprintNativeEvent, Category = "Attack|SmackAttack")
+	UFUNCTION(BlueprintNativeEvent, Category = "AttackInterface|SmackAttack")
 		void SmackAttack();
 	//virtual void Do_SmackAttack_Pure(const FVector& Direction, const float& AttackStrength) = 0;
 	virtual void Do_SmackAttack_Pure(IAttackInterface* OtherInterface, AActor* OtherActor){}
@@ -52,21 +52,26 @@ public:
 	virtual void ResetCanBeSmackAttacked(){}
 
 
-	UFUNCTION(BlueprintNativeEvent, Category = "Attack|GroundPound")
+	UFUNCTION(BlueprintNativeEvent, Category = "AttackInterface|GroundPound")
 		void GroundPound();
 	virtual void Do_GroundPound_Pure(IAttackInterface* OtherInterface, AActor* OtherActor){}
 	virtual void Receive_GroundPound_Pure(const FVector& PoundDirection, const float& GP_Strength) {}
+	UFUNCTION(BlueprintNativeEvent, Category = "AttackInterface|GroundPound")
+		void Receive_Pogo_GroundPound();
 	virtual void Receive_Pogo_GroundPound_Pure(){}
 
+	UFUNCTION(BlueprintNativeEvent, Category = "AttackInterface|Pogo")
+		void IA_Receive_Pogo();
+	virtual void IA_Receive_Pogo_Pure(){}
 
 	FTimerHandle TH_IAttack_LeewayPause;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AttackInterface|Grapplehook")
 		float AttackInterface_LeewayPause_Time{ 1.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AttackInterface|Grapplehook")
 		float AttackInterface_LeewayPause_Timedilation{ 0.35f };
-	UFUNCTION(BlueprintNativeEvent, Category = "Attack|Stun")
+	UFUNCTION(BlueprintNativeEvent, Category = "AttackInterface|Stun")
 		void Receive_LeewayPause();
-	UFUNCTION(BlueprintNativeEvent, Category = "Attack|Stun")
+	UFUNCTION(BlueprintNativeEvent, Category = "AttackInterface|Stun")
 		void Cause_LeewayPause();
 	virtual void Cause_LeewayPause_Pure(float Pausetime) {}
 	virtual void Receive_LeewayPause_Pure(float Pausetime) {}

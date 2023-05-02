@@ -228,7 +228,7 @@ private: // Gravity
 #pragma endregion //States
 public:
 	void RotateActorYawToVector(FVector AimVector, float DeltaTime = -1.f);
-
+	virtual bool ShroomBounce(FVector direction, float strength) override;
 #pragma region Wall Mechanics
 public:
 	UWallDetectionComponent* WallDetector{ nullptr };
@@ -312,6 +312,16 @@ public:	// Visual effects
 		void LC_SpawnEffect(float Time, float VelocityMultiplier, FVector SurfaceNormal, FVector SurfaceLocation);
 	UFUNCTION(BlueprintCallable)
 		void LC_GetEffectLocation(FVector& SurfaceLocation, FVector& SurfaceNormal);
+
+	UFUNCTION(BlueprintImplementableEvent)
+		void SpawnStunnedEffect(float lifetime);
+	UFUNCTION(BlueprintImplementableEvent)
+		void DeleteStunnedEffect();
+
+	UFUNCTION(BlueprintImplementableEvent)
+		void Effect_StuckToThornwall_Start();
+	UFUNCTION(BlueprintImplementableEvent)
+		void Effect_StuckToThornwall_End();
 #pragma endregion //LaunchedCollision
 #pragma region GrappleHooked
 public: 
@@ -427,7 +437,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Pogo")
 		float PB_Groundpound_LaunchStrength{ 1200.f };
 public:
-	void Receive_Pogo_GroundPound_Pure() override;
+	virtual void Receive_Pogo_GroundPound_Pure() override;
+	virtual void IA_Receive_Pogo_Pure() override;
+	//UFUNCTION(BlueprintImplementableEvent)
+		//void Receive_Pogo();
+
 #pragma endregion			//Pogo
 #pragma region Bounce
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

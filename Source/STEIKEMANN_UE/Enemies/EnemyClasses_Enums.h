@@ -12,6 +12,16 @@ enum class EGravityState : int8
 	LerpToNone,
 	ForcedNone
 };
+UENUM(BlueprintType)
+enum class EEnemyAnimState : uint8
+{
+	Idle_Run,
+	Launched,
+	SpottingPlayer,
+	Sleeping,
+	Stunned,
+	StuckToThornbush
+};
 UENUM()
 enum class EEnemyState : int8
 {

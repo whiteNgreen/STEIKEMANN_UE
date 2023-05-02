@@ -43,7 +43,7 @@ void AEnemySpawner::BeginPlay()
 		SpawnData = MakeShared<SpawnPointData>();
 		SpawnData->Location = GetActorLocation();
 		SpawnData->Radius_Max = SpawnerActiveRadius;
-		SpawnData->Radius_Min = SpawnerMinRadius;
+		//SpawnData->Radius_Min = SpawnerMinRadius;
 		SpawnData->IdleLocation = IdlePoint->GetComponentLocation();
 	}
 

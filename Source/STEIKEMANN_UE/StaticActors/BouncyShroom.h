@@ -43,7 +43,8 @@ private:
 	FVector ShroomLocation;
 public:
 	bool GetBounceInfo(const FVector actorLocation, const FVector normalImpulse, const FVector IncommingDirection, FVector& OUT_direction, float& OUT_strength);
-
+	UFUNCTION(BlueprintImplementableEvent)
+		void ShroomBounce_Impl();
 	UFUNCTION(BlueprintCallable)
 		void DrawProjectedBouncePath(float time, float drawtime, float GravityMulti);
 };

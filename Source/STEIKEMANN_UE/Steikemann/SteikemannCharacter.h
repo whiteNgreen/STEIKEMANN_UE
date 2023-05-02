@@ -655,7 +655,7 @@ private:
 	bool PB_Passive_IMPL(AActor* OtherActor);
 	void PB_Launch_Passive();
 
-	void PB_Active_IMPL();
+	void PB_Active_IMPL(AActor* PogoedActor);
 	void PB_Launch_Active();
 
 	bool PB_Groundpound_IMPL(AActor* OtherActor);
@@ -930,7 +930,8 @@ public:	// Animation functions
 	// For the control rig 
 	FVector GH_GetTargetLocation() const;
 	bool bGH_LerpControlRig{};
-	virtual void StartAnimLerp_ControlRig() override;
+
+	virtual void StartAnimLerp_ControlRig() override;	// Called in animation montages
 
 public: // Aiming and Visual Aid 
 	
@@ -940,7 +941,10 @@ public: // Aiming and Visual Aid
 		FVector2D GH_GrappleSmackAiming_MNK_Multiplier = FVector2D(1.f);
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|DynamicGround")
 		FVector2D GH_GrappleSmackAiming_MNK_CameraWeight = FVector2D(1.f);
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|DynamicGround")
+		FVector2D GH_GrappleSmackAimingVector_Default;
 	FVector2D GH_GrappleSmackAimingVector;
+	void GH_SetInitialGrappleSmackAimingVector(FVector GrappledActorLocation);
 
 	UFUNCTION(BlueprintImplementableEvent)
 		void GH_GrappleDynamic_Start();
