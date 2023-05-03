@@ -48,4 +48,10 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 		float PlayerDistanceCheck() const;
+
+	UFUNCTION(BlueprintCallable)
+		FVector GetPlayerCameraLocation() const;
+
+	UFUNCTION(BlueprintCallable)
+		float ExponentStrength(float x, float Top, float Bot);
 };

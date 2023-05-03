@@ -850,7 +850,7 @@ void ASteikemannCharacter::GH_PreLaunch_Static(void(ASteikemannCharacter::* Laun
 		},
 		GrappleDrag_PreLaunch_Timer_Length, false);
 	TimerManager.SetTimer(TH_Grapplehook_Start, this, LaunchFunction, GrappleDrag_PreLaunch_Timer_Length);
-
+	
 	// End GrappleHook Timer
 	TimerManager.SetTimer(TH_Grapplehook_End_Launch, this, &ASteikemannCharacter::GH_Stop, GrappleDrag_PreLaunch_Timer_Length + GrappleHook_PostLaunchTimer);
 
@@ -1025,7 +1025,7 @@ void ASteikemannCharacter::PullDynamicTargetOffWall()
 	FTimerHandle stopcontrolrig;
 	TimerManager.SetTimer(stopcontrolrig, this, &ASteikemannCharacter::GH_StopControlRig, GrappleDrag_PreLaunch_Timer_Length + (GrappleHook_PostLaunchTimer * 0.3));
 	//
-	//TimerManager.ClearTimer(TH_Grapplehook_Start);
+	TimerManager.ClearTimer(TH_Grapplehook_Start);
 	//TimerManager.ClearTimer(TH_Grapplehook_Pre_Launch);
 	//TimerManager.ClearTimer(TH_Grapplehook_End_Launch);
 
@@ -2148,7 +2148,6 @@ bool ASteikemannCharacter::Do_Pogo(const FHitResult& Hit)
 	// Collision with Pogo Target
 	if (itag->HasMatchingGameplayTag(Tag::PogoTarget())/* && OtherComp->IsA(UCapsuleComponent::StaticClass())*/)
 	{
-		PRINTPARLONG(2.f, "Do Pogo on %s", *Hit.GetActor()->GetName());
 		m_PogoTarget = OtherActor;
 		PB_Pogo();
 		if (m_EState == EState::STATE_Attacking && m_EAttackState == EAttackState::GroundPound)
@@ -2903,7 +2902,7 @@ void ASteikemannCharacter::OnCapsuleComponentBeginOverlap(UPrimitiveComponent* O
 	//	m_PogoTarget = OtherActor;
 	//	PB_Pogo();
 		if (m_EState == EState::STATE_Attacking && m_EAttackState == EAttackState::GroundPound && m_EAttackType == EAttackType::GroundPound) {
-			PRINTLONG(1.5f, "Overlap Groundpound pogo");
+			//PRINTLONG(1.5f, "Overlap Groundpound pogo");
 			if (PB_Groundpound_IMPL(OtherActor))
 				return;
 		}
@@ -3551,7 +3550,7 @@ void ASteikemannCharacter::Launch_GroundPound()
 	//if (bPB_Groundpound_PredeterminedPogoHit) {
 	//bPB_Groundpound_PredeterminedPogoHit = PB_Groundpound_Predeterminehit();
 	if (PB_Groundpound_Predeterminehit()) {
-		PRINTLONG(1.5f, "PB_Groundpound Predetermined Hit");
+		//PRINTLONG(1.5f, "PB_Groundpound Predetermined Hit");
 		GetMoveComponent()->m_GravityMode = EGravityMode::Default;
 		PB_Groundpound_IMPL(PB_Groundpound_TargetActor);
 		return;

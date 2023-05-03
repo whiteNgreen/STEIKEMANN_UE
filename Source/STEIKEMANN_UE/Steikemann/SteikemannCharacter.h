@@ -555,7 +555,7 @@ public:/* ------------------- Basic Movement ------------------- */
 		void Anim_Activate_Jump();
 	UFUNCTION(BlueprintImplementableEvent)
 		void Anim_Activate_DoubleJump();
-	UFUNCTION(BlueprintImplementableEvent)
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 		void Anim_Land();
 
 	bool CanDoubleJump() const;

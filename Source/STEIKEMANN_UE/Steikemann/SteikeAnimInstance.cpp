@@ -41,7 +41,6 @@ void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		/* Grappling */
 		bGrappling = SteikeOwner->IsGrappling();
 		GrappledTarget = SteikeOwner->GH_GetTargetLocation();
-		bGrappling ? PRINT("bGrappling = true") : PRINT("bGrappling = false");
 		//GrappledTarget = SteikeOwner->Active_GrappledActor_Location;
 		bControlRigLerp = SteikeOwner->bGH_LerpControlRig;
 		ControlRig_LeafAlpha = FMath::FInterpTo(ControlRig_LeafAlpha, (float)bControlRigLerp, DeltaSeconds, 33.f);

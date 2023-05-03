@@ -4,6 +4,7 @@
 #include "PlayerDistanceCheck_Component.h"
 #include "../WorldStatics/SteikeWorldStatics.h"
 #include "../DebugMacros.h"
+#include "BaseClasses/StaticVariables.h"
 
 // Sets default values for this component's properties
 UPlayerDistanceCheck_Component::UPlayerDistanceCheck_Component()
@@ -59,5 +60,15 @@ float UPlayerDistanceCheck_Component::PlayerDistanceCheck() const
 {
 	return FVector::DistSquared(GetOwner()->GetActorLocation(), SteikeWorldStatics::CameraLocation);
 
+}
+
+FVector UPlayerDistanceCheck_Component::GetPlayerCameraLocation() const
+{
+	return SteikeWorldStatics::CameraLocation;
+}
+
+float UPlayerDistanceCheck_Component::ExponentStrength(float x, float Top, float Bot)
+{
+	return -FMath::Exp(-FMath::Pow(-x, Bot) * Top) + 1.f;
 }
 
