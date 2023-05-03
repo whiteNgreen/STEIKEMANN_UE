@@ -295,17 +295,17 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		case EPogoType::POGO_None:
 			break;
 		case EPogoType::POGO_Passive:
-			PB_Passive_IMPL(m_PogoTarget);
+			//PB_Passive_IMPL(m_PogoTarget);
 			break;
 		case EPogoType::POGO_Active:
-			PB_Active_IMPL(m_PogoTarget);
+			//PB_Active_IMPL(m_PogoTarget);
 			break;
 		default:
 			break;
 		}
 
 		if (m_EAirState == EAirState::AIR_Pogo) break;
-		if (wall && m_WallState == EOnWallState::WALL_None)
+		if (wall && m_WallState == EOnWallState::WALL_None && m_EAttackState != EAttackState::GroundPound)
 		{
 			// Detect ledge & Ledge Grab
 			if (WallDetector->DetectLedge(m_Ledgedata, this, GetActorLocation(), GetActorUpVector(), m_Walldata, LedgeGrab_Height, LedgeGrab_Inwards))
@@ -361,11 +361,11 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		}
 		break;
 	case EState::STATE_Grappling:
-		if (m_EPogoType == EPogoType::POGO_Passive)
-		{
-			PB_Passive_IMPL(m_PogoTarget);
-			break;
-		}
+		//if (m_EPogoType == EPogoType::POGO_Passive)
+		//{
+		//	PB_Passive_IMPL(m_PogoTarget);
+		//	break;
+		//}
 		break;
 	default:
 		break;
@@ -1858,6 +1858,8 @@ void ASteikemannCharacter::Landed(const FHitResult& Hit)
 		DeathDelegate_Land.Unbind();
 		return;
 	}
+	if (Do_Pogo(Hit))
+		return;
 
 	switch (m_EState)
 	{
@@ -1866,15 +1868,18 @@ void ASteikemannCharacter::Landed(const FHitResult& Hit)
 	case EState::STATE_OnGround:
 		break;
 	case EState::STATE_InAir:
-		if (m_EAirState == EAirState::AIR_Pogo)
-			return;
-		Anim_Land();
+		//if (Do_Pogo(Hit)) 
+		//	return;
+		//if (m_EAirState == EAirState::AIR_Pogo)
+		//	return;
 		break;
 	case EState::STATE_OnWall:
 		break;
 	case EState::STATE_Attacking:
-		if (bPB_Groundpound_PredeterminedPogoHit)
-			return;
+		//if (bPB_Groundpound_PredeterminedPogoHit)
+		//	return;
+		//if (Do_Pogo(Hit))
+		//	return;
 		if (m_EAttackState == EAttackState::GroundPound)
 		{
 			if (IsGroundPounding()) {
@@ -1891,7 +1896,7 @@ void ASteikemannCharacter::Landed(const FHitResult& Hit)
 	OnLanded(Hit);
 	LandedDelegate.Broadcast(Hit);
 
-	bPB_Groundpound_PredeterminedPogoHit = false;
+	//bPB_Groundpound_PredeterminedPogoHit = false;
 
 	if (Delegate_GrappleEnemyOnLand.IsBound()) {
 		m_EState = EState::STATE_OnGround;
@@ -1932,12 +1937,12 @@ void ASteikemannCharacter::Jump()
 		}
 		case EState::STATE_InAir:	// Double Jump
 		{
-			if (m_EPogoType != EPogoType::POGO_Leave)
-				if (PB_Active_TargetDetection())
-				{
-					m_EPogoType = EPogoType::POGO_Active;
-					break;
-				}
+			//if (m_EPogoType != EPogoType::POGO_Leave)
+			if (PB_Active_TargetDetection())
+			{
+				PB_Active_IMPL(PB_Active_PogoTarget);
+				return;
+			}
 
 			if (GetMoveComponent()->IsFalling() && JumpCurrentCount == 0)
 			{
@@ -2100,13 +2105,13 @@ bool ASteikemannCharacter::PB_TargetBeneath()
 
 bool ASteikemannCharacter::PB_ValidTargetDistance(const FVector OtherActorLocation)
 {
-	float PlayerZ = (GetActorLocation().Z - GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
-	if (PlayerZ < OtherActorLocation.Z)
-		return false;
-
 	FVector Direction2D = FVector(OtherActorLocation - GetActorLocation());
 	Direction2D.Z = 0.f;
 	const bool Valid2D = Direction2D.Size() <= PB_Max2DTargetDistance;
+	
+	float PlayerZ = (GetActorLocation().Z - GetCapsuleComponent()->GetScaledCapsuleHalfHeight() * 0.7f);
+	if (PlayerZ < OtherActorLocation.Z && Valid2D)
+		return false;
 
 	float LengthToEnemy = GetActorLocation().Z - OtherActorLocation.Z;
 	float Difference = (GetCapsuleComponent()->GetScaledCapsuleHalfHeight()) + (PB_TargetLengthContingency);
@@ -2120,20 +2125,84 @@ bool ASteikemannCharacter::PB_ValidTargetDistance(const FVector OtherActorLocati
 bool ASteikemannCharacter::PB_Active_TargetDetection()
 {
 	FCollisionShape capsule = FCollisionShape::MakeCapsule(PB_ActiveDetection_CapsuleRadius, PB_ActiveDetection_CapsuleHalfHeight);
-
 	FVector location = GetActorLocation() - FVector(0, 0, PB_ActiveDetection_CapsuleZLocation);
 	FHitResult Hit;
 	FCollisionQueryParams Params("", false, this);
-	bool b = GetWorld()->SweepSingleByChannel(Hit, location, location, FQuat(1, 0, 0, 0), ECC_PogoCollision, capsule, Params);
+	if (GetWorld()->SweepSingleByChannel(Hit, GetActorLocation(), location, FQuat(), ECC_PogoCollision, capsule, Params)) {
+		PB_Active_PogoTarget = Hit.GetActor();
+		return true;
+	}
+	PB_Active_PogoTarget = nullptr;
+	return false;
+}
+
+bool ASteikemannCharacter::Do_Pogo(const FHitResult& Hit)
+{
+	bool b{};
+	if (m_EAirState == EAirState::AIR_Pogo) 
+		return true;
+	AActor* OtherActor = Hit.GetActor();
+	UPrimitiveComponent* OtherComp = Hit.GetComponent();
+	IGameplayTagAssetInterface* itag = Cast<IGameplayTagAssetInterface>(OtherActor);
+	if (!itag) { return false; }
+	// Collision with Pogo Target
+	if (itag->HasMatchingGameplayTag(Tag::PogoTarget())/* && OtherComp->IsA(UCapsuleComponent::StaticClass())*/)
+	{
+		PRINTPARLONG(2.f, "Do Pogo on %s", *Hit.GetActor()->GetName());
+		m_PogoTarget = OtherActor;
+		PB_Pogo();
+		if (m_EState == EState::STATE_Attacking && m_EAttackState == EAttackState::GroundPound)
+			if (PB_Groundpound_IMPL(OtherActor))
+				return true;
+		switch (m_EPogoType)
+		{
+		case EPogoType::POGO_None:
+			break;
+		case EPogoType::POGO_Passive:
+			PB_Passive_IMPL(Hit);
+			b = true;
+			break;
+		case EPogoType::POGO_Active:
+			PB_Active_IMPL(OtherActor);
+			b = true;
+			break;
+		case EPogoType::POGO_Groundpound:
+			PB_Groundpound_IMPL(OtherActor);
+			b = true;
+			break;
+		case EPogoType::POGO_Leave:
+			break;
+		default:
+			break;
+		}
+		m_EPogoType = EPogoType::POGO_Leave;
+	}
 	return b;
+}
+
+void ASteikemannCharacter::PB_Pogo()
+{
+	m_EPogoType = EPogoType::POGO_Passive;
+	if (m_EAttackState == EAttackState::GroundPound) {
+		m_EPogoType = EPogoType::POGO_Groundpound;
+	}
+}
+
+void ASteikemannCharacter::PB_EnterPogoState(float time)
+{
+	m_EAirState = EAirState::AIR_Pogo;
+	//bPB_Groundpound_LaunchNextFrame = false;
+	//bPB_Groundpound_PredeterminedPogoHit = false;
+	TimerManager.SetTimer(TH_Pogo, [this]() { m_EAirState = EAirState::AIR_Freefall;  }, time, false);
 }
 
 bool ASteikemannCharacter::PB_Passive_IMPL(AActor* OtherActor)
 {
 	if (!OtherActor) return false;
 	// Validate Distance
-	if (!PB_ValidTargetDistance(OtherActor->GetActorLocation()))	
+	if (!PB_ValidTargetDistance(OtherActor->GetActorLocation())) {
 		return false;
+	}
 	if (GetCharacterMovement()->Velocity.Z > 0.f)
 		return false;
 
@@ -2153,6 +2222,30 @@ bool ASteikemannCharacter::PB_Passive_IMPL(AActor* OtherActor)
 	return true;
 }
 
+bool ASteikemannCharacter::PB_Passive_IMPL(const FHitResult& Hit)
+{
+	if (GetCharacterMovement()->Velocity.Z > 0.f)
+		return false;
+
+	//if (Hit.ImpactPoint.Z > (GetActorLocation().Z - GetCapsuleComponent()->GetScaledCapsuleHalfHeight() * 0.7f))
+	//	return false;
+
+	// Launch Passive Pogo
+	PB_EnterPogoState(PB_StateTimer_Passive);
+	PB_Launch_Passive();
+
+	// Animation
+	Anim_Pogo_Passive();
+
+	// Affect Pogo Target
+	IAttackInterface* iattack = Cast<IAttackInterface>(Hit.GetActor());
+	if (iattack) {
+		iattack->IA_Receive_Pogo_Pure();
+	}
+
+	return true;
+}
+
 void ASteikemannCharacter::PB_Launch_Passive()
 {
 	FVector Direction = GetCharacterMovement()->Velocity.GetSafeNormal2D();
@@ -2161,10 +2254,15 @@ void ASteikemannCharacter::PB_Launch_Passive()
 	GetCharacterMovement()->Velocity *= 0.f;
 	GetCharacterMovement()->AddImpulse((FVector::UpVector * PB_LaunchStrength_Z_Passive) + (Direction * PB_LaunchStrength_MultiXY_Passive), true);
 
+	if (!TimerManager.IsTimerActive(TH_Pogo_NoCollision)) {
+		DisableCollisions();
+		TimerManager.SetTimer(TH_Pogo_NoCollision, this, &ABaseCharacter::EnableCollisions, 0.1f);
+	}
 }
 
 void ASteikemannCharacter::PB_Active_IMPL(AActor* PogoedActor)
 {
+	if (!PogoedActor) return;
 	m_EAirState = EAirState::AIR_Pogo;
 	m_EPogoType = EPogoType::POGO_Leave;
 	//TimerManager.ClearTimer(TH_Pogo);
@@ -2187,22 +2285,28 @@ void ASteikemannCharacter::PB_Launch_Active()
 {
 	FVector direction = FVector((FVector::UpVector * (1.f - (m_InputVector.Size() * PB_InputMulti_Active))) + (m_InputVector * PB_InputMulti_Active)).GetSafeNormal();
 	GetMoveComponent()->PB_Launch_Active(direction, PB_LaunchStrength_Active);
+	if (!TimerManager.IsTimerActive(TH_Pogo_NoCollision)) {
+		DisableCollisions();
+		TimerManager.SetTimer(TH_Pogo_NoCollision, this, &ABaseCharacter::EnableCollisions, 0.1f);
+	}
 }
 
 bool ASteikemannCharacter::PB_Groundpound_IMPL(AActor* OtherActor)
 {
-	if (!PB_ValidTargetDistance(OtherActor->GetActorLocation()) && !bPB_Groundpound_LaunchNextFrame)
-		return false;
-
-	if (IAttackInterface* IAttack = Cast<IAttackInterface>(OtherActor))
-		IAttack->Receive_Pogo_GroundPound_Pure();
+	if (!OtherActor) return false;
+	//if (m_EPogoType == EPogoType::POGO_Leave)
+		//return true;
+	//if (!PB_ValidTargetDistance(OtherActor->GetActorLocation()) && !bPB_Groundpound_LaunchNextFrame)
+	//	return false;
 
 	JumpCurrentCount = 1;	// Resets double jump
 	PB_EnterPogoState(PB_StateTimer_Groundpound);
 	PB_Launch_Groundpound();
 	ResetState();
 	m_EAttackState = EAttackState::None;
-	m_EPogoType = EPogoType::POGO_None;
+	m_EAttackType = EAttackType::None;
+	m_EPogoType = EPogoType::POGO_Leave;
+	TimerManager.SetTimer(TH_Pogo, [this]() { m_EPogoType = EPogoType::POGO_None; }, 0.5f, false);
 	if (IAttackInterface* iattack = Cast<IAttackInterface>(OtherActor)) {
 		iattack->Receive_Pogo_GroundPound_Pure();
 	}
@@ -2217,6 +2321,10 @@ void ASteikemannCharacter::PB_Launch_Groundpound()
 	FVector Direction = ((FVector::UpVector * (1.f - PB_InputMulti_Groundpound)) + (m_InputVector * PB_InputMulti_Groundpound)).GetSafeNormal();
 	GetCharacterMovement()->AddImpulse(Direction * PB_LaunchStrength_Groundpound, true);	// Simple method of bouncing player atm
 	Anim_Activate_Jump();	// Anim_Pogo-Groundpound 
+	//if (!TimerManager.IsTimerActive(TH_Pogo_NoCollision)) {
+	//	DisableCollisions();
+	//	TimerManager.SetTimer(TH_Pogo_NoCollision, this, &ABaseCharacter::EnableCollisions, 0.1f);
+	//}
 }
 
 bool ASteikemannCharacter::PB_Groundpound_Predeterminehit()
@@ -2224,15 +2332,15 @@ bool ASteikemannCharacter::PB_Groundpound_Predeterminehit()
 	FCollisionQueryParams Params("", false, this);
 
 	// Air Target
-	float capWidth{ 1.5f };
+	float capWidth{ 1.8f };
 	FCollisionShape Cap = FCollisionShape::MakeCapsule(GetCapsuleComponent()->GetScaledCapsuleRadius() * capWidth, GetCapsuleComponent()->GetScaledCapsuleHalfHeight() * capWidth);
 	TArray<FHitResult> AirHits;
-	bool air = GetWorld()->SweepMultiByChannel(AirHits, GetActorLocation(), GetActorLocation(), FQuat(1.f, 0.f, 0.f, 0.f), ECC_PogoCollision, Cap, Params);
+	bool air = GetWorld()->SweepMultiByChannel(AirHits, GetActorLocation(), GetActorLocation() + FVector::DownVector, FQuat(), ECC_PogoCollision, Cap, Params);
 	if (air) {
 		for (const auto& Hit : AirHits) {
 			if (IGameplayTagAssetInterface* tag = Cast<IGameplayTagAssetInterface>(Hit.GetActor())) {
-				if (tag->HasMatchingGameplayTag(Tag::Enemy())) {
-					bPB_Groundpound_LaunchNextFrame = true;
+				if (tag->HasMatchingGameplayTag(Tag::PogoTarget())) {
+					//bPB_Groundpound_LaunchNextFrame = true;
 					PB_Groundpound_TargetActor = Hit.GetActor();
 					return true;
 				}
@@ -2240,38 +2348,38 @@ bool ASteikemannCharacter::PB_Groundpound_Predeterminehit()
 		}
 	}
 
-	// Ground
-	FHitResult GroundHit;
-	FCollisionShape SweepSphere = FCollisionShape::MakeSphere(GetCapsuleComponent()->GetScaledCapsuleRadius());
-	bool ground = GetWorld()->SweepSingleByChannel(GroundHit, GetActorLocation() + FVector(0,0, 150.f), GetActorLocation() - FVector(0, 0, 1000.f), FQuat(), ECC_WorldStatic, SweepSphere, Params);
-	if (!ground)
-	{
-		ground = GetWorld()->SweepSingleByChannel(GroundHit, GetActorLocation() + FVector(0, 0, 150.f), GetActorLocation() - FVector(0, 0, 1000.f), FQuat(), ECC_PogoCollision, SweepSphere, Params);
-		if (!ground)
-			return false;
-	}
-	if (IGameplayTagAssetInterface* ITag = Cast<IGameplayTagAssetInterface>(GroundHit.GetActor()))
-	{
-		FGameplayTagContainer tags;
-		ITag->GetOwnedGameplayTags(tags);
-		if (tags.HasTag(Tag::PogoTarget())) {
-			m_PogoTarget = GroundHit.GetActor();
-			return true;
-		}
-	}
-
-	// Pogo targets near ground location
-	FCollisionShape capsule = FCollisionShape::MakeCapsule(GetCapsuleComponent()->GetScaledCapsuleRadius(), GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
-	TArray<FHitResult> CapHits;
-	const bool pogotarget = GetWorld()->SweepMultiByChannel(CapHits, GroundHit.ImpactPoint, GetActorForwardVector(), FQuat(1, 0, 0, 0), ECC_PogoCollision, capsule, Params);
-	if (!pogotarget) return false;
-
-
-	for (const auto& it : CapHits)
-		if (ValidLengthToCapsule(it.ImpactPoint, GroundHit.ImpactPoint, capsule.GetCapsuleHalfHeight(), capsule.GetCapsuleRadius())) {
-			m_PogoTarget = it.GetActor();
-			return true;
-		}
+	//// Ground
+	//FHitResult GroundHit;
+	//FCollisionShape SweepSphere = FCollisionShape::MakeSphere(GetCapsuleComponent()->GetScaledCapsuleRadius());
+	//bool ground = GetWorld()->SweepSingleByChannel(GroundHit, GetActorLocation() + FVector(0,0, 150.f), GetActorLocation() - FVector(0, 0, 1000.f), FQuat(), ECC_WorldStatic, SweepSphere, Params);
+	//if (!ground)
+	//{
+	//	ground = GetWorld()->SweepSingleByChannel(GroundHit, GetActorLocation() + FVector(0, 0, 150.f), GetActorLocation() - FVector(0, 0, 1000.f), FQuat(), ECC_PogoCollision, SweepSphere, Params);
+	//	if (!ground)
+	//		return false;
+	//}
+	//if (IGameplayTagAssetInterface* ITag = Cast<IGameplayTagAssetInterface>(GroundHit.GetActor()))
+	//{
+	//	FGameplayTagContainer tags;
+	//	ITag->GetOwnedGameplayTags(tags);
+	//	if (tags.HasTag(Tag::PogoTarget())) {
+	//		m_PogoTarget = GroundHit.GetActor();
+	//		return true;
+	//	}
+	//}
+	//
+	//// Pogo targets near ground location
+	//FCollisionShape capsule = FCollisionShape::MakeCapsule(GetCapsuleComponent()->GetScaledCapsuleRadius(), GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
+	//TArray<FHitResult> CapHits;
+	//const bool pogotarget = GetWorld()->SweepMultiByChannel(CapHits, GroundHit.ImpactPoint, GetActorForwardVector(), FQuat(1, 0, 0, 0), ECC_PogoCollision, capsule, Params);
+	//if (!pogotarget) return false;
+	//
+	//
+	//for (const auto& it : CapHits)
+	//	if (ValidLengthToCapsule(it.ImpactPoint, GroundHit.ImpactPoint, capsule.GetCapsuleHalfHeight(), capsule.GetCapsuleRadius())) {
+	//		m_PogoTarget = it.GetActor();
+	//		return true;
+	//	}
 
 	return false;
 }
@@ -2300,22 +2408,6 @@ bool ASteikemannCharacter::ValidLengthToCapsule(FVector HitLocation, FVector cap
 	return false;
 }
 
-void ASteikemannCharacter::PB_Pogo()
-{
-	if (m_EAttackState == EAttackState::GroundPound) {
-		m_EPogoType = EPogoType::POGO_Groundpound;
-		return;
-	}
-	m_EPogoType = EPogoType::POGO_Passive;
-}
-
-void ASteikemannCharacter::PB_EnterPogoState(float time)
-{
-	m_EAirState = EAirState::AIR_Pogo;
-	bPB_Groundpound_LaunchNextFrame = false;
-	bPB_Groundpound_PredeterminedPogoHit = false;
-	TimerManager.SetTimer(TH_Pogo, [this](){ m_EAirState = EAirState::AIR_Freefall;  }, time, false);
-}
 
 
 void ASteikemannCharacter::Dash_Start()
@@ -2797,6 +2889,8 @@ void ASteikemannCharacter::CancelOnWall()
 
 void ASteikemannCharacter::OnCapsuleComponentBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+	if (!OverlappedComp->IsA(UCapsuleComponent::StaticClass()))
+		return;
 	IGameplayTagAssetInterface* tag = Cast<IGameplayTagAssetInterface>(OtherActor);
 	if (!tag) { return; }
 
@@ -2806,23 +2900,40 @@ void ASteikemannCharacter::OnCapsuleComponentBeginOverlap(UPrimitiveComponent* O
 	// Collision with Pogo Target
 	if (tags.HasTag(Tag::PogoTarget()) && OtherComp->IsA(USphereComponent::StaticClass()))
 	{
-		m_PogoTarget = OtherActor;
-		PB_Pogo();
+	//	m_PogoTarget = OtherActor;
+	//	PB_Pogo();
+		if (m_EState == EState::STATE_Attacking && m_EAttackState == EAttackState::GroundPound && m_EAttackType == EAttackType::GroundPound) {
+			PRINTLONG(1.5f, "Overlap Groundpound pogo");
+			if (PB_Groundpound_IMPL(OtherActor))
+				return;
+		}
+	//	switch (m_EPogoType)
+	//	{
+	//	case EPogoType::POGO_None:
+	//		break;
+	//	case EPogoType::POGO_Passive:
+	//		PB_Passive_IMPL(SweepResult);
+	//		break;
+	//	case EPogoType::POGO_Active:
+	//		PB_Active_IMPL(OtherActor);
+	//		break;
+	//	case EPogoType::POGO_Groundpound:
+	//		PB_Groundpound_IMPL(OtherActor);
+	//		break;
+	//	case EPogoType::POGO_Leave:
+	//		break;
+	//	default:
+	//		break;
+	//	}
 	}
 	
 	/* Collision with collectible */
 	if (tags.HasTag(Tag::Collectible())) {
-		if (ACollectible* collectible = Cast<ACollectible>(OtherActor))
-		{
+		if (ACollectible* collectible = Cast<ACollectible>(OtherActor)){
 			ReceiveCollectible(collectible);
-			//ReceiveCollectible(collectible->CollectibleType);
-			//collectible->Destruction();
 		}
-		else if (ACollectible_Static* collectible_static = Cast<ACollectible_Static>(OtherActor))
-		{
+		else if (ACollectible_Static* collectible_static = Cast<ACollectible_Static>(OtherActor)){
 			ReceiveCollectible(collectible_static);
-			//ReceiveCollectible(collectible_static->CollectibleType);
-			//collectible_static->Destruction();
 		}
 	}
 
@@ -2848,14 +2959,14 @@ void ASteikemannCharacter::OnCapsuleComponentEndOverlap(UPrimitiveComponent* Ove
 	tag->GetOwnedGameplayTags(tags);
 
 	// Collision with Pogo Target
-	if (tags.HasTag(Tag::PogoTarget()))
-	{
-		if (OtherActor == m_PogoTarget && OtherComp->IsA(USphereComponent::StaticClass()))
-		{
-			if (m_EPogoType == EPogoType::POGO_None)
-				m_PogoTarget = nullptr;
-		}
-	}
+	//if (tags.HasTag(Tag::PogoTarget()))
+	//{
+	//	if (OtherActor == m_PogoTarget && OtherComp->IsA(USphereComponent::StaticClass()))
+	//	{
+	//		if (m_EPogoType == EPogoType::POGO_None)
+	//			m_PogoTarget = nullptr;
+	//	}
+	//}
 }
 
 void ASteikemannCharacter::OnCapsuleComponentHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
@@ -2868,6 +2979,41 @@ void ASteikemannCharacter::OnCapsuleComponentHit(UPrimitiveComponent* HitComp, A
 		if (bPlayerCanTakeDamage)
 			PTakeDamage(1, OtherActor);
 	}
+	// Collision with Pogo Target
+	//if (itag->HasMatchingGameplayTag(Tag::PogoTarget())/* && OtherComp->IsA(UCapsuleComponent::StaticClass())*/)
+	//{
+	//	if (m_EAirState == EAirState::AIR_Pogo)
+	//		return;
+	//	PRINTLONG(1.f, "Physicalhit: Pogotarget");
+	//	if (!(GetCharacterMovement()->Velocity.Z < 0.f && GetActorLocation().Z > OtherActor->GetActorLocation().Z))
+	//		return;
+
+	//	m_PogoTarget = OtherActor;
+	//	PB_Pogo();
+	//	if (/*m_EState == EState::STATE_Attacking && */m_EAttackState == EAttackState::GroundPound) {
+	//		PRINTLONG(1.f, "Physicalhit: Pogo Ground Pound");
+	//		if (PB_Groundpound_IMPL(OtherActor))
+	//			return;
+	//	}
+	//	switch (m_EPogoType)
+	//	{
+	//	case EPogoType::POGO_None:
+	//		break;
+	//	case EPogoType::POGO_Passive:
+	//		PB_Passive_IMPL(Hit);
+	//		break;
+	//	case EPogoType::POGO_Active:
+	//		PB_Active_IMPL(OtherActor);
+	//		break;
+	//	case EPogoType::POGO_Groundpound:
+	//		PB_Groundpound_IMPL(OtherActor);
+	//		break;
+	//	case EPogoType::POGO_Leave:
+	//		break;
+	//	default:
+	//		break;
+	//	}
+	//}
 }
 
 void ASteikemannCharacter::DrawDebugArms(const float& InputAngle)
@@ -3263,7 +3409,6 @@ void ASteikemannCharacter::OnAttackColliderBeginOverlap(UPrimitiveComponent* Ove
 		if (OverlappedComp == AttackCollider) { AType = EAttackType::SmackAttack; }
 		if (OverlappedComp == GroundPoundCollider) { AType = EAttackType::GroundPound; }
 
-		//AttackContactDelegate_Instigator.Broadcast();
 		AttackContactDelegate.Broadcast(OtherActor);
 		
 		/* Attacking a corruption core || Enemy Spawner || InkFlower*/
@@ -3308,7 +3453,6 @@ void ASteikemannCharacter::Gen_Attack(IAttackInterface* OtherInterface, AActor* 
 	//FVector Direction = FVector(Direction_ActorToActor.GetSafeNormal() + Direction_ComponentToActor.GetSafeNormal()).GetSafeNormal();
 	FVector Direction = Direction_ComponentToActor.GetSafeNormal();
 	OtherInterface->Gen_ReceiveAttack(Direction, SmackAttackStrength, AType);
-	DRAWLINE(Direction * 300.f, FColor::Red, 2.f);
 }
 
 void ASteikemannCharacter::TlCurve_AttackTurn_IMPL(float value)
@@ -3378,12 +3522,10 @@ void ASteikemannCharacter::UnClick_GroundPound()
 	bGroundPoundPress = false;
 }
 
-
 void ASteikemannCharacter::Do_GroundPound()
 {
 	if (IsGroundPounding() || IsOnGround() || m_EState == EState::STATE_OnGround) return;
 
-	bPB_Groundpound_PredeterminedPogoHit = PB_Groundpound_Predeterminehit();
 	m_WallState = EOnWallState::WALL_Leave;
 	m_EAttackType = EAttackType::GroundPound;
 
@@ -3393,27 +3535,29 @@ void ASteikemannCharacter::Do_GroundPound()
 	Start_GroundPound();
 }
 
-void ASteikemannCharacter::Launch_GroundPound()
-{
-	float strength = GP_VisualLaunchStrength;
-	if (bPB_Groundpound_LaunchNextFrame && PB_Groundpound_TargetActor) {
-		PB_Groundpound_IMPL(PB_Groundpound_TargetActor);
-		strength = 0.f;
-	}
-	GetMoveComponent()->GP_Launch(strength);
-}
-
 void ASteikemannCharacter::Start_GroundPound()
 {
 	m_EState = EState::STATE_Attacking;
 	m_EAttackState = EAttackState::GroundPound;
-
 	GetMoveComponent()->GP_PreLaunch();
-
 	TimerManager.SetTimer(THandle_GPHangTime, this, &ASteikemannCharacter::Launch_GroundPound, GP_PrePoundAirtime);
-
 	// Animation
 	Anim_GroundPound_Initial();
+}
+
+void ASteikemannCharacter::Launch_GroundPound()
+{
+	//if (bPB_Groundpound_LaunchNextFrame && PB_Groundpound_TargetActor) {
+	//if (bPB_Groundpound_PredeterminedPogoHit) {
+	//bPB_Groundpound_PredeterminedPogoHit = PB_Groundpound_Predeterminehit();
+	if (PB_Groundpound_Predeterminehit()) {
+		PRINTLONG(1.5f, "PB_Groundpound Predetermined Hit");
+		GetMoveComponent()->m_GravityMode = EGravityMode::Default;
+		PB_Groundpound_IMPL(PB_Groundpound_TargetActor);
+		return;
+	}
+	GetMoveComponent()->GP_Launch(GP_VisualLaunchStrength);
+	//float strength = GP_VisualLaunchStrength;
 }
 
 void ASteikemannCharacter::Deactivate_GroundPound()

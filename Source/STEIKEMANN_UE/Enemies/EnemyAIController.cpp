@@ -454,20 +454,16 @@ void AEnemyAIController::IncapacitateBegin()
 
 void AEnemyAIController::IncapacitateEnd()
 {
-	//PRINTLONG(2.f, "END STUNNED!!!");
 	m_AIIncapacitatedType = EAIIncapacitatedType::None;
 	m_PawnOwner->Post_IncapacitateDetermineState();
 }
 
 void AEnemyAIController::IncapacitateAI(const EAIIncapacitatedType& IncapacitateType, float Time/*, const ESmallEnemyAIState& NextState*/)
 {
-	if (Time > 0.f)
+	if (Time > 0.f && Time > TM_AI.GetTimerRemaining(TH_IncapacitateTimer))
 		TM_AI.SetTimer(TH_IncapacitateTimer, this, &AEnemyAIController::Post_Incapacitate_GettingSmacked, Time);
-	else
-		TM_AI.ClearTimer(TH_IncapacitateTimer);
 	SetState(ESmallEnemyAIState::Incapacitated);
 	m_AIIncapacitatedType = IncapacitateType;
-	//PRINTPARLONG(Time, "Incapacitated for %f seconds", Time);
 }
 
 void AEnemyAIController::ReDetermineState(const ESmallEnemyAIState& StateOverride)

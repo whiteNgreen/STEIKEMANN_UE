@@ -92,11 +92,9 @@ public: // Functions
 	FVector GetRandomLocationNearSpawn();
 #pragma endregion // SpawnRespawn
 	FTimerHandle TH_DisabledCollision;
-	void DisableCollisions();
 	/* Disables collisions for a period. Calling EnableCollisions() on timer end
 	 * TimerHandle TH_DisabledCollision */
 	void DisableCollisions(float time);
-	void EnableCollisions();
 
 	/**
 	* Timer delegate called on DisableCollisions(float time) to check if the current placement
@@ -436,6 +434,10 @@ public:
 		float PB_Groundpound_LaunchWallNormal{ 0.2f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Pogo")
 		float PB_Groundpound_LaunchStrength{ 1200.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Pogo")
+		float PB_Pogo_Passive_Stunduration{ 1.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Pogo")
+		float PB_Pogo_Groundpound_Stunduration{ 1.f };
 public:
 	virtual void Receive_Pogo_GroundPound_Pure() override;
 	virtual void IA_Receive_Pogo_Pure() override;

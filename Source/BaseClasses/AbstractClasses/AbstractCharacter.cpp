@@ -51,7 +51,14 @@ void ABaseCharacter::EndTick(float DeltaTime)
 	Delegate_ParticleUpdate.Broadcast(DeltaTime);
 	Delegate_MaterialUpdate.Broadcast(DeltaTime);
 }
-
+void ABaseCharacter::EnableCollisions()
+{
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+}
+void ABaseCharacter::DisableCollisions()
+{
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+}
 UNiagaraComponent* ABaseCharacter::CreateNiagaraComponent(FName Name, USceneComponent* Parent, FAttachmentTransformRules AttachmentRule, bool bTemp)
 {
 	UNiagaraComponent* TempNiagaraComp = NewObject<UNiagaraComponent>(this, Name);

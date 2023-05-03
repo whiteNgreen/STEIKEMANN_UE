@@ -67,6 +67,8 @@ public:
 	virtual void BeginDestroy() override;
 	virtual void Tick(float DeltaTime) override;
 	virtual void EndTick(float DeltaTime);
+	void EnableCollisions();
+	void DisableCollisions();
 
 	FTimerManager TimerManager;
 	FNextFrameDelegate Delegate_NextFrameDelegate;

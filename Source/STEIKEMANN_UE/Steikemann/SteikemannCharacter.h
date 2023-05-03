@@ -635,31 +635,36 @@ public:
 		float PB_InputMulti_Groundpound{ 0.05f };
 	
 private: // Within Collision bools
-	bool bPB_Groundpound_PredeterminedPogoHit{};
-	bool bPB_Groundpound_LaunchNextFrame{};
+	//bool bPB_Groundpound_PredeterminedPogoHit{};
+	//bool bPB_Groundpound_LaunchNextFrame{};
 	AActor* PB_Groundpound_TargetActor{ nullptr };
+	AActor* PB_Active_PogoTarget{ nullptr };
 
 	FTimerHandle TH_PB_ExitHandle; // Timer handle holding exit time. For validating buffering of PB_Active inputs
 	FTimerHandle TH_Pogo;
+	FTimerHandle TH_Pogo_NoCollision;
 
 public:	// Target detection
 	bool PB_TargetBeneath();
-	bool PB_ValidTargetDistance(const FVector OtherActorLocation);
+	bool PB_ValidTargetDistance(const FVector OtherActorLocation);	// Decrepid
 
 	bool PB_Active_TargetDetection();
 
 private:  
+	bool Do_Pogo(const FHitResult& Hit);
+
 	void PB_Pogo();
 	void PB_EnterPogoState(float time);
 
 	bool PB_Passive_IMPL(AActor* OtherActor);
+	bool PB_Passive_IMPL(const FHitResult& Hit);
 	void PB_Launch_Passive();
 
 	void PB_Active_IMPL(AActor* PogoedActor);
 	void PB_Launch_Active();
 
 	bool PB_Groundpound_IMPL(AActor* OtherActor);
-	bool PB_Groundpound_Predeterminehit();
+	bool PB_Groundpound_Predeterminehit();	// Decrepid
 	void PB_Launch_Groundpound();
 
 	void PB_Exit();

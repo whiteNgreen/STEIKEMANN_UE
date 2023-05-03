@@ -3,6 +3,7 @@
 
 #include "../Enemies/EnemyAnimInstance.h"
 #include "SmallEnemy.h"
+#include "../DebugMacros.h"
 
 void UEnemyAnimInstance::NativeBeginPlay()
 {
@@ -18,7 +19,7 @@ void UEnemyAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 	Velocity = Owner->GetVelocity();
 	Speed = Velocity.Length();
-
+	PRINTPAR("bPogoedOn = %i", bPogoedOn);
 	float dir = FVector::DotProduct(Velocity.GetSafeNormal(), Owner->GetActorForwardVector());
 	if (bIsLaunchedInAir) {
 		Launched_SpinAngle.Roll -= DeltaSeconds * (Launched_SpinSpeed * FMath::Sign(dir));

@@ -186,19 +186,12 @@ FVector ASmallEnemy::GetRandomLocationNearSpawn()
 	return location;
 }
 
-void ASmallEnemy::DisableCollisions()
-{
-	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-}
+
 void ASmallEnemy::DisableCollisions(float time)
 {
-	DisableCollisions();
+	ABaseCharacter::DisableCollisions();
 	TimerManager.SetTimer(TH_EnableCollision_PlacementCheck, this, &ASmallEnemy::ActorInvalidPlacement, time);
 	TimerManager.SetTimer(TH_DisabledCollision, this, &ASmallEnemy::EnableCollisions, time);
-}
-void ASmallEnemy::EnableCollisions()
-{
-	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 }
 
 void ASmallEnemy::ActorInvalidPlacement()
@@ -878,7 +871,7 @@ void ASmallEnemy::HookedPure(const FVector InstigatorLocation, bool OnGround, bo
 		SleepingEnd();
 
 		Delegate_StunnedLand.BindUObject(this, &ASmallEnemy::StunnedLand);
-		if (!GetCharacterMovement()->IsWalking())
+		if (!OnGround)
 			Delegate_LaunchedLand.BindUObject(this, &ASmallEnemy::LandedLaunched);
 	}
 }
@@ -1084,15 +1077,22 @@ void ASmallEnemy::Receive_Pogo_GroundPound_Pure()
 	m_State = EEnemyState::STATE_None;
 
 	GetCharacterMovement()->AddImpulse(Direction * PB_Groundpound_LaunchStrength, true);
+	Incapacitate(EAIIncapacitatedType::Stunned, PB_Pogo_Groundpound_Stunduration);
 	Execute_Receive_Pogo_GroundPound(this);
+	m_Anim->bPogoedOn = true;
+	FTimerHandle h;
+	TimerManager.SetTimer(h, [this]() { m_Anim->bPogoedOn = false; }, 0.5f, false);
 	// Particles
 	//UNiagaraFunctionLibrary::SpawnSystemAtLocation()
 }
 
 void ASmallEnemy::IA_Receive_Pogo_Pure()
 {
-	Incapacitate(EAIIncapacitatedType::Stunned, 0.3f);
+	Incapacitate(EAIIncapacitatedType::Stunned, PB_Pogo_Passive_Stunduration);
 	Execute_IA_Receive_Pogo(this);
+	m_Anim->bPogoedOn = true;
+	FTimerHandle h;
+	TimerManager.SetTimer(h, [this]() { m_Anim->bPogoedOn = false; }, 0.5f, false);
 }
 
 void ASmallEnemy::PrintState()
