@@ -130,8 +130,6 @@ bool ABaseCharacter::CheckStaticWorldBeneathCharacter(float LengthBeneath) const
 	FVector location = GetActorLocation() - below;
 
 	const bool b  = GetWorld()->SweepSingleByChannel(Hit, location, location, FQuat(1, 0, 0, 0), ECC_StaticWorldChannel, capsule, Params);
-	if (b)
-		DrawDebugCapsule(GetWorld(), location, capsule.GetCapsuleHalfHeight(), capsule.GetCapsuleRadius(), FQuat(1, 0, 0, 0), FColor::Red, false, 2.f, 0, 5.f);
 	return b;
 }
 

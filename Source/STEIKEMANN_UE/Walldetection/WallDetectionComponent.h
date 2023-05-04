@@ -29,7 +29,7 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 public:
-	void SetDebugStatus(bool b) { bShowDebug = b; }
+	//void SetDebugStatus(bool b) { bShowDebug = b; }
 
 	// Capusle size
 	void SetCapsuleSize(float radius, float halfheight) { m_capsule.SetCapsule(radius, halfheight); }
@@ -38,7 +38,7 @@ public:
 	void SetMinLengthToWall(float length) { m_MinLengthToWall = length; }
 
 private:
-	bool bShowDebug{};
+	//bool bShowDebug{};
 	FCollisionShape m_capsule;
 	float Angle_UpperLimit{  0.7f };
 	float Angle_LowerLimit{ -0.7f };

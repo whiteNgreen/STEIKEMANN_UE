@@ -41,23 +41,23 @@ bool UWallDetectionComponent::DetectWall(const AActor* actor, const FVector Loca
 	FCollisionQueryParams Params = FCollisionQueryParams("", false, actor);
 	bool b = GetWorld()->SweepMultiByChannel(Hits, Location, Location + ForwardVector, FQuat(1.f, 0, 0, 0), ECC_PlayerWallDetection, m_capsule, Params);
 
-	if (bShowDebug)
-		DrawDebugCapsule(GetWorld(), Location, m_capsule.GetCapsuleHalfHeight(), m_capsule.GetCapsuleRadius(), FQuat(1.f, 0, 0, 0), FColor(.3f, .3f, 1.f, 1.f), false, 0, 0, 1.f);
+	//if (bShowDebug)
+	//	DrawDebugCapsule(GetWorld(), Location, m_capsule.GetCapsuleHalfHeight(), m_capsule.GetCapsuleRadius(), FQuat(1.f, 0, 0, 0), FColor(.3f, .3f, 1.f, 1.f), false, 0, 0, 1.f);
 
 	if (!b) return false;
 	
-	if (bShowDebug)// Debug
-		for (const auto& it : Hits)
-			DrawDebugPoint(GetWorld(), it.ImpactPoint, 5.f, FColor::Blue, false, 1, 1);
+	//if (bShowDebug)// Debug
+		//for (const auto& it : Hits)
+			//DrawDebugPoint(GetWorld(), it.ImpactPoint, 5.f, FColor::Blue, false, 1, 1);
 
 	// Get Valid point on wall, used for WallJump and Ledgegrab
 	b = DetermineValidPoints_IMPL(Hits, Location);
 	if (!b) return false;
 	GetWallPoint_IMPL(walldata, Hits);
 
-	if (bShowDebug)// Debug
-		for (const auto& it : Hits)
-			DrawDebugPoint(GetWorld(), it.ImpactPoint, 7.f, FColor::Orange, false, 2, 1);
+	//if (bShowDebug)// Debug
+	//	for (const auto& it : Hits)
+	//		DrawDebugPoint(GetWorld(), it.ImpactPoint, 7.f, FColor::Orange, false, 2, 1);
 
 
 	// Get point valid for Wall Jump mechanic
@@ -70,10 +70,10 @@ bool UWallDetectionComponent::DetectWall(const AActor* actor, const FVector Loca
 	else WallJumpData.valid = false;
 
 
-	if (bShowDebug && WallJumpData.valid) {// Debug
-		DrawDebugPoint(GetWorld(), WallJumpData.Location, 12.f, FColor::Red, false, 0, 1);
-		DrawDebugLine(GetWorld(), WallJumpData.Location, WallJumpData.Location + WallJumpData.Normal * 50.f, FColor::Purple, false, 0, 1, 4.f);
-	}
+	//if (bShowDebug && WallJumpData.valid) {// Debug
+	//	DrawDebugPoint(GetWorld(), WallJumpData.Location, 12.f, FColor::Red, false, 0, 1);
+	//	DrawDebugLine(GetWorld(), WallJumpData.Location, WallJumpData.Location + WallJumpData.Normal * 50.f, FColor::Purple, false, 0, 1, 4.f);
+	//}
 
 	return true;
 }
@@ -85,24 +85,24 @@ bool UWallDetectionComponent::DetectStickyWall(const AActor* actor, const FVecto
 	//bool b = GetWorld()->SweepMultiByChannel(Hits, Location, Location + Forward, FQuat(1.f, 0, 0, 0), ECC_EnemyWallDetection, m_capsule, Params);
 	bool b = GetWorld()->SweepMultiByChannel(Hits, Location, Location + Forward, FQuat(1.f, 0, 0, 0), TraceChannel, m_capsule, Params);
 
-	if (bShowDebug)
-		DrawDebugCapsule(GetWorld(), Location, m_capsule.GetCapsuleHalfHeight(), m_capsule.GetCapsuleRadius(), FQuat(1.f, 0, 0, 0), FColor(.3f, .3f, 1.f, 1.f), false, 0, 0, 1.f);
+	//if (bShowDebug)
+	//	DrawDebugCapsule(GetWorld(), Location, m_capsule.GetCapsuleHalfHeight(), m_capsule.GetCapsuleRadius(), FQuat(1.f, 0, 0, 0), FColor(.3f, .3f, 1.f, 1.f), false, 0, 0, 1.f);
 
 	if (!b) return false;
 
-	if (bShowDebug)// Debug
-		for (const auto& it : Hits)
-			DrawDebugPoint(GetWorld(), it.ImpactPoint, 5.f, FColor::Blue, false, 1, 1);
+	//if (bShowDebug)// Debug
+	//	for (const auto& it : Hits)
+	//		DrawDebugPoint(GetWorld(), it.ImpactPoint, 5.f, FColor::Blue, false, 1, 1);
 
 	// Get Valid point on wall, used for WallJump and Ledgegrab
 	//b = DetermineValidPoints_IMPL(Hits, Location);
 	if (!b) return false;
 	GetWallPoint_IMPL(walldata, Hits);
 
-	if (bShowDebug) {// Debug
-		DrawDebugPoint(GetWorld(), walldata.Location, 12.f, FColor::Red, false, 0, 1);
-		DrawDebugLine(GetWorld(), walldata.Location, walldata.Location + walldata.Normal * 50.f, FColor::Purple, false, 0, 1, 4.f);
-	}
+	//if (bShowDebug) {// Debug
+	//	DrawDebugPoint(GetWorld(), walldata.Location, 12.f, FColor::Red, false, 0, 1);
+	//	DrawDebugLine(GetWorld(), walldata.Location, walldata.Location + walldata.Normal * 50.f, FColor::Purple, false, 0, 1, 4.f);
+	//}
 
 	FHitResult Hit;
 	FVector Direction = walldata.Location - Location;
@@ -110,7 +110,7 @@ bool UWallDetectionComponent::DetectStickyWall(const AActor* actor, const FVecto
 
 	if (b)
 	{
-		DrawDebugLine(GetWorld(), Location, Location + (Direction * 1.1f), FColor::Purple, false, 0, 1, 5.f);
+		//DrawDebugLine(GetWorld(), Location, Location + (Direction * 1.1f), FColor::Purple, false, 0, 1, 5.f);
 		return true;
 
 		// Do I really need to check the tag?
@@ -149,8 +149,8 @@ bool UWallDetectionComponent::DetermineValidPoints_IMPL(TArray<FHitResult>& hits
 	float r = m_capsule.GetCapsuleRadius();
 	float a = h - (2*r);
 	FVector aLineStart = Location - FVector(0, 0, a / 2);
-	if (bShowDebug)
-		DrawDebugLine(GetWorld(), aLineStart, aLineStart + (FVector::UpVector * a), FColor::Red, false, 0, 1, 5.f);
+	//if (bShowDebug)
+	//	DrawDebugLine(GetWorld(), aLineStart, aLineStart + (FVector::UpVector * a), FColor::Red, false, 0, 1, 5.f);
 
 	// Cull non-valid points
 	for (int32 i{}; i < hits.Num();)
@@ -181,8 +181,8 @@ bool UWallDetectionComponent::Valid_WallJumpPoints(TArray<FHitResult>& hits, con
 		a = 0;
 		aLineStart = Location;
 	}
-	if (bShowDebug)
-		DrawDebugLine(GetWorld(), aLineStart, aLineStart + (FVector::UpVector * a), FColor::Red, false, 0, 1, 5.f);
+	//if (bShowDebug)
+	//	DrawDebugLine(GetWorld(), aLineStart, aLineStart + (FVector::UpVector * a), FColor::Red, false, 0, 1, 5.f);
 	for (int32 i{}; i < hits.Num();)
 	{
 		if (!ValidLengthToCapsule(hits[i].ImpactPoint, aLineStart, a)) {
@@ -254,8 +254,8 @@ bool UWallDetectionComponent::DetectLedge(Wall::LedgeData& ledge, const AActor* 
 	FCollisionQueryParams Params = FCollisionQueryParams("", false, actor);
 
 	const bool firstCheck = !GetWorld()->LineTraceSingleByChannel(hit, aboveLocation, inwardsLocation, ECC_PlayerWallDetection, Params);
-	if (bShowDebug)
-		DrawDebugLine(GetWorld(), aboveLocation, inwardsLocation, FColor::Red, false, 5.f, 0, 5.f);
+	//if (bShowDebug)
+	//	DrawDebugLine(GetWorld(), aboveLocation, inwardsLocation, FColor::Red, false, 5.f, 0, 5.f);
 
 	if (!firstCheck)
 		return false;
@@ -263,11 +263,11 @@ bool UWallDetectionComponent::DetectLedge(Wall::LedgeData& ledge, const AActor* 
 	TArray<FHitResult> Hits;
 	const bool secondCheck = !GetWorld()->SweepMultiByChannel(Hits, inwardsLocation, inwardsLocation + FVector::DownVector, FQuat(1.f, 0, 0, 0), ECC_PlayerWallDetection, m_capsule, Params);
 
-	if (bShowDebug)
-		DrawDebugCapsule(GetWorld(), inwardsLocation, m_capsule.GetCapsuleHalfHeight(), m_capsule.GetCapsuleRadius(), FQuat(1.f, 0, 0, 0), FColor(1.f, .3f, 0.3f, 1.f), false, 5.f, 0, 1.5f);
-	if (bShowDebug)// Debug
-		for (const auto& it : Hits)
-			DrawDebugPoint(GetWorld(), it.ImpactPoint, 9.f, FColor::White, false, 5.f, 0);
+	//if (bShowDebug)
+	//	DrawDebugCapsule(GetWorld(), inwardsLocation, m_capsule.GetCapsuleHalfHeight(), m_capsule.GetCapsuleRadius(), FQuat(1.f, 0, 0, 0), FColor(1.f, .3f, 0.3f, 1.f), false, 5.f, 0, 1.5f);
+	//if (bShowDebug)// Debug
+	//	for (const auto& it : Hits)
+	//		DrawDebugPoint(GetWorld(), it.ImpactPoint, 9.f, FColor::White, false, 5.f, 0);
 
 	if (!secondCheck)
 		return false;
@@ -277,8 +277,8 @@ bool UWallDetectionComponent::DetectLedge(Wall::LedgeData& ledge, const AActor* 
 	{
 		FHitResult f;
 		const bool final = GetWorld()->LineTraceSingleByChannel(f, inwardsLocation, inwardsLocation + (FVector::DownVector * height), ECC_PlayerWallDetection, Params);
-		if (bShowDebug)
-			DrawDebugLine(GetWorld(), inwardsLocation, inwardsLocation + (FVector::DownVector * height), FColor::Blue, false, 5.f, 0, 5.f);
+		//if (bShowDebug)
+		//	DrawDebugLine(GetWorld(), inwardsLocation, inwardsLocation + (FVector::DownVector * height), FColor::Blue, false, 5.f, 0, 5.f);
 
 		if (final)
 		{
@@ -291,8 +291,8 @@ bool UWallDetectionComponent::DetectLedge(Wall::LedgeData& ledge, const AActor* 
 			ledge.TraceLocation = newloc - (actorUp * 5.f);
 			newloc -= actorUp * (height/2.f);// TODO: NEW LEDGE GRAB HEIGHT. Detection and ledge grab height being two different things
 			ledge.ActorLocation = newloc;
-			if (bShowDebug)
-				DrawDebugPoint(GetWorld(), ledge.Location, 10.f, FColor::Purple, false, 10.f, 0);
+			//if (bShowDebug)
+			//	DrawDebugPoint(GetWorld(), ledge.Location, 10.f, FColor::Purple, false, 10.f, 0);
 			return true;
 		}
 	}

@@ -176,7 +176,6 @@ void ASteikemannCharacter::BeginPlay()
 	GrappleTargetingDetectionSphere->SetSphereRadius(GrappleHookRange);
 
 	WallDetector->SetCapsuleSize(WDC_Capsule_Radius, WDC_Capsule_Halfheight);
-	WallDetector->SetDebugStatus(bWDC_Debug);
 	WallDetector->SetHeight(Wall_HeightCriteria, GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
 	WallDetector->SetMinLengthToWall(WDC_Length);
 
@@ -792,7 +791,6 @@ void ASteikemannCharacter::GH_SetGrappleType(IGameplayTagAssetInterface* ITag, I
 	if (IGrapple->IsStuck_Pure())
 	{
 		if (bPressedCancelButton) {
-			PRINTLONG(2.f, "Pull target off wall");
 			PullDynamicTargetOffWall();
 			return;
 		}
@@ -841,7 +839,6 @@ void ASteikemannCharacter::GH_PreLaunch_Static(void(ASteikemannCharacter::* Laun
 	GH_PreLaunch();
 	IGrapple->HookedPure();
 
-	//FTimerHandle h;
 	TimerManager.SetTimer(TH_Grapplehook_Pre_Launch,
 		[this]()
 		{
@@ -916,6 +913,7 @@ void ASteikemannCharacter::GH_PreLaunch()
 
 void ASteikemannCharacter::GH_Launch_Static()
 {
+	if (!Active_GrappledActor.IsValid()) return;
 	/* Grapple Launch */
 	FVector LaunchDirection = Active_GrappledActor->GetActorLocation() - GetActorLocation();
 
@@ -1003,10 +1001,7 @@ void ASteikemannCharacter::PullDynamicTargetOffWall()
 	if (!IGrapple) return;
 	GH_PreLaunch();
 	IGrapple->HookedPure();
-	//TimerManager.SetTimer()
-	//IGrapple->PullFree_Pure(GetActorLocation());
-	//FTimerHandle th;
-	//
+
 	TimerManager.SetTimer(TH_Grapplehook_Pre_Launch,
 		[this, IGrapple]()
 		{
@@ -1022,19 +1017,44 @@ void ASteikemannCharacter::PullDynamicTargetOffWall()
 	TimerManager.SetTimer(TH_Grapplehook_End_Launch, this, &ASteikemannCharacter::GH_Stop, GrappleDrag_PreLaunch_Timer_Length + GrappleHook_PostLaunchTimer);
 
 	// End control rig 
-	FTimerHandle stopcontrolrig;
-	TimerManager.SetTimer(stopcontrolrig, this, &ASteikemannCharacter::GH_StopControlRig, GrappleDrag_PreLaunch_Timer_Length + (GrappleHook_PostLaunchTimer * 0.3));
+	//FTimerHandle stopcontrolrig;
+	TimerManager.SetTimer(TH_Grapplehook_StopControlRig, this, &ASteikemannCharacter::GH_StopControlRig, GrappleDrag_PreLaunch_Timer_Length + (GrappleHook_PostLaunchTimer * 0.3));
 	//
 	TimerManager.ClearTimer(TH_Grapplehook_Start);
-	//TimerManager.ClearTimer(TH_Grapplehook_Pre_Launch);
-	//TimerManager.ClearTimer(TH_Grapplehook_End_Launch);
 
 	GetMoveComponent()->m_GravityMode = EGravityMode::Default;
-	//GH_Stop();
 
 	m_EMovementInputState = EMovementInput::Locked;
-	FTimerHandle openmovement;
-	TimerManager.SetTimer(openmovement, [this]() { m_EMovementInputState = EMovementInput::Open; }, GH_PostPullingTargetFreeTime, false);
+	//FTimerHandle openmovement;
+	TimerManager.SetTimer(TH_Grapplehook_OpenMovement, [this]() { m_EMovementInputState = EMovementInput::Open; }, GH_PostPullingTargetFreeTime, false);
+}
+
+void ASteikemannCharacter::PullDynamicTargetOffWall_Instant()
+{
+	if (!Active_GrappledActor.IsValid()) return;
+	IGrappleTargetInterface* IGrapple = Cast<IGrappleTargetInterface>(Active_GrappledActor);
+	if (!IGrapple) return;
+
+	TimerManager.ClearTimer(TH_Grapplehook_Start);
+	TimerManager.ClearTimer(TH_Grapplehook_Pre_Launch);
+	TimerManager.ClearTimer(TH_Grapplehook_End_Launch);
+
+	m_EGrappleState = EGrappleState::Post_Launch;
+	GetMoveComponent()->m_GravityMode = EGravityMode::Default;
+	IGrapple->PullFree_Pure(GetActorLocation());
+	// Animations
+	Anim_Grapple_End_Pure();
+
+	GH_Stop();
+
+	// End control rig 
+	//FTimerHandle stopcontrolrig;
+	TimerManager.SetTimer(TH_Grapplehook_StopControlRig, this, &ASteikemannCharacter::GH_StopControlRig, (GrappleHook_PostLaunchTimer * 0.3));
+
+	m_EMovementInputState = EMovementInput::Locked;
+	//FTimerHandle openmovement;
+	TimerManager.SetTimer(TH_Grapplehook_OpenMovement, [this]() { m_EMovementInputState = EMovementInput::Open; }, GH_PostPullingTargetFreeTime, false);
+
 }
 
 bool ASteikemannCharacter::GH_GrappleLaunchLandDelegate()
@@ -1133,7 +1153,6 @@ void ASteikemannCharacter::GH_ShowGrappleSmackCurveIndicator_Gamepad(float Delta
 	angle = angle + (angle * (((InputVectorRaw.X + InputVectorRaw.Length()) / 2.f) * SmackAttack_InputAngleMultiplier));
 	Direction = (cosf(angle) * Direction) + (sinf(angle) * FVector::UpVector);
 	float strength = (GrappleSmack_Strength * AdditionalStrength + (GrappleSmack_Strength * (InputVectorRaw.X * Grapplesmack_DirectionMultiplier)));
-	//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + Direction * strength * DeltaTime, FColor::Red, false, DrawTime, -1, 6.f);
 
 	GH_ShowGrappleSmackCurve(DeltaTime, Direction, strength, DrawTime);
 }
@@ -1143,7 +1162,6 @@ void ASteikemannCharacter::GH_ShowGrappleSmackCurveIndicator(float DeltaTime, fl
 	if (!Active_GrappledActor.IsValid()) return;
 
 	FVector Direction = GH_GrappleSmackAiming_MNK(Active_GrappledActor.Get());
-	//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + Direction * SmackAttackStrength, FColor::Red, false, DrawTime, 0, 4.f);
 
 	GH_ShowGrappleSmackCurve(DeltaTime, Direction, GrappleSmack_Strength + (GrappleSmack_Strength * Grapplesmack_DirectionMultiplier), DrawTime);
 }
@@ -2486,8 +2504,12 @@ void ASteikemannCharacter::Click_RightFacebutton()
 	{
 		if (m_EGrappleState == EGrappleState::Pre_Launch)
 		{
-			if (m_EGrappleType == EGrappleType::Static_StuckEnemy_Ground)
-				PullDynamicTargetOffWall();
+			if (m_EGrappleType == EGrappleType::Static_StuckEnemy_Ground) {
+				if (TimerManager.IsTimerActive(TH_Grapplehook_Pre_Launch))
+					PullDynamicTargetOffWall_Instant();
+				else
+					PullDynamicTargetOffWall();
+			}
 			if (m_EGrappleType == EGrappleType::Dynamic_Ground)
 				GH_Cancel();
 		}

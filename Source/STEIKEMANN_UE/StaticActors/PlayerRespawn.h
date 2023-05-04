@@ -18,8 +18,8 @@ public:
 	APlayerRespawn();
 
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
-		UStaticMeshComponent* Mesh{ nullptr };
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
+		//UStaticMeshComponent* Mesh{ nullptr };
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Collision")
 		UBoxComponent* BoxCollider{ nullptr };

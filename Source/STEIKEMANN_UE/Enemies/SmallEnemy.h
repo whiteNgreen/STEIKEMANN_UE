@@ -240,8 +240,6 @@ public:
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|WallDetection")
 		float WDC_LeavingWallTimer{ 0.5f };
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall")
-		bool bWDC_Debug{};
 
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|WallDetection")
@@ -313,16 +311,19 @@ public:	// Visual effects
 
 	UFUNCTION(BlueprintImplementableEvent)
 		void SpawnStunnedEffect(float lifetime);
-	UFUNCTION(BlueprintImplementableEvent)
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 		void DeleteStunnedEffect();
 
 	UFUNCTION(BlueprintImplementableEvent)
 		void Effect_StuckToThornwall_Start();
-	UFUNCTION(BlueprintImplementableEvent)
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 		void Effect_StuckToThornwall_End();
 #pragma endregion //LaunchedCollision
 #pragma region GrappleHooked
 public: 
+	UPROPERTY(BlueprintReadOnly)
+		bool bIsHooked{};
+	FTimerHandle TH_UncheckIsHooked;
 	bool bCanBeGrappleHooked{ true };
 	/* The internal cooldown before enemy can be grapplehooked again */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook")

@@ -803,8 +803,6 @@ public:
 #pragma endregion	//Collectibles & Health
 #pragma region OnWall
 public:// Capsule
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall")
-		bool bWDC_Debug{};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		class UWallDetectionComponent* WallDetector{ nullptr };
@@ -916,6 +914,7 @@ public:	// Launch Functions
 	void GH_Cancel();
 
 	void PullDynamicTargetOffWall();
+	void PullDynamicTargetOffWall_Instant();
 	
 	FTimerHandle TH_UnbindGrappleEnemyOnLand;
 	FGrappleEnemyLandDelegate Delegate_GrappleEnemyOnLand;
@@ -1044,6 +1043,8 @@ public: /* ------- Native Variables and functions -------- */
 	FTimerHandle TH_Grapplehook_Start;
 	FTimerHandle TH_Grapplehook_Pre_Launch;
 	FTimerHandle TH_Grapplehook_End_Launch;
+	FTimerHandle TH_Grapplehook_OpenMovement;
+	FTimerHandle TH_Grapplehook_StopControlRig;
 	
 	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
 		float GrappleHook_LaunchSpeed{ 2000.f };

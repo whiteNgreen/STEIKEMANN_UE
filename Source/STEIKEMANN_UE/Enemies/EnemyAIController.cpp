@@ -488,6 +488,7 @@ void AEnemyAIController::Incapacitate_GettingSmacked()
 
 void AEnemyAIController::Post_Incapacitate_GettingSmacked()
 {
+	if (!m_PawnOwner || !m_Player) return;
 	m_AIIncapacitatedType = EAIIncapacitatedType::None;
 
 	switch (m_EAIPost_IncapacitatedType)
@@ -548,6 +549,7 @@ void AEnemyAIController::ChaseTimedUpdate()
 	if (!m_Player || !m_DogPack) {
 		return;
 	}
+
 	FVector Forward{};
 
 	switch (m_DogType)
@@ -561,6 +563,11 @@ void AEnemyAIController::ChaseTimedUpdate()
 		break;
 	case EDogType::Teal:
 	{
+		if (!m_DogPack->Red || !m_DogPack->Pink) {
+			ChasePlayer_Red_Update();
+			break;
+		}
+
 		if (!m_DogPack->Red->IsIncapacitated()) {
 			Forward = FVector(m_Player->GetActorLocation() - m_DogPack->Red->GetActorLocation()).GetSafeNormal2D();
 			ChasePlayer_CircleAround_Update(Forward);
@@ -637,7 +644,6 @@ void AEnemyAIController::GetPlayerPtr()
 	m_Player = player;
 	if (!player) {
 		FTimerHandle h;
-		//GetWorldTimerManager().SetTimer(h, this, &AEnemyAIController::GetPlayerPtr, 0.5f);
 		TimerManager.SetTimer(h, this, &AEnemyAIController::GetPlayerPtr, 0.5f);
 	}
 }

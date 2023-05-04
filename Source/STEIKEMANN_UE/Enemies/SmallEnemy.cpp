@@ -46,7 +46,6 @@ void ASmallEnemy::BeginPlay()
 	
 	WallDetector->SetCapsuleSize(WDC_Capsule_Radius, WDC_Capsule_Halfheight);
 	WallDetector->SetHeight(WDC_MinHeight, GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
-	WallDetector->SetDebugStatus(bWDC_Debug);
 
 	ChompColliderScale = BoxComp_Chomp->GetRelativeScale3D();
 	Chomp_DisableCollision();
@@ -483,7 +482,7 @@ void ASmallEnemy::IncapacitateUndeterminedTime(const EAIIncapacitatedType& Incap
 	Incapacitate(IncapacitateType);
 
 	if (!function) return;
-	IncapacitatedCollisionDelegate.BindUObject(this, function);
+	//IncapacitatedCollisionDelegate.BindUObject(this, function);
 	IncapacitatedLandDelegation.BindUObject(this, &ASmallEnemy::IncapacitatedLand);
 }
 
@@ -505,7 +504,7 @@ void ASmallEnemy::RedetermineIncapacitateState()
 	if (GetCharacterMovement()->IsWalking() || m_State == EEnemyState::STATE_OnGround)
 	{
 		m_AI->RedetermineIncapacitateState();
-		IncapacitatedCollisionDelegate.Unbind();
+		//IncapacitatedCollisionDelegate.Unbind();
 		IncapacitatedLandDelegation.Unbind();
 		m_Anim->m_AnimState = EEnemyAnimState::Idle_Run;
 	}
@@ -799,6 +798,7 @@ void ASmallEnemy::SpottingPlayer_End()
 bool ASmallEnemy::CanAttack_Pawn() const
 {
 	if (m_State != EEnemyState::STATE_OnGround) return false;
+	if (bIsHooked) return false;
 	return true;
 }
 
@@ -833,6 +833,7 @@ void ASmallEnemy::HookedPure(const FVector InstigatorLocation, bool OnGround, bo
 	/* During Pre Action, Rotate Actor towards instigator - Yaw */
 	if (PreAction)
 	{
+		bIsHooked = true;
 		//AI
 		IncapacitateUndeterminedTime(EAIIncapacitatedType::Grappled, &ASmallEnemy::Capacitate_Grappled);
 		Cancel_CHOMP();
@@ -864,6 +865,7 @@ void ASmallEnemy::HookedPure(const FVector InstigatorLocation, bool OnGround, bo
 
 		bCanBeGrappleHooked = false;
 		TimerManager.SetTimer(Handle_GrappledCooldown, this, &ASmallEnemy::ResetCanBeGrappleHooked, GrappleHookedInternalCooldown);
+		TimerManager.SetTimer(TH_UncheckIsHooked, [this]() { bIsHooked = false; }, 1.f, false);
 
 		//
 		if (m_DogPack)
@@ -914,12 +916,13 @@ void ASmallEnemy::PullFree_Launch(const FVector& InstigatorLocation)
 	// Player is currently below the dog
 	if (Dotproduct_Up <= 0.f)
 	{
-		RotateActorYawToVector(Direction.GetSafeNormal2D());
-		GetCharacterMovement()->AddImpulse(Direction.GetSafeNormal2D() * Direction.Size() * Grappled_PulledFreeStrengthMultiplier, true);
+		//RotateActorYawToVector(Direction.GetSafeNormal2D());
+		//GetCharacterMovement()->AddImpulse(Direction.GetSafeNormal2D() * Direction.Size() * Grappled_PulledFreeStrengthMultiplier, true);
+		GrappleLaunchToInstigator(InstigatorLocation, GrappledLaunchTime * 4.f, true);
 	}
 	else
 	{
-		GrappleLaunchToInstigator(InstigatorLocation, GrappledLaunchTime, true);
+		GrappleLaunchToInstigator(InstigatorLocation, GrappledLaunchTime * 4.f, true);
 	}
 }
 
