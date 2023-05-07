@@ -2490,8 +2490,8 @@ void ASteikemannCharacter::Click_RightFacebutton()
 	case EState::STATE_None:
 		break;
 	case EState::STATE_OnGround:
-		if (Can_Dash_Start())
-			Dash_Start();
+		//if (Can_Dash_Start())
+		//	Dash_Start();
 		break;
 	case EState::STATE_InAir:
 		break;
@@ -2642,9 +2642,9 @@ void ASteikemannCharacter::PTakeDamage(int damage, AActor* otheractor, int i/* =
 	// Hair Material Change
 	HealthHairColor(Health);
 
-	// Cancel effects
+	// Cancel States
 	GH_Cancel();
-	
+	Stop_Attack();
 }
 
 void ASteikemannCharacter::PTakeDamage(int damage, const FVector& Direction, int i)
@@ -2657,8 +2657,7 @@ void ASteikemannCharacter::PTakeDamage(int damage, const FVector& Direction, int
 
 	m_EMovementInputState = EMovementInput::Locked;
 	TimerManager.SetTimer(THDamageBuffer, [this]() { bPlayerCanTakeDamage = true; PTakeRepeatDamage(); }, DamageInvincibilityTime, false);
-	FTimerHandle Move;
-	TimerManager.SetTimer(Move, [this]() { m_EMovementInputState = EMovementInput::Open; }, DamageInvincibilityTime / 2.f, false);
+	TimerManager.SetTimer(TH_MovementPeriodLocked, [this]() { m_EMovementInputState = EMovementInput::Open; }, DamageInvincibilityTime / 2.f, false);
 	
 	/* Damage launch */
 	GetMoveComponent()->Velocity *= 0.f;
@@ -2675,6 +2674,10 @@ void ASteikemannCharacter::PTakeDamage(int damage, const FVector& Direction, int
 
 	// Hair Material Change
 	HealthHairColor(Health);
+
+	// Cancel States
+	GH_Cancel();
+	Stop_Attack();
 }
 
 bool ASteikemannCharacter::PTakeRepeatDamage()
