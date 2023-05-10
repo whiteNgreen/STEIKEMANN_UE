@@ -45,6 +45,7 @@ void AEnemySpawner::BeginPlay()
 		SpawnData->Radius_Max = SpawnerActiveRadius;
 		//SpawnData->Radius_Min = SpawnerMinRadius;
 		SpawnData->IdleLocation = IdlePoint->GetComponentLocation();
+		SpawnData->GuardRadius = SpawnerGuardRadius;
 	}
 
 	Async(EAsyncExecution::TaskGraphMainThread, [this]() {

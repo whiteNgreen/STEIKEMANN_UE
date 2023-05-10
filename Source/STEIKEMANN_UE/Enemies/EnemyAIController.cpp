@@ -64,7 +64,7 @@ void AEnemyAIController::Tick(float DeltaTime)
 			break;
 		}
 	}
-	//PRINT_STATE();
+	PRINT_STATE();
 }
 
 void AEnemyAIController::OnPossess(APawn* InPawn)
@@ -606,24 +606,27 @@ void AEnemyAIController::ChaseUpdate(float DeltaTime)
 	{
 		ChasePlayer_Red_Update();
 		ChasePlayer_Red();
+		PRINT("Red");
 		break;
 	}
 	case EDogType::Pink:
 	{
 		ChasePlayer_Pink();
 		LerpPinkTeal_ChaseLocation(DeltaTime);
+		PRINT("Pink");
 		break;
 	}
 	case EDogType::Teal:
 	{
 		ChasePlayer_Teal();
 		LerpPinkTeal_ChaseLocation(DeltaTime);
+		PRINT("Teal");
 		break;
 	}
 	default:
 		break;
 	}
-
+	PRINTPAR("Chase Loc: %s", *PinkTeal_ChaseLocation.ToString());
 	if (m_Player)
 		if (CanAttack_AI())
 			if (FVector::Dist(GetPawn()->GetActorLocation(), m_Player->GetActorLocation()) < AttackDistance)

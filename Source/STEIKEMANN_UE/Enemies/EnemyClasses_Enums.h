@@ -48,6 +48,7 @@ struct SpawnPointData
 	FVector IdleLocation;
 	float Radius_Min;
 	float Radius_Max;
+	float GuardRadius;
 };
 
 

@@ -544,7 +544,7 @@ void ASmallEnemy::CollisionDelegate()
 
 bool ASmallEnemy::IsTargetWithinSpawn(const FVector& target, const float& radiusmulti) const
 {
-	return FVector::Dist(m_SpawnPointData->Location, target) < m_SpawnPointData->Radius_Max * radiusmulti;
+	return FVector::Dist(m_SpawnPointData->Location, target) < m_SpawnPointData->GuardRadius * radiusmulti;
 }
 
 void ASmallEnemy::Capacitate_Grappled()

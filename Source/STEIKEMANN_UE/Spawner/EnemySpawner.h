@@ -80,6 +80,8 @@ public: // Variables
 	/* When respawning: Only respawn the actors that are outside of this radius from the spawners root */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float SpawnerActiveRadius{ 2000.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		float SpawnerGuardRadius{ 2000.f };
 
 	float AngleYaw{};
 	float AnglePitch{};
