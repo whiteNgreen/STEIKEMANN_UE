@@ -551,7 +551,6 @@ void AEnemyAIController::ChaseTimedUpdate()
 	}
 
 	FVector Forward{};
-
 	switch (m_DogType)
 	{
 	case EDogType::Red:
@@ -588,11 +587,8 @@ void AEnemyAIController::ChaseTimedUpdate()
 
 	//	--- GUARD --- 
 	m_GuardLocation = (FVector(PinkTeal_ChaseLocation - m_PawnOwner->m_SpawnPointData->Location).GetSafeNormal() * m_PawnOwner->m_SpawnPointData->Radius_Max) + m_PawnOwner->m_SpawnPointData->Location;
-
 	if (!m_PawnOwner->IsTargetWithinSpawn(m_Player->GetActorLocation())) 
-	{
 		SetState(ESmallEnemyAIState::GuardSpawn);
-	}
 }
 
 void AEnemyAIController::ChaseUpdate(float DeltaTime)
