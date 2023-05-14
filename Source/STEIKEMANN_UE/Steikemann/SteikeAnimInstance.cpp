@@ -41,7 +41,6 @@ void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		/* Grappling */
 		bGrappling = SteikeOwner->IsGrappling();
 		GrappledTarget = SteikeOwner->GH_GetTargetLocation();
-		//GrappledTarget = SteikeOwner->Active_GrappledActor_Location;
 		bControlRigLerp = SteikeOwner->bGH_LerpControlRig;
 		ControlRig_LeafAlpha = FMath::FInterpTo(ControlRig_LeafAlpha, (float)bControlRigLerp, DeltaSeconds, 33.f);
 
@@ -53,7 +52,6 @@ void USteikeAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 		/* Ledge Grab */
 		bLedgeGrab = SteikeOwner->IsLedgeGrabbing();
-
 
 		// Booleans for blending various bodyparts
 		bBlendLowerBody_Air = bFalling && (bGrappling || SteikeOwner->IsSmackAttacking());

@@ -16,13 +16,11 @@ DECLARE_DELEGATE(FStunnedLandDelegation)
 DECLARE_DELEGATE(FIncapacitatedCollision)
 DECLARE_DELEGATE_OneParam(FLaunchedLand, const FHitResult& LandHit)
 
-/* Forward Declarations */
 class UTimelineComponent;
 class AEnemyAIController;
 class UWallDetectionComponent;
 class USphereComponent;
 class UBoxComponent;
-
 
 UCLASS()
 class STEIKEMANN_UE_API ASmallEnemy : public ABaseCharacter,
@@ -43,6 +41,7 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	// Actor is "deactivated" when not sufficiently close to the player
 	UPROPERTY(BlueprintReadWrite)
 		bool bIsActive{ true };
 
@@ -104,7 +103,7 @@ public: // Functions
 	FTimerHandle TH_EnableCollision_PlacementCheck;
 	// This function should be placed in the BaseCharacterClass
 	// as it would probably be used by any characterclass in the game
-	void ActorInvalidPlacement();	
+	void ActorInvalidPlacement();	// Unfinished function
 
 #pragma region GameplayTags
 	UPROPERTY(BlueprintReadOnly, Category = "GameplayTags")
@@ -198,9 +197,8 @@ public: // Variables for calling AI
 	FTimerHandle TH_RedetermineIncapacitate;
 
 public: // Functinos calling AI controller or Functions AI controller calling 
-	void Incapacitate(const EAIIncapacitatedType& IncapacitateType, float Time = -1.f/*, const ESmallEnemyAIState& NextState = ESmallEnemyAIState::None*/);
+	void Incapacitate(const EAIIncapacitatedType& IncapacitateType, float Time = -1.f);
 	void IncapacitateUndeterminedTime(const EAIIncapacitatedType& IncapacitateType, void (ASmallEnemy::* landingfunction)() = nullptr);
-	//void Capacitate(const EAIIncapacitatedType& IncapacitateType, float Time = -1.f, const ESmallEnemyAIState& NextState = ESmallEnemyAIState::None);
 	void Post_IncapacitateDetermineState();
 	void RedetermineIncapacitateState();
 	bool IsIncapacitated() const;
@@ -218,11 +216,6 @@ private: // Functions Capacitate - Used for IncapacitatedLandingDelegate
 	void PostChompLand();
 	void CollisionDelegate();
 	void Capacitate_Grappled();
-
-private: // Gravity
-	//float GravityScale;
-	//float GravityZ;
-
 #pragma endregion //States
 public:
 	void RotateActorYawToVector(FVector AimVector, float DeltaTime = -1.f);
@@ -250,14 +243,12 @@ public:
 		float WDC_MinHeight{ 20.f };
 private:
 	Wall::WallData m_WallData;
-	//Wall::WallData m_WallJumpData;
 
 #pragma endregion	//Wall Mechanics
 #pragma region LaunchedCollision
 public:
 	FTimerHandle TH_FreezeCollisionLaunchCooldown;
 	FTimerHandle TH_CollisionLaunchFreeze;
-	//FTimerHandle TH_InternalDogToDogCollision;
 	FVector CollisionLaunchDirection;
 	FVector MeshInitialPosition;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Launched Reflected Collision")
@@ -332,7 +323,6 @@ public:
 	FTimerHandle Handle_GrappledCooldown;
 	void ResetCanBeGrappleHooked() { bCanBeGrappleHooked = true; }
 
-
 	/* Time it should take to reach the Grappled Instigator : 2nd method */	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|GrappleHook")
 		float GrappledLaunchTime{ 1.f };
@@ -348,20 +338,13 @@ public:
 
 public:	/* ----- Grapple Interface ------ */
 	virtual void TargetedPure() override;
-
 	virtual void UnTargetedPure() override;
-
 	virtual void InReach_Pure() override;
-
 	virtual void OutofReach_Pure() override;
-
 	virtual void HookedPure() override;
 	virtual void HookedPure(const FVector InstigatorLocation, bool OnGround,bool PreAction = false) override;
-
 	virtual void UnHookedPure() override;
-
 	virtual void PullFree_Pure(const FVector InstigatorLocation);
-
 public:
 	void PullFree_Launch(const FVector& InstigatorLocation);
 	void GrappleLaunchToInstigator(FVector InstigatorLocation, float Time, bool OnGround);
@@ -369,7 +352,6 @@ public:
 #pragma region GettingSmacked
 public:
 	bool bCanBeSmackAttacked{ true };
-
 	FTimerHandle THandle_GotSmackAttacked{};
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|SmackAttack")
@@ -442,9 +424,6 @@ public:
 public:
 	virtual void Receive_Pogo_GroundPound_Pure() override;
 	virtual void IA_Receive_Pogo_Pure() override;
-	//UFUNCTION(BlueprintImplementableEvent)
-		//void Receive_Pogo();
-
 #pragma endregion			//Pogo
 #pragma region Bounce
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

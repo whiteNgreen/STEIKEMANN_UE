@@ -5,26 +5,16 @@
 #include "GameFrameWork/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "NiagaraComponent.h"
-//#include "../DebugMacros.h"
-// Base components
 #include "../StaticVariables.h"
 
-ABaseCharacter::ABaseCharacter()
-{
-}
-
+ABaseCharacter::ABaseCharacter(){}
 ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
-	: Super(ObjectInitializer)
-{
-}
-
+	: Super(ObjectInitializer)	{}
 
 void ABaseCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	AttackContactDelegate.AddUObject(this, &ABaseCharacter::AttackContact);
-	//AttackContactDelegate_Instigator.AddUObject(this, &ABaseCharacter::AttackContact_Instigator);
-
 	const auto i = GetCharacterMovement();
 	m_GravityScale = i->GravityScale;
 	m_BaseGravityZ = i->GetGravityZ();
@@ -67,7 +57,6 @@ UNiagaraComponent* ABaseCharacter::CreateNiagaraComponent(FName Name, USceneComp
 	TempNiagaraComp->RegisterComponent();
 
 	if (bTemp) { TempNiagaraComponents.Add(TempNiagaraComp); } // Adding as temp comp
-
 	return TempNiagaraComp;
 }
 
@@ -79,7 +68,6 @@ void ABaseCharacter::AttackContact(AActor* target)
 		return;
 	}
 	AttackContactedActors.Add(target);
-
 	// Do Whatever needs to be done to the actor here	// Like f.ex starting an animation before starting the time dilation
 	this->CustomTimeDilation = Statics::AttackContactTimeDilation;
 
@@ -92,7 +80,7 @@ void ABaseCharacter::AttackContact(AActor* target)
 		return;
 	target->CustomTimeDilation = Statics::AttackContactTimeDilation;
 	GetWorldTimerManager().SetTimer(TH_AttackContact_Instigator, [this]() {		// Using world timer manager for timers meant to run in realtime
-		if (this)
+		if (this)	// hmm.. can this even be checked?
 			this->CustomTimeDilation = 1.f;
 		}, AttackContactTimer, false);
 }

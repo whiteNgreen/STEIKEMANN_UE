@@ -37,6 +37,7 @@ void UANEndAttackBufferPeriod::Notify(USkeletalMeshComponent* MeshComp, UAnimSeq
 	CallOwnerFunction(MeshComp, &AAbstractCharacter::EndAttackBufferPeriod);
 }
 
+// Control Rig
 void UANStartControlRigLerp::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation)
 {
 	CallOwnerFunction(MeshComp, &AAbstractCharacter::StartAnimLerp_ControlRig);

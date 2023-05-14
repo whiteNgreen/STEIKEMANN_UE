@@ -105,6 +105,7 @@ public:
 		EActorType m_ActorType;
 };
 
+// ----------------------------------------------------- ACTIVATE CONTROL RIG -----------------------------------------------------------------
 UCLASS()
 class STEIKEMANN_UE_API UANStartControlRigLerp : public UAnimNotify
 {

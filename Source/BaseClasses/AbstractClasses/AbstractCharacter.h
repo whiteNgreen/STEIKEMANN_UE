@@ -4,14 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-//#include "../Components/BaseCharWaterFloatComponent.h"
-
-// Particles
-//#include "NiagaraFunctionLibrary.h"
-//#include "NiagaraComponent.h"
-
 #include "../Delegates_Shared.h"
-
 #include "AbstractCharacter.generated.h"
 
 #define ECC_IKCollision ECC_GameTraceChannel6
@@ -104,13 +97,4 @@ public:
 
 	float m_GravityScale;
 	float m_BaseGravityZ;
-
-
-#pragma region WaterPuddle
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		//class UBaseCharWaterFloatComponent* WaterInterActionComponent;
-	//FWaterPuddleEnter Delegate_WaterPuddleEnter;
-	//FWaterPuddleExit Delegate_WaterPuddleExit;
-#pragma endregion				//WaterPuddle
-
 };

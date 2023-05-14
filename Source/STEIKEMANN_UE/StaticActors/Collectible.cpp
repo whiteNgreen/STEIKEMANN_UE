@@ -59,7 +59,6 @@ void ACollectible::Destruction()
 	}
 
 	/* Destroy object after 2.f seconds */
-	//GetWorldTimerManager().SetTimer(FTHDestruction, [this]() { Destroy(); }, 2.f, false);
 	TimerManager.SetTimer(FTHDestruction, [this]() { Destroy(); }, 2.f, false);
 }
 
@@ -88,7 +87,6 @@ void ACollectible_Static::Destruction()
 		owner->RespawnPickup();
 	}
 	/* Destroy object after 2.f seconds */
-	//GetWorldTimerManager().SetTimer(FTHDestruction, [this]() { Destroy(); }, 2.f, false);
 	TimerManager.SetTimer(FTHDestruction, [this]() { Destroy(); }, 2.f, false);
 }
 

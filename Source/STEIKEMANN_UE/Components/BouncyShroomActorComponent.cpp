@@ -17,8 +17,6 @@ UBouncyShroomActorComponent::UBouncyShroomActorComponent()
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = false;
-
-	// ...
 }
 
 
@@ -26,7 +24,6 @@ UBouncyShroomActorComponent::UBouncyShroomActorComponent()
 void UBouncyShroomActorComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
 	m_Owner = Cast<ABaseCharacter>(GetOwner());
 	ACharacter* charOwner = Cast<ACharacter>(m_Owner);
 	if (charOwner) {
@@ -39,8 +36,6 @@ void UBouncyShroomActorComponent::BeginPlay()
 void UBouncyShroomActorComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	// ...
 }
 
 void UBouncyShroomActorComponent::OnOwnerCapsuleHitShroom(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
@@ -49,7 +44,6 @@ void UBouncyShroomActorComponent::OnOwnerCapsuleHitShroom(UPrimitiveComponent* H
 
 	IGameplayTagAssetInterface* ITag = Cast<IGameplayTagAssetInterface>(OtherActor);
 	if (!ITag) return;
-
 	if (ITag->HasMatchingGameplayTag(Tag::BouncyShroom()))
 	{
 		if (!OtherComp->IsA(UBoxComponent::StaticClass())) return;

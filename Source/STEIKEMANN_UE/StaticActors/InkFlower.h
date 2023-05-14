@@ -38,7 +38,6 @@ public: // Animation
 public: // Collectible
 	UFUNCTION(BlueprintCallable)
 		void SpawnInkCollectible();
-	//UPrimitiveComponent*, OverlappedComponent, AActor*, OtherActor, UPrimitiveComponent*, OtherComp, int32, OtherBodyIndex, bool, bFromSweep, const FHitResult&, SweepResult);
 
 	UFUNCTION()
 		void OnCollectibleBeginOverlap(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& Hit);

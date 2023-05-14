@@ -29,13 +29,10 @@ ASmallEnemy::ASmallEnemy()
 	WallDetector = CreateDefaultSubobject<UWallDetectionComponent>(TEXT("Wall Detection Component"));
 	PlayerPogoDetection = CreateDefaultSubobject<USphereComponent>(TEXT("PlayerPogoDetection"));
 	PlayerPogoDetection->SetupAttachment(RootComponent);
-
 	TlComp_Smacked = CreateDefaultSubobject<UTimelineComponent>("Timeline_Smacked");
 	TlComp_LaunchedCollision = CreateDefaultSubobject<UTimelineComponent>("Timeline LaunchedCollision");
-
 	BoxComp_Chomp = CreateDefaultSubobject<UBoxComponent>("Attack Collider");
 	BoxComp_Chomp->SetupAttachment(GetMesh(), FName("SOCKET_Head"));
-
 	BounceComp = CreateDefaultSubobject<UBouncyShroomActorComponent>("Bounce Component");
 }
 
@@ -109,15 +106,8 @@ void ASmallEnemy::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	FVector playerLoc = SteikeWorldStatics::PlayerLocation;
 
-	//if (FVector::DistSquared(GetActorLocation(), playerLoc) < _Statics_PlayerDistaceToActive)
 	if (bIsActive)
 	{
-		//const auto c = GetCharacterMovement();
-		//if (c->IsActive())
-			//c->SetActive(false);
-		//if (bPrintDebugStatus)
-		//	PRINT("Active");
-
 		SetDefaultState();
 		const bool wall = WallDetector->DetectStickyWall(this, GetActorLocation(), GetActorForwardVector(), m_WallData, ECC_EnemyWallDetection);
 		if (wall && (m_State == EEnemyState::STATE_InAir || m_State == EEnemyState::STATE_Launched) && m_WallState != EWall::WALL_Leaving)
@@ -147,19 +137,10 @@ void ASmallEnemy::Tick(float DeltaTime)
 		default:
 			break;
 		}
-
 		Gravity_Tick();
-
 		EndTick(DeltaTime);
 
 		//PrintState();
-	}
-	else {
-		//const auto c = GetCharacterMovement();
-		//if (c->IsActive())
-		//	c->SetActive(false);
-	//	if (bPrintDebugStatus)
-	//		PRINT("In_Active");
 	}
 }
 
@@ -179,9 +160,7 @@ FVector ASmallEnemy::GetRandomLocationNearSpawn()
 {
 	FVector location = m_SpawnPointData->Location;
 	FVector direction = FVector::ForwardVector.RotateAngleAxis(RandomFloat(0.f, 360.f), FVector::UpVector);
-
 	location += direction * RandomFloat(m_SpawnPointData->Radius_Min, m_SpawnPointData->Radius_Max);
-
 	return location;
 }
 
@@ -193,6 +172,8 @@ void ASmallEnemy::DisableCollisions(float time)
 	TimerManager.SetTimer(TH_DisabledCollision, this, &ASmallEnemy::EnableCollisions, time);
 }
 
+/* Unfinished function to properly place the actor outside of an object 
+*	Meant to be called when collision is enabled after a mechanic required it to be disabled for a period of time */
 void ASmallEnemy::ActorInvalidPlacement()
 {
 	if (!GetWorld()) return;
@@ -219,7 +200,6 @@ void ASmallEnemy::ActorInvalidPlacement()
 void ASmallEnemy::SetDogType(enum EDogType type)
 {
 	m_DogType = type;
-
 	AEnemyAIController* con = Cast<AEnemyAIController>(GetController());
 	if (con) {
 		con->m_DogType = type;
@@ -263,13 +243,11 @@ void ASmallEnemy::Alert(const APawn& instigator)
 void ASmallEnemy::SleepingBegin()
 {
 	m_Anim->bIsSleeping = true;
-	//m_Anim->m_AnimState = EEnemyAnimState::Sleeping;
 }
 
 void ASmallEnemy::SleepingEnd()
 {
 	m_Anim->bIsSleeping = false;
-	//m_Anim->m_AnimState = EEnemyAnimState::SpottingPlayer;
 }
 
 void ASmallEnemy::AttackJump()
@@ -310,7 +288,6 @@ void ASmallEnemy::SetDefaultState()
 		break;
 	}
 
-	//auto i = Cast<UCharacterMovementComponent>(GetMovementComponent());
 	auto i = GetMovementComponent();
 	if (i->IsFalling()) {
 		m_State = EEnemyState::STATE_InAir;
@@ -324,13 +301,7 @@ void ASmallEnemy::Landed(const FHitResult& Hit)
 {
 	Super::Landed(Hit);
 
-
-	//if (!Delegate_LaunchedLand.IsBound())
-	//	if (IncapacitatedLandDelegation.ExecuteIfBound())
-	//		IncapacitatedLandDelegation.Unbind();
-
 	IGameplayTagAssetInterface* itag = Cast<IGameplayTagAssetInterface>(Hit.GetActor());
-
 	m_Anim->m_AnimState = EEnemyAnimState::Idle_Run;
 	if (!Delegate_LaunchedLand.IsBound())
 	{
@@ -346,12 +317,6 @@ void ASmallEnemy::Landed(const FHitResult& Hit)
 	}	
 	if (Delegate_LaunchedLand.ExecuteIfBound(Hit))
 		Delegate_LaunchedLand.Unbind();
-
-
-	//if (IsIncapacitated()) {
-	//	FTimerHandle h;
-	//	TimerManager.SetTimer(h, this, &ASmallEnemy::RedetermineIncapacitateState, Incapacitated_LandedStunTime);
-	//}
 
 	m_State = EEnemyState::STATE_OnGround;
 	m_Anim->bIsLaunchedInAir = false;
@@ -468,10 +433,10 @@ void ASmallEnemy::CorgiJump_Pure()
 	CorgiJump_BPEvent();
 }
 
-void ASmallEnemy::Incapacitate(const EAIIncapacitatedType& IncapacitateType, float Time/*, const ESmallEnemyAIState& NextState*/)
+void ASmallEnemy::Incapacitate(const EAIIncapacitatedType& IncapacitateType, float Time)
 {
 	if (m_AI) {
-		m_AI->IncapacitateAI(IncapacitateType, Time/*, NextState*/);
+		m_AI->IncapacitateAI(IncapacitateType, Time);
 		m_AI->Incapacitate_GettingSmacked();
 	}
 	Chomp_DisableCollision();
@@ -482,7 +447,6 @@ void ASmallEnemy::IncapacitateUndeterminedTime(const EAIIncapacitatedType& Incap
 	Incapacitate(IncapacitateType);
 
 	if (!function) return;
-	//IncapacitatedCollisionDelegate.BindUObject(this, function);
 	IncapacitatedLandDelegation.BindUObject(this, &ASmallEnemy::IncapacitatedLand);
 }
 
@@ -504,7 +468,6 @@ void ASmallEnemy::RedetermineIncapacitateState()
 	if (GetCharacterMovement()->IsWalking() || m_State == EEnemyState::STATE_OnGround)
 	{
 		m_AI->RedetermineIncapacitateState();
-		//IncapacitatedCollisionDelegate.Unbind();
 		IncapacitatedLandDelegation.Unbind();
 		m_Anim->m_AnimState = EEnemyAnimState::Idle_Run;
 	}
@@ -714,20 +677,12 @@ void ASmallEnemy::GetCollisionTime(float& OUT_Time, float& OUT_Multiplier)
 
 void ASmallEnemy::DogToDogCollision(const FHitResult& SweepHit, ASmallEnemy* OtherDog)
 {
-	//PRINTLONG(2.f, "DOG COLLISION");
-	//DRAWLINE(OtherDog->GetVelocity(), FColor::Blue, 2.f);
-	//DRAWLINE(GetVelocity(), FColor::Red, 2.f);
-	//DRAWLINE(SweepHit.ImpactNormal * 200.f, FColor::Green, 3.f);
-	//DRAWPOINT(SweepHit.ImpactPoint, FColor::Blue, 2.f);
-
 	ReflectedCollisionLaunch_PreLaunch(SweepHit.ImpactNormal, SweepHit.ImpactPoint, true);
 	OtherDog->ReflectedCollisionLaunch_PreLaunch(-SweepHit.ImpactNormal, SweepHit.ImpactPoint, true);
-	//OtherDog->GettingDogCollision(-SweepHit.ImpactNormal, SweepHit.ImpactPoint);
 }
 
 void ASmallEnemy::GettingDogCollision(FVector SurfaceNormal, FVector SurfaceLocation)
 {
-
 }
 
 bool ASmallEnemy::DogEnvironmentCollision(const FHitResult& SweepHit)
@@ -782,8 +737,7 @@ void ASmallEnemy::LC_GetEffectLocation(FVector& SurfaceLocation, FVector& Surfac
 	{
 		SurfaceLocation = Hit.ImpactPoint;
 		SurfaceNormal = Hit.ImpactNormal;
-	}
-	
+	}	
 }
 
 void ASmallEnemy::SpottingPlayer_Begin()
@@ -889,9 +843,7 @@ void ASmallEnemy::PullFree_Pure(const FVector InstigatorLocation)
 {
 	m_State = EEnemyState::STATE_InAir;
 	
-	// Add Impulse towards instigator - 2D direction
 	PullFree_Launch(InstigatorLocation);
-	// Leave wall
 	LeaveWall();
 
 	// Enable Gravity and Disable Collisions
@@ -913,17 +865,7 @@ void ASmallEnemy::PullFree_Launch(const FVector& InstigatorLocation)
 {
 	FVector Direction = InstigatorLocation - GetActorLocation();
 	float Dotproduct_Up = FVector::DotProduct(FVector::UpVector, Direction.GetSafeNormal());
-	// Player is currently below the dog
-	if (Dotproduct_Up <= 0.f)
-	{
-		//RotateActorYawToVector(Direction.GetSafeNormal2D());
-		//GetCharacterMovement()->AddImpulse(Direction.GetSafeNormal2D() * Direction.Size() * Grappled_PulledFreeStrengthMultiplier, true);
-		GrappleLaunchToInstigator(InstigatorLocation, GrappledLaunchTime * 4.f, true);
-	}
-	else
-	{
-		GrappleLaunchToInstigator(InstigatorLocation, GrappledLaunchTime * 4.f, true);
-	}
+	GrappleLaunchToInstigator(InstigatorLocation, GrappledLaunchTime * 4.f, true);
 }
 
 void ASmallEnemy::GrappleLaunchToInstigator(FVector InstigatorLocation, float Time, bool OnGround)
@@ -955,10 +897,8 @@ void ASmallEnemy::Do_SmackAttack_Pure(IAttackInterface* OtherInterface, AActor* 
 	 *	is this the best method of creating modular game mechanics?
 	 *  Don't know the cost of actually checking for and actor component vs casting to an interface. 
 	** Or is Interface better? 
-	 *  Issue with interfaces would be the multiple inheritance on the classes
-	 *	slowing down compile time due too them being something of a nightmare for compilers. 
+	 *  Issue with interfaces would be the multiple inheritance on the classes, which is bad for reasons beyond me atm
 	 */
-	//auto s = OtherActor->GetComponentByClass(UBouncyShroomActorComponent::StaticClass());	
 }
 
 void ASmallEnemy::Receive_SmackAttack_Pure(const FVector Direction, const float Strength, const bool bOverrideStrength)
@@ -1022,10 +962,8 @@ void ASmallEnemy::Receive_LeewayPause_Pure(float Pausetime)
 {
 	if (m_State == EEnemyState::STATE_Grappled) return;
 	CustomTimeDilation = AttackInterface_LeewayPause_Timedilation;
-	//FTimerHandle h;
 	if (GetWorld())
 		GetWorldTimerManager().SetTimer(TH_IAttack_LeewayPause, [this]() { if(GetWorld() && this)CustomTimeDilation = 1.f; }, Pausetime, false);
-		//TimerManager.SetTimer(TH_IAttack_LeewayPause, [this]() { CustomTimeDilation = 1.f; }, Pausetime, false);
 }
 
 void ASmallEnemy::ChompingAnotherEnemy(IAttackInterface* OtherInterface, AActor* OtherActor)
@@ -1085,8 +1023,6 @@ void ASmallEnemy::Receive_Pogo_GroundPound_Pure()
 	m_Anim->bPogoedOn = true;
 	FTimerHandle h;
 	TimerManager.SetTimer(h, [this]() { m_Anim->bPogoedOn = false; }, 0.5f, false);
-	// Particles
-	//UNiagaraFunctionLibrary::SpawnSystemAtLocation()
 }
 
 void ASmallEnemy::IA_Receive_Pogo_Pure()

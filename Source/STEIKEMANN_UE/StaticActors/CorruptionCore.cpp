@@ -64,11 +64,7 @@ void ACorruptionCore::Death()
 {
 	Death_IMPL();
 	/* Particles and disable mesh + collision */
-	//UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), DeathParticles, GetActorLocation());
 	Collider->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	//Mesh->SetHiddenInGame(true, true);
-
-	//DestroyConnectedTendrils();
 
 	/* Destroy object after 10 seconds */
 	auto func = [this]() {

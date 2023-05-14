@@ -10,7 +10,6 @@
 
 void ASteikePlayerController::CheckInputType(FKey key)
 {
-	//PRINTPARLONG(2.f, "Key: %s", *key.GetDisplayName().ToString());
 	EInputType NewInputType = EInputType::MouseNKeyboard;
 	if (key.IsGamepadKey()) {
 		NewInputType = EInputType::Gamepad;

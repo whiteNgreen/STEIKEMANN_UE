@@ -12,8 +12,6 @@ UPlayerDistanceCheck_Component::UPlayerDistanceCheck_Component()
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
-
-	// ...
 }
 
 
@@ -21,9 +19,6 @@ UPlayerDistanceCheck_Component::UPlayerDistanceCheck_Component()
 void UPlayerDistanceCheck_Component::BeginPlay()
 {
 	Super::BeginPlay();
-
-	// ...
-	
 }
 
 
@@ -31,7 +26,6 @@ void UPlayerDistanceCheck_Component::BeginPlay()
 void UPlayerDistanceCheck_Component::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
 	DistanceToPlayer = PlayerDistanceCheck();
 	const bool b = DistanceToPlayer < FMath::Square(CheckLength);
 	if (bPlayerWithinDistance != b)
@@ -59,7 +53,6 @@ bool UPlayerDistanceCheck_Component::PlayerWithinDistance(const float distance) 
 float UPlayerDistanceCheck_Component::PlayerDistanceCheck() const
 {
 	return FVector::DistSquared(GetOwner()->GetActorLocation(), SteikeWorldStatics::CameraLocation);
-
 }
 
 FVector UPlayerDistanceCheck_Component::GetPlayerCameraLocation() const

@@ -69,7 +69,6 @@ void AEnemySpawner::BeginActorSpawn(void(AEnemySpawner::* spawnFunction)())
 void AEnemySpawner::BeginActorRespawn()
 {
 	DetermineActorsToRespawn(m_ActorsToRespawn);	
-	//m_ActorsToRespawn = SpawnedActors;	// Make all dogs respawn no matter what
 	RespawnActors(m_ActorsToRespawn);
 }
 
@@ -120,9 +119,7 @@ void AEnemySpawner::DetermineActorsToRespawn(TArray<ASmallEnemy*>& actorsToRespa
 void AEnemySpawner::RespawnActors(TArray<ASmallEnemy*>& actorsToRespawn)
 {
 	m_SpawnIndex = 0;
-	//m_SpawnIndex = actorsToRespawn.Num()-1;
 	m_SpawnAmount = actorsToRespawn.Num();
-	//m_SpawnAmount = 0;
 	m_ActorsToDestroy = actorsToRespawn;
 
 	if (actorsToRespawn.Num() == 0) {
@@ -138,16 +135,12 @@ void AEnemySpawner::RespawnActor()
 	m_ActorsToRespawn.RemoveAt(m_ActorsToRespawn.Num() - 1);
 
 	SpawnAubergineDog(type);
-	//m_ActorsToDestroy[m_SpawnIndex]->Destroy();
 	m_SpawnIndex++;
-	//m_SpawnIndex--;
 	if (m_SpawnIndex < m_SpawnAmount) {
-	//if (m_SpawnIndex > m_SpawnAmount) {
 		TimerManager.SetTimer(TH_SpawnTimer, this, &AEnemySpawner::RespawnActor, Timer_SpawnIterator);
 	}
 
 	if (m_SpawnIndex >= m_SpawnAmount) {
-	//if (m_SpawnIndex < m_SpawnAmount) {
 		TimerManager.SetTimer(FTHCanBeDamaged, [this]() { bAICanBeDamaged = true; }, CanBeAttackedTimer, false);
 
 		for (auto& it : m_ActorsToDestroy) {

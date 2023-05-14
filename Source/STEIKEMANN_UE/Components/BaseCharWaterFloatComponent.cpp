@@ -18,8 +18,6 @@ UBaseCharWaterFloatComponent::UBaseCharWaterFloatComponent()
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
-
-	// ...
 }
 
 
@@ -27,8 +25,6 @@ UBaseCharWaterFloatComponent::UBaseCharWaterFloatComponent()
 void UBaseCharWaterFloatComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
-	// ...
 	m_Owner = Cast<ABaseCharacter>(GetOwner());
 	if (m_Owner) {
 		m_Owner->GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this,	&UBaseCharWaterFloatComponent::OnOwnerCapsuleOverlapWithWater);
@@ -43,8 +39,6 @@ void UBaseCharWaterFloatComponent::BeginPlay()
 void UBaseCharWaterFloatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	// ...
 	if (bIsFloatingInWater && m_CharMovement) {
 		FloatingInWater(DeltaTime);
 	}
@@ -147,10 +141,8 @@ void UBaseCharWaterFloatComponent::OnOwnerCapsuleEndOverlapWithWater(UPrimitiveC
 	/**
 	* Exit water puddle
 	*/
-	if (ITag->HasMatchingGameplayTag(Tag::WaterPuddle()))
-	{
+	if (ITag->HasMatchingGameplayTag(Tag::WaterPuddle())){
 		bIsFloatingInWater = false;
-		//m_Owner->Delegate_WaterPuddleExit.ExecuteIfBound();
 	}
 
 }

@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "../DebugMacros.h"
-//#include "../WallDetectionComponent.h"
 #include "../Walldetection/WallDetection_EnS.h"
 #include "SteikemannCharMovementComponent.generated.h"
 
@@ -51,11 +50,7 @@ public:
 	/* Gravity over time while character is in the air */
 		/* The Base gravity scale override */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|GravityOverride")
-		float m_GravityScaleOverride /*UMETA(DisplayName = "Gravity Scale Override")*/ { 2.f };
-		/* Gravity scale during freefall */
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|GravityOverride")
-		//float m_GravityScaleOverride_Freefall /*UMETA(DisplayName = "Freefall Gravity")*/ { 2.f };
-		/* Interpolation speed between gravityscale override and freefall gravity */
+		float m_GravityScaleOverride{ 2.f };
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MyVariables|GravityOverride")
 		float m_GravityScaleOverride_InterpSpeed{ 2.f };
 
@@ -156,8 +151,6 @@ public:
 	EOnWallState m_WallState = EOnWallState::WALL_None;
 	Wall::WallData m_WallJumpData;
 
-
-	//void InitialOnWall(const Wall::WallData& wall, float time);
 	void Initial_OnWall_Hang(const Wall::WallData& wall, float time);
 
 	void WallJump(FVector input, float JumpStrength);
@@ -169,7 +162,6 @@ private:
 	FTimerHandle TH_WallHang;
 
 	void ExitWall_Air();
-	//void InitialOnWall_IMPL(float time);
 	void OnWallHang_IMPL();
 	void OnWallDrag_IMPL(float deltatime);
 

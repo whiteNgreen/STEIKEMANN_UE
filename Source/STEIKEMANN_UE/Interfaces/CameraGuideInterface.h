@@ -28,7 +28,6 @@ USTRUCT(BlueprintType)
 struct FocusPoint 
 {
 public:
-	//GENERATED_BODY()
 	GENERATED_BODY()
 
 	FocusPoint() {}
@@ -37,9 +36,6 @@ public:
 	class USplineComponent* FocusSpline{ nullptr };
 	UPROPERTY()
 		EFocusType ComponentType = EFocusType::FOCUS_Point;
-	//UPrimitiveComponent* FocusObj{ nullptr };
-
-
 	FVector ComponentLocation{};
 	FVector Location{};
 	float SplineInputKey{};
@@ -51,15 +47,11 @@ public:
 
 	UPROPERTY(EditInstanceOnly, Category = "FocusPoint", meta = (DisplayPriority = "1"))
 		EPointType Type = EPointType::NONE;
-
 	
 	/* -------------------------------- LOOKAT_Absolute & CAMERA_Absolute -------------------------------- */
 	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "FocusPoint", meta = (UIMin = "0.0", UIMax = "1.0",
 		EditCondition = "Type == EPointType::LOOKAT_Absolute || Type == EPointType::CAMERA_Absolute", EditConditionHides))
 		float LerpSpeed{ 0.18f };
-	
-
-
 
 	/* -------------------------------- LOOKAT_Lean & CAMERA_Lean -------------------------------- */
 	/* Lean Amount: How far towards the target will the camera lean

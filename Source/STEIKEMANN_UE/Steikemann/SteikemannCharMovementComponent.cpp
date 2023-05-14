@@ -3,10 +3,7 @@
 
 #include "../Steikemann/SteikemannCharMovementComponent.h"
 #include "../Steikemann/SteikemannCharacter.h"
-//#include "Engine.h"
 #include "BaseClasses/StaticVariables.h"
-//#include "../WallDetection/WallDetectionComponent.h"
-
 
 USteikemannCharMovementComponent::USteikemannCharMovementComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -26,13 +23,8 @@ void USteikemannCharMovementComponent::BeginPlay()
 void USteikemannCharMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	/* Friction */
 	GroundFriction = CharacterFriction;
-
-	/* -- Gravity -- */
 	SetGravityScale(DeltaTime);
-	
 
 	/* Jump velocity */
 	if (bIsJumping || bIsDoubleJumping){
@@ -116,23 +108,9 @@ void USteikemannCharMovementComponent::SetGravityScale(float deltatime)
 }
 
 
-
+// Decrepid
 bool USteikemannCharMovementComponent::DoJump(bool bReplayingMoves)
 {
-	//if (!GetCharOwner()) { return false; }
-
-	//if (GetCharOwner()->bCanPostEdgeRegularJump)	{ return true; }
-	//if (GetCharOwner()->bCanEdgeJump)		{ return true; }
-
-	//if (GetCharOwner()->CanJump() || GetCharOwner()->CanDoubleJump())
-	//{
-	//	// Don't jump if we can't move up/down.
-	//	if (!bConstrainToPlane || FMath::Abs(PlaneConstraintNormal.Z) != 1.f)
-	//	{
-	//		return true;
-	//	}
-	//}
-
 	return false;
 }
 
@@ -186,16 +164,13 @@ void USteikemannCharMovementComponent::DetermineJump(float DeltaTime)
 {
 	if (bIsDoubleJumping)
 	{
-		if (Velocity.Z <= 0.f){
+		if (Velocity.Z <= 0.f)
 			StopJump();
-			//StartJumpHeightHold();
-		}
 		return;
 	}
 
 	JumpPercentage = Velocity.Z / InitialJumpVelocity;
-	if (JumpPercentage < (1 - GetCharOwner()->JumpFullPercentage/* Could get this from function argument */))
-	{
+	if (JumpPercentage < (1 - GetCharOwner()->JumpFullPercentage/* Could get this from function argument */)){
 		StopJump();
 	}
 }
@@ -237,7 +212,7 @@ void USteikemannCharMovementComponent::DeactivateJumpMechanics()
 {
 	bIsJumping = false;
 	bIsDoubleJumping = false;
-	GetCharOwner()->bJumping = false;	// CharOwners bJumping is NOT used anywhere
+	GetCharOwner()->bJumping = false;	// CharOwners bJumping is not used anywhere - delete?
 	bJumpPrematureSlowdown = false;
 }
 
@@ -264,7 +239,6 @@ void USteikemannCharMovementComponent::AirFrictionMultiplier(float value)
 
 void USteikemannCharMovementComponent::PB_Launch_Active(FVector direction, float strength)
 {
-	//m_GravityMode = EGravityMode::Default;
 	Velocity *= 0.f;
 	AddImpulse(direction * strength, true);
 }
@@ -331,7 +305,6 @@ void USteikemannCharMovementComponent::LedgeJump(const FVector input, float Jump
 	}
 	
 	// Angle direction towards input
-	//FVector ortho = FVector::CrossProduct(FVector::UpVector, FVector::CrossProduct(mInput.GetSafeNormal(), FVector::UpVector));
 	FVector ortho = mInput.GetSafeNormal();
 	float angle = FMath::Clamp(LedgeJump_AngleLimit * ((LedgeJump_AngleLimit * alpha) / LedgeJump_AngleLimit), 0.f, LedgeJump_AngleLimit);
 	float r = FMath::DegreesToRadians(angle);
@@ -414,14 +387,11 @@ FVector USteikemannCharMovementComponent::ClampDirectionToAngleFromVector(const 
 
 void USteikemannCharMovementComponent::GP_PreLaunch()
 {
-	//bGP_PreLaunch = true;
 	m_GravityMode = EGravityMode::ForcedNone;
 }
 
 void USteikemannCharMovementComponent::GP_Launch(float strength)
 {
-	//bGP_PreLaunch = false;
-	//const float LaunchStrength = GetCharOwner()->GP_LaunchStrength;
 	m_GravityMode = EGravityMode::Default;
 	AddImpulse(FVector(0, 0, -strength), true);
 }

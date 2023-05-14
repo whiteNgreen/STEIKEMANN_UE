@@ -18,13 +18,10 @@ ADialoguePrompt::ADialoguePrompt()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
-
 	Root = CreateDefaultSubobject<USceneComponent>("Root");
 	RootComponent = Root;
-
 	Volume = CreateDefaultSubobject<UBoxComponent>("Volume");
 	Volume->SetupAttachment(Root);
-
 	Prompt = CreateDefaultSubobject<USceneComponent>("Prompt");
 	Prompt->SetupAttachment(Volume);
 }
@@ -46,7 +43,6 @@ void ADialoguePrompt::Tick(float DeltaTime)
 void ADialoguePrompt::SceneComponentLookAt(USceneComponent* Comp, USceneComponent* Target)
 {
 	if (!Comp || !Target) {
-		PRINTLONG(2.f, "Invalid Comp");
 		return;
 	}
 	FVector Direction = FVector(Target->GetComponentLocation() - Comp->GetComponentLocation()).GetSafeNormal();

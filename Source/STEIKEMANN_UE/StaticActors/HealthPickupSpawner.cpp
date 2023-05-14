@@ -20,12 +20,10 @@ void APickupSpawner::BeginPlay()
 void APickupSpawner::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	
 }
 
 void APickupSpawner::RespawnPickup()
 {
-	PRINTLONG(PickupSpawnTime, "Respawn Pickup");
 	TimerManager.SetTimer(TH_PickupRespawn, this, &APickupSpawner::SpawnPickup, PickupSpawnTime);
 }
 

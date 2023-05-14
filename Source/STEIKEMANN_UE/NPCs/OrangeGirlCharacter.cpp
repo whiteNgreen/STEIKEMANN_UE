@@ -24,8 +24,5 @@ void AOrangeGirlCharacter::Gen_ReceiveAttack(const FVector Direction, const floa
 	if (!CanBeAttacked()) 
 		return;
 	bAICanBeDamaged = false;
-
-	PRINTLONG(2.f, "Orange girl ATTACKED");
-
 	TimerManager.SetTimer(FTHCanBeDamaged, this, &IAttackInterface::ResetCanbeDamaged, 0.5f);
 }

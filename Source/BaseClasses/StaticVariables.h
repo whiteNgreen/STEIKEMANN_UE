@@ -13,7 +13,7 @@ static inline FVector GetRandomLocationAroundPoint2D(const FVector& location, co
 	float angle = FMath::RandRange(0.f, 360.f);
 
 	float r = (FMath::Max(FMath::RandRange(0.f, radius), minRadius)) / radius;
-	float length = FMath::Sqrt(r)/* * FMath::Pow(r, 2)*/;
+	float length = FMath::Sqrt(r);
 
 	return location + (FVector::ForwardVector.RotateAngleAxis(angle, FVector::UpVector) * length * radius);
 }

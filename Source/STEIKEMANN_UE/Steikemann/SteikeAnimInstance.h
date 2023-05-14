@@ -23,8 +23,6 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 		class ASteikemannCharacter* SteikeOwner{ nullptr };
-		//TWeakObjectPtr<class ASteikemannCharacter> SteikeOwner{ nullptr };
-
 	/* Walking Speed */
 	UPROPERTY(BlueprintReadOnly)
 		float Speed{};

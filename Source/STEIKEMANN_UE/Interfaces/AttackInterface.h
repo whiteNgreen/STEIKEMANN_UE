@@ -11,7 +11,6 @@ enum EAttackType
 {
 	None,
 	SmackAttack,
-	//Scoop,
 	GroundPound,
 	PogoBounce,
 	Environmental

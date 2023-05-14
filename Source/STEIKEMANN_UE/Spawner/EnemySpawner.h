@@ -74,9 +74,6 @@ public: // Variables
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float CanBeAttackedTimer{ 1.f };
 
-	/* When spawned actor look for a location within spawn, they will not look inside this radius */
-	//UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	//	float SpawnerMinRadius{ 500.f };
 	/* When respawning: Only respawn the actors that are outside of this radius from the spawners root */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float SpawnerActiveRadius{ 2000.f };
@@ -133,11 +130,7 @@ public: // Functions
 	UFUNCTION(BlueprintImplementableEvent)
 		void Anim_Hit();
 
-public: // Functions - Called by SpawnedActor
-
 private: // PRIVATE Functions
 	void SpawnAubergineDog(int& index);
 	ASmallEnemy* SpawnCharacter();
-
-	//void SpawnAuberginePack();
 };

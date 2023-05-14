@@ -48,7 +48,6 @@ bool ABouncyShroom::GetBounceInfo(const FVector actorLocation, const FVector nor
 void ABouncyShroom::DrawProjectedBouncePath(float time, float drawtime, float GravityMulti)
 {
 	if (!GetWorld()) return;
-	//float delta = GetWorld()->GetDeltaSeconds();
 	float delta = 1.f / 60.f;
 
 	FVector Start = DirectionArrowComp->GetComponentLocation();

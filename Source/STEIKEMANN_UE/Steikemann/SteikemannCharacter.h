@@ -10,12 +10,9 @@
 #include "../Interfaces/GrappleTargetInterface.h"
 #include "../Interfaces/AttackInterface.h"
 #include "../Interfaces/CameraGuideInterface.h"
-//#include "../DebugMacros.h"
 #include "Camera/CameraShakeBase.h"
 #include "SteikeAnimInstance.h"
 #include "GameplayTagAssetInterface.h"
-//#include "../StaticActors/Collectible.h"
-//#include "../WallDetectionComponent.h"
 #include "../Walldetection/WallDetection_EnS.h"
 #include "../StaticActors/EnS/StaticActors_EnS.h"
 
@@ -28,12 +25,8 @@ DECLARE_DELEGATE(FAttackActionBuffer)
 DECLARE_DELEGATE_OneParam(FPostAttackBuffer, EPostAttackType& PostAttackType);
 DECLARE_DELEGATE(FGrappleEnemyLandDelegate)
 
-//class UNiagaraSystem;
-//class UNiagaraComponent;
-/* Forward Declarations */
 class USoundBase;
 class UWallDetectionComponent;
-
 
 UENUM()
 enum class EMovementInput : int8
@@ -127,7 +120,6 @@ enum class ESmackAttackType : int8
 UENUM()
 enum class EPostAttackType : int8
 {
-	//None,
 	GrappleSmack
 };
 
@@ -200,7 +192,6 @@ public:
 	EMovementInput m_EMovementInputState = EMovementInput::Open;
 
 	TWeakObjectPtr<class USteikemannCharMovementComponent> MovementComponent;
-	/* Returns the custom MovementComponent. A TWeakPtr<class USteikemannCharMovementComponent> */
 	TWeakObjectPtr<class USteikemannCharMovementComponent> GetMoveComponent() const { return MovementComponent; }
 
 	USteikeAnimInstance* SteikeAnimInstance{ nullptr };
@@ -298,10 +289,10 @@ public:
 
 		/* The amount of particles that will spawn determined by the characters landing velocity, times this multiplier */
 		UPROPERTY(EditAnywhere, Category = "Particle Effects|Land")
-			float NSM_Land_ParticleAmount		/*UMETA(DisplayName = "Particle Amount Multiplier") */{ 0.5f };
+			float NSM_Land_ParticleAmount{ 0.5f };
 		/* The speed of the particles will be determined by the characters velocity when landing, times this multiplier */
 		UPROPERTY(EditAnywhere, Category = "Particle Effects|Land")
-			float NSM_Land_ParticleSpeed		/*UMETA(DisplayName = "Particle Speed Multiplier")*/ { 0.5f };
+			float NSM_Land_ParticleSpeed{ 0.5f };
 
 		#pragma endregion //Landing
 	#pragma region OnWall
@@ -310,7 +301,7 @@ public:
 			UNiagaraSystem* NS_WallSlide{ nullptr };
 		/* The amount of particles per second the system should emit */
 		UPROPERTY(EditAnywhere, Category = "Particle Effects|WallJump")
-			float NS_WallSlide_ParticleAmount	/*UMETA(DisplayName = "WallSlide ParticleAmount")*/ { 1000.f };
+			float NS_WallSlide_ParticleAmount{ 1000.f };
 	#pragma endregion //OnWall
 	#pragma region Attack
 	UNiagaraComponent* NiagaraComp_Attack{ nullptr };
@@ -415,16 +406,6 @@ public:
 		float GrappleDynamic_PitchAlpha{ 0.2f };
 	UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic", meta = (UIMin = "-1", UIMax = "1"))
 		float GrappleDynamic_DefaultPitch{ 0.2f };
-
-
-	//UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic|Pitch", meta = (UIMin = "0", UIMax = "1500"))
-	//	float GrappleDynamic_Pitch_DistanceMIN	 { 100.f };
-	//UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic|Pitch", meta = (UIMin = "0", UIMax = "500"))
-	//	float GrappleDynamic_Pitch_MIN{ 100.f };
-	//UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic|Pitch", meta = (UIMin = "0", UIMax = "5000"))
-	//	float GrappleDynamic_Pitch_MAX{ 100.f };
-	//UPROPERTY(EditAnywhere, Category = "Camera|Mechanic|GrappleDynamic|Pitch", meta = (UIMin = "0", UIMax = "2"))
-	//	float GrappleDynamic_ZdiffMultiplier{ 1.f };
 
 	float InitialGrappleDynamicZ{};
 
@@ -538,8 +519,6 @@ public:/* ------------------- Basic Movement ------------------- */
 		float Jump_HeightHoldTimer{ 1.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump")
 		float JumpHeightHold_VelocityInterpSpeed{ 5.f };
-	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump")
-		//float PostScoop_JumpTime{ 0.3f };
 
 	void Landed(const FHitResult& Hit) override;
 
@@ -563,9 +542,6 @@ public:/* ------------------- Basic Movement ------------------- */
 
 	bool IsFalling() const;
 	bool IsOnGround() const;
-
-
-	//bool CanJump() const override;
 
 	/* 
 	 * -------------------- New Jump : Cartoony --------------------------- 
@@ -635,8 +611,6 @@ public:
 		float PB_InputMulti_Groundpound{ 0.05f };
 	
 private: // Within Collision bools
-	//bool bPB_Groundpound_PredeterminedPogoHit{};
-	//bool bPB_Groundpound_LaunchNextFrame{};
 	AActor* PB_Groundpound_TargetActor{ nullptr };
 	AActor* PB_Active_PogoTarget{ nullptr };
 
@@ -656,9 +630,9 @@ private:
 	void PB_Pogo();
 	void PB_EnterPogoState(float time);
 
-	bool PB_Passive_IMPL(AActor* OtherActor);
+	//bool PB_Passive_IMPL(AActor* OtherActor);
 	bool PB_Passive_IMPL(const FHitResult& Hit);
-	void PB_Launch_Passive();
+	void PB_Launch_Passive(bool bOnStuckEnemy);
 
 	void PB_Active_IMPL(AActor* PogoedActor);
 	void PB_Launch_Active();
@@ -708,7 +682,6 @@ public: // Animation
 #pragma endregion		//Right Facebutton
 #pragma region Collectibles & Health
 public:
-	//void ReceiveCollectible(ECollectibleType type);
 	void ReceiveCollectible(class ACollectible* collectible);
 	void ReceiveCollectible(class ACollectible_Static* collectible);
 	UFUNCTION(BlueprintImplementableEvent)
@@ -1035,7 +1008,7 @@ public: /* ------- Native Variables and functions -------- */
 	/* The added percentage of the screens height that is added to the aiming location. A higher number turns it closer to the
 		middle, with a lower number further up. 0 directly to the middle */
 	UPROPERTY(Editanywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Targeting")
-		float GrappleAimYChange_Base /*UMETA(DisplayName = "GrappleAimYDifference") */{ 4.f };
+		float GrappleAimYChange_Base{ 4.f };
 	float GrappleAimYChange{};
 
 	void GH_GrappleAiming();
@@ -1056,27 +1029,28 @@ public: /* ------- Native Variables and functions -------- */
 		float GrappleHook_DividingFactor{ 2.f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
-		float GrappleHook_PostLaunchTimer /*UMETA(DisplayName = "Post Launch Timer")*/ { 1.f };
+		float GrappleHook_PostLaunchTimer{ 1.f };
 
 
 	/* How long the player will be held in the air before being launched towards the grappled actor */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook")
-		float GrappleDrag_PreLaunch_Timer_Length /*UMETA(DisplayName = "PreLaunch Timer")*/  { 0.25f };
+		float GrappleDrag_PreLaunch_Timer_Length{ 0.25f };
 
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Grappling Hook|StuckEnemy")
-		float GrappleHook_Time_ToStuckEnemy /*UMETA(DisplayName = "Time To Stuck Enemy")*/ { 0.3f };
+		float GrappleHook_Time_ToStuckEnemy{ 0.3f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Grappling Hook|StuckEnemy")
-		float GrappleHook_AboveStuckEnemy /*UMETA(DisplayName = "Z Above Stuck Enemy")*/ { 50.f };
-
+		float GrappleHook_AboveStuckEnemy{ 50.f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Grappling Hook|StuckEnemy")
+		float GH_StuckEnemy2DOffsetScale{ 0.1f };
 	/* -- GRAPPLE CAMERA VARIABLES -- */
 	/* Interpolation speed of the camera rotation during grapplehook Drag */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag|Camera Rotation")
-		float GrappleDrag_Camera_InterpSpeed			/*UMETA(DisplayName = "Interpolation Speed")	*/	{ 3.f };
+		float GrappleDrag_Camera_InterpSpeed{ 3.f };
 
 	/* Pitch adjustment for the camera rotation during the Pre_Launch of Grapple Drag  */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Grappling Hook|Drag|Camera Rotation")
-		float GrappleDrag_Camera_PitchPoint				/*UMETA(DisplayName = "Pitch Point")	*/			{ 20.f };
+		float GrappleDrag_Camera_PitchPoint{ 20.f };
 
 #pragma endregion				//GrappleHook
 #pragma region Attacks
@@ -1102,7 +1076,6 @@ public: /* ------- Native Variables and functions -------- */
 	void StartAttackBufferPeriod() override;
 	void ExecuteAttackBuffer() override;
 	void EndAttackBufferPeriod() override;
-
 
 	FPostAttackBuffer Delegate_PostAttackBuffer;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|SmackAttack|GrappleSmack")
@@ -1134,11 +1107,11 @@ public: /* ------- Native Variables and functions -------- */
 	UFUNCTION(BlueprintImplementableEvent)
 		void ComboAttack(int combo);
 	void ComboAttack_Pure();
-	void Cancel_SmackAttack();
-
+	UFUNCTION(BlueprintCallable)
+		void Cancel_SmackAttack();
 	UFUNCTION(BlueprintCallable)
 		void Stop_Attack();
-
+	
 	void RotateToAttack();
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Attack")
@@ -1181,9 +1154,9 @@ public: /* ------- Native Variables and functions -------- */
 		uint8 SmackDirectionType{ 1 };
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|SmackDirection", meta = (UIMin = "1.0", UIMax = "4.0", EditCondition = "SmackDirectionType == 2 || SmackDirectionType == 3", EditConditionHides))
-		float SmackDirection_CameraMultiplier	/*UMETA(DisplayName = "Camera Multiplier")*/ { 1.f };
+		float SmackDirection_CameraMultiplier{ 1.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks|SmackDirection", meta = (UIMin = "1.0", UIMax = "4.0", EditCondition = "SmackDirectionType == 1 || SmackDirectionType == 3", EditConditionHides))
-		float SmackDirection_InputMultiplier	/*UMETA(DisplayName = "Input Multiplier")*/ { 1.f };
+		float SmackDirection_InputMultiplier{ 1.f };
 
 	
 	/* The angle from the ground the enemy will be smacked. 0.0: Is parallel to the ground. 1.0: Is directly upwards */
@@ -1194,9 +1167,9 @@ public: /* ------- Native Variables and functions -------- */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks")
 		float GrappleSmack_Strength{ 2300.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks", meta = (UIMin = "0", UIMax = "1"))
-		float SmackAttack_InputAngleMultiplier			/*UMETA(DisplayName = "Input Angle Multiplier")*/ { 0.2 };
+		float SmackAttack_InputAngleMultiplier{ 0.2 };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|BasicAttacks", meta = (UIMin = "0", UIMax = "1"))
-		float Grapplesmack_DirectionMultiplier		/*UMETA(DisplayName = "Input Strength Multiplier")*/ { 0.2 };
+		float Grapplesmack_DirectionMultiplier{ 0.2 };
 
 	UFUNCTION(BlueprintCallable)
 		bool IsSmackAttacking() const;

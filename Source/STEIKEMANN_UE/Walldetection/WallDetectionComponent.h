@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-//#include "DebugMacros.h"
 #include "WallDetection_EnS.h"
 #include "../STEIKEMANN_UE.h"
 #include "WallDetectionComponent.generated.h"
@@ -18,7 +17,6 @@ class STEIKEMANN_UE_API UWallDetectionComponent : public UActorComponent
 
 public:	
 	// Sets default values for this component's properties
-	//UWallDetectionComponent();
 
 protected:
 	// Called when the game starts
@@ -29,9 +27,6 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 public:
-	//void SetDebugStatus(bool b) { bShowDebug = b; }
-
-	// Capusle size
 	void SetCapsuleSize(float radius, float halfheight) { m_capsule.SetCapsule(radius, halfheight); }
 	
 	void SetHeight(float minHeight, float playerCapsuleHalfHeight) { m_MinHeight = minHeight, m_OwnerHalfHeight = playerCapsuleHalfHeight; }
@@ -45,7 +40,6 @@ private:
 	float m_MinLengthToWall{ 40.f };
 
 public:	// Wall Detection
-	// Viable wall angles between upper and lower limit. 
 
 	bool DetectWall(const AActor* actor, const FVector Location, const FVector ForwardVector, Wall::WallData& walldata, Wall::WallData& WallJumpData);
 	bool DetectStickyWall(const AActor* actor, const FVector Location, const FVector Forward, Wall::WallData& walldata, ECollisionChannel TraceChannel);

@@ -13,12 +13,10 @@ ABaseStaticActor::ABaseStaticActor()
 	RootComponent = Root;
 }
 
-
 // Called when the game starts or when spawned
 void ABaseStaticActor::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
 void ABaseStaticActor::Tick(float DeltaTime)

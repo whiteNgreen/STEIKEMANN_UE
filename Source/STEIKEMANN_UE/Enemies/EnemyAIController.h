@@ -58,8 +58,6 @@ public:	// Functions
 		void AIOnSeePawn(APawn* pawn);
 	UFUNCTION()
 		void AIHearNoise(APawn* InstigatorPawn, const FVector& Location, float Volume);
-	//void SensePawn(APawn* pawn, FGameplayTag& tag);
-	//void SensePawn_Player();
 	void SpotPlayer();
 
 	void AlertedInit(const APawn& instigator);
@@ -76,7 +74,6 @@ public:	// Functions
 	bool AlertedByPack();
 
 	// Attacking 
-	/* The distance to the player the AI will initiate Attack */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 		float AttackDistance{ 300.f };
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
@@ -202,28 +199,20 @@ public: // Variables
 	EAIIncapacitatedType m_AIIncapacitatedType = EAIIncapacitatedType::None;
 	EAIPost_IncapacitatedType m_EAIPost_IncapacitatedType;
 
-	FTimerManager TM_AI;	// ha en egen timer manager istedenfor å bruke World Timer Manager?
+	FTimerManager TM_AI;	
 	FTimerHandle TH_IncapacitateTimer;
 
 	FTimerHandle TH_StopSensingPlayer;
 	FTimerHandle TH_SpotPlayer;
 
-
-	//FSensedPawnsDelegate SensedPawnsDelegate;
-	//FDelegateHandle DH_SensedPlayer;
-
 	/* Time taken to spot the player */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 		float TimeToSpotPlayer{ 2.f };
 
-	//UPROPERTY(BlueprintReadWrite)
-		//bool bFollowPlayer{};
 	/* Time AI is spent as recently spawned, where it does nothing */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 		float TimeSpentRecentlySpawned{ 1.f };
-	//UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	EDogType m_DogType;
-
 
 #ifdef UE_BUILD_DEBUG
 public:

@@ -126,13 +126,11 @@ float ACollectibleSpawner::TraceZLocation(FVector& loc, bool& traceSuccess, int 
 void ACollectibleSpawner::BeginPlay()
 {
 	Super::BeginPlay();
-	//SpawnCollectibles();
 }
 
 // Called every frame
 void ACollectibleSpawner::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
 }
 
