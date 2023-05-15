@@ -242,6 +242,26 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 #ifdef UE_BUILD_DEBUG
 	/* PRINTING STATE MACHINE INFO */
 	//Print_State();
+	switch (m_EPogoType)
+	{
+	case EPogoType::POGO_None:
+		PRINT("None");
+		break;
+	case EPogoType::POGO_Passive:
+		PRINT("Passive");
+		break;
+	case EPogoType::POGO_Active:
+		PRINT("Active");
+		break;
+	case EPogoType::POGO_Groundpound:
+		PRINT("Groundpound");
+		break;
+	case EPogoType::POGO_Leave:
+		PRINT("Leave");
+		break;
+	default:
+		break;
+	}
 #endif
 
 	/*		Resets Rotation Pitch and Roll		*/
@@ -280,18 +300,6 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		case EAirState::AIR_Jump:
 			break;
 		case EAirState::AIR_Pogo:
-			break;
-		default:
-			break;
-		}
-
-		switch (m_EPogoType)
-		{
-		case EPogoType::POGO_None:
-			break;
-		case EPogoType::POGO_Passive:
-			break;
-		case EPogoType::POGO_Active:
 			break;
 		default:
 			break;
@@ -341,11 +349,11 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		case EAttackState::Smack:
 			break;
 		case EAttackState::GroundPound:
-			if (m_EPogoType == EPogoType::POGO_Groundpound) 
-			{
-				PB_Groundpound_IMPL(m_PogoTarget);
-				break;
-			}
+			//if (m_EPogoType == EPogoType::POGO_Groundpound) 
+			//{
+			//	PB_Groundpound_IMPL(m_PogoTarget);
+			//	break;
+			//}
 			break;
 		default:
 			break;
@@ -419,7 +427,7 @@ void ASteikemannCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 		/* Movement control */
 			/* Gamepad and Keyboard */
 	PlayerInputComponent->BindAxis("Move Forward / Backward", this, &ASteikemannCharacter::MoveForward);
-	PlayerInputComponent->BindAxis("Move Right / Left", this, &ASteikemannCharacter::MoveRight);
+	PlayerInputComponent->BindAxis("Move Right / Left", this,		&ASteikemannCharacter::MoveRight);
 		/* Looking control */
 	PlayerInputComponent->BindAxis("Turn Right / Left Mouse", this,		&ASteikemannCharacter::Mouse_AddControllerYawInput);
 	PlayerInputComponent->BindAxis("Look Up / Down Mouse", this,		&ASteikemannCharacter::Mouse_AddControllerPitchInput);
@@ -738,7 +746,8 @@ void ASteikemannCharacter::GH_Click()
 	if (!ITag || !IGrapple) return;
 	if (ITag->HasMatchingGameplayTag(Tag::AubergineDoggo()))
 		GrappledEnemy = Active_GrappledActor;
-	JumpCurrentCount = 1;	// Reset DoubleJump
+	if (JumpCurrentCount > 1)
+		JumpCurrentCount = 1;	// Reset DoubleJump
 	GC_StaticGrapple_Alpha = GC_StaticGrapple_StartSpeed;
 
 	GH_SetInitialGrappleSmackAimingVector(Active_GrappledActor->GetActorLocation());
@@ -923,10 +932,11 @@ void ASteikemannCharacter::GH_Launch_Static_StuckEnemy()
 	FVector GrappledLocation = GH_GetTargetLocation() + (FVector(GetActorLocation() - GH_GetTargetLocation()) * GH_StuckEnemy2DOffsetScale);
 	FVector Direction = GrappledLocation - GetActorLocation();
 	FVector Direction2D = FVector(Direction.X, Direction.Y, 0);
-
 	FVector Velocity = Direction2D / GrappleHook_Time_ToStuckEnemy;
 
-	float z = ((GrappledLocation.Z + GrappleHook_AboveStuckEnemy) - GetActorLocation().Z);
+	float zOffset = FMath::Max((GH_GetTargetLocation().Z - GetActorLocation().Z) * GH_StuckEnemyVerticalOffsetScale, 0.f);
+
+	float z = ((GrappledLocation.Z + GrappleHook_AboveStuckEnemy + zOffset) - GetActorLocation().Z);
 
 	Velocity.Z = (z / GrappleHook_Time_ToStuckEnemy) + (0.5 * m_BaseGravityZ * GrappleHook_Time_ToStuckEnemy * -1.f);
 	GetMoveComponent()->AddImpulse(Velocity, true);
@@ -2104,6 +2114,8 @@ bool ASteikemannCharacter::PB_ValidTargetDistance(const FVector OtherActorLocati
 
 bool ASteikemannCharacter::PB_Active_TargetDetection()
 {
+	if (m_EPogoType == EPogoType::POGO_Leave) true;
+
 	FCollisionShape capsule = FCollisionShape::MakeCapsule(PB_ActiveDetection_CapsuleRadius, PB_ActiveDetection_CapsuleHalfHeight);
 	FVector location = GetActorLocation() - FVector(0, 0, PB_ActiveDetection_CapsuleZLocation);
 	FHitResult Hit;
@@ -2209,6 +2221,7 @@ void ASteikemannCharacter::PB_Launch_Passive(bool bOnStuckEnemy)
 	GetCharacterMovement()->Velocity *= 0.f;
 	GetCharacterMovement()->AddImpulse((FVector::UpVector * PB_LaunchStrength_Z_Passive) + (Direction * PB_LaunchStrength_MultiXY_Passive), true);
 
+	TimerManager.SetTimer(TH_PB_ExitHandle, [this]() { m_EPogoType = EPogoType::POGO_None; }, PB_StateTimer_Passive, false);
 	if (!TimerManager.IsTimerActive(TH_Pogo_NoCollision)) {
 		DisableCollisions();
 		TimerManager.SetTimer(TH_Pogo_NoCollision, this, &ABaseCharacter::EnableCollisions, 0.1f);
@@ -2217,6 +2230,7 @@ void ASteikemannCharacter::PB_Launch_Passive(bool bOnStuckEnemy)
 
 void ASteikemannCharacter::PB_Active_IMPL(AActor* PogoedActor)
 {
+	if (m_EPogoType == EPogoType::POGO_Leave) return;
 	if (!PogoedActor) return;
 	m_EAirState = EAirState::AIR_Pogo;
 	m_EPogoType = EPogoType::POGO_Leave;
@@ -2246,7 +2260,13 @@ void ASteikemannCharacter::PB_Launch_Active()
 
 bool ASteikemannCharacter::PB_Groundpound_IMPL(AActor* OtherActor)
 {
+	if (m_EPogoType == EPogoType::POGO_Leave) return false;
 	if (!OtherActor) return false;
+
+	if (!TimerManager.IsTimerActive(TH_Pogo_NoCollision)) {
+		DisableCollisions();
+		TimerManager.SetTimer(TH_Pogo_NoCollision, this, &ABaseCharacter::EnableCollisions, 0.1f);
+	}
 
 	JumpCurrentCount = 1;	// Resets double jump
 	PB_EnterPogoState(PB_StateTimer_Groundpound);
@@ -2255,7 +2275,7 @@ bool ASteikemannCharacter::PB_Groundpound_IMPL(AActor* OtherActor)
 	m_EAttackState = EAttackState::None;
 	m_EAttackType = EAttackType::None;
 	m_EPogoType = EPogoType::POGO_Leave;
-	TimerManager.SetTimer(TH_Pogo, [this]() { m_EPogoType = EPogoType::POGO_None; }, 0.5f, false);
+	TimerManager.SetTimer(TH_PB_ExitHandle, [this]() { m_EPogoType = EPogoType::POGO_None; }, PB_StateTimer_Groundpound, false);
 	if (IAttackInterface* iattack = Cast<IAttackInterface>(OtherActor)) {
 		iattack->Receive_Pogo_GroundPound_Pure();
 	}

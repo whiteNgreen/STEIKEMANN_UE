@@ -1042,6 +1042,8 @@ public: /* ------- Native Variables and functions -------- */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Grappling Hook|StuckEnemy")
 		float GrappleHook_AboveStuckEnemy{ 50.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Grappling Hook|StuckEnemy")
+		float GH_StuckEnemyVerticalOffsetScale{ 0.1f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Grappling Hook|StuckEnemy")
 		float GH_StuckEnemy2DOffsetScale{ 0.1f };
 	/* -- GRAPPLE CAMERA VARIABLES -- */
 	/* Interpolation speed of the camera rotation during grapplehook Drag */

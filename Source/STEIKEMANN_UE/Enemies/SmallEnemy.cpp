@@ -859,6 +859,7 @@ void ASmallEnemy::PullFree_Pure(const FVector InstigatorLocation)
 
 	Delegate_StunnedLand.BindUObject(this, &ASmallEnemy::StunnedLand);
 	Delegate_LaunchedLand.BindUObject(this, &ASmallEnemy::LandedLaunched);
+	Launched(FVector(InstigatorLocation - GetActorLocation()).GetSafeNormal());
 }
 
 void ASmallEnemy::PullFree_Launch(const FVector& InstigatorLocation)
