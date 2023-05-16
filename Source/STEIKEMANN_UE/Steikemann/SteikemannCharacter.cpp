@@ -242,26 +242,6 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 #ifdef UE_BUILD_DEBUG
 	/* PRINTING STATE MACHINE INFO */
 	//Print_State();
-	switch (m_EPogoType)
-	{
-	case EPogoType::POGO_None:
-		PRINT("None");
-		break;
-	case EPogoType::POGO_Passive:
-		PRINT("Passive");
-		break;
-	case EPogoType::POGO_Active:
-		PRINT("Active");
-		break;
-	case EPogoType::POGO_Groundpound:
-		PRINT("Groundpound");
-		break;
-	case EPogoType::POGO_Leave:
-		PRINT("Leave");
-		break;
-	default:
-		break;
-	}
 #endif
 
 	/*		Resets Rotation Pitch and Roll		*/
@@ -472,6 +452,21 @@ void ASteikemannCharacter::LeavePromptArea()
 	m_PromptState = EPromptState::None;
 }
 
+void ASteikemannCharacter::SetPlayerPromptTransform()
+{
+	FTransform transform = m_PromptActor->GetPlayerPromptTransform();
+	const FVector starttrace = transform.GetLocation();
+	const FVector endtrace = transform.GetLocation() - FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 3.f);
+	FHitResult Hit;
+	const FCollisionQueryParams Params("", false, this);
+	if (GetWorld()->LineTraceSingleByChannel(Hit, starttrace, endtrace, ECC_WorldStatic, Params)) 
+	{
+		const float difference = GetCapsuleComponent()->GetScaledCapsuleHalfHeight() - FVector::Dist(starttrace, Hit.ImpactPoint);
+		transform.AddToTranslation(FVector(0, 0, difference));
+	}
+	SetActorTransform(transform, false, nullptr, ETeleportType::ResetPhysics);
+}
+
 bool ASteikemannCharacter::ActivatePrompt()
 {
 	if (TimerManager.IsTimerActive(TH_BetweenPromptActivations))
@@ -482,7 +477,7 @@ bool ASteikemannCharacter::ActivatePrompt()
 
 	case EPromptState::WithingArea:
 		Cancel_SmackAttack();
-		RotateActorYawToVector(FVector(m_PromptActor->GetActorLocation() - GetActorLocation()));
+		SetPlayerPromptTransform();
 		m_CameraTransform = Camera->GetComponentTransform();
 		m_PromptState = EPromptState::InPrompt;
 		// Get first prompt state
@@ -2230,7 +2225,12 @@ void ASteikemannCharacter::PB_Launch_Passive(bool bOnStuckEnemy)
 
 void ASteikemannCharacter::PB_Active_IMPL(AActor* PogoedActor)
 {
-	if (m_EPogoType == EPogoType::POGO_Leave) return;
+	if (m_EPogoType == EPogoType::POGO_Leave) {
+		// Delegate jump to after the pogo exit timer is done. To improve the responsiveness of the pogo active near passive bounces
+		FTimerHandle h;
+		TimerManager.SetTimer(h, this, &ASteikemannCharacter::Jump, TimerManager.GetTimerRemaining(TH_PB_ExitHandle) + 0.02f);	
+		return;
+	}
 	if (!PogoedActor) return;
 	m_EAirState = EAirState::AIR_Pogo;
 	m_EPogoType = EPogoType::POGO_Leave;
@@ -2469,7 +2469,7 @@ void ASteikemannCharacter::ReceiveCollectible(ACollectible_Static* collectible)
 		UpdateSapCollectible();
 		break;
 	case ECollectibleType::Health:
-		GainHealth(1);
+		GainHealth(2);
 		break;
 	case ECollectibleType::CorruptionCore:
 		CollectibleCorruptionCore++;

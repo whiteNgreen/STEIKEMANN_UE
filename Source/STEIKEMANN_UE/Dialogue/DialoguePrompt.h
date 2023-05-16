@@ -18,6 +18,7 @@ enum class ECameraLerp : uint8
 class UCameraComponent;
 class UBoxComponent;
 class ASteikemannCharacter;
+class UArrowComponent;
 
 UCLASS()
 class STEIKEMANN_UE_API ADialoguePrompt : public AActor
@@ -30,7 +31,8 @@ public:
 		USceneComponent* Prompt;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		UBoxComponent* Volume;
-
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		UArrowComponent* PlayerTransform;
 public:
 	// Sets default values for this actor's properties
 	ADialoguePrompt();
@@ -84,5 +86,8 @@ public:	// Functions called by player
 
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 		void ExitPrompt(float ExitTime);
+
+	UFUNCTION(BlueprintCallable)
+		FTransform GetPlayerPromptTransform() const;
 };
 

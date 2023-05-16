@@ -238,7 +238,7 @@ public:
 
 	void EnterPromptArea(ADialoguePrompt* promptActor, FVector promptLocation);
 	void LeavePromptArea();
-
+	void SetPlayerPromptTransform();
 	bool ActivatePrompt();
 	UFUNCTION(BlueprintCallable)
 		bool PlayerExitPrompt();

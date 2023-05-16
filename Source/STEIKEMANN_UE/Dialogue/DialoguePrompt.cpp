@@ -6,6 +6,7 @@
 
 #include "Components/BoxComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/ArrowComponent.h"
 #include "../GameplayTags.h"
 #include "Kismet/GameplayStatics.h"
 #include "Camera/CameraComponent.h"
@@ -24,6 +25,8 @@ ADialoguePrompt::ADialoguePrompt()
 	Volume->SetupAttachment(Root);
 	Prompt = CreateDefaultSubobject<USceneComponent>("Prompt");
 	Prompt->SetupAttachment(Volume);
+	PlayerTransform = CreateDefaultSubobject<UArrowComponent>("Player Transform");
+	PlayerTransform->SetupAttachment(Root);
 }
 
 // Called when the game starts or when spawned
@@ -116,6 +119,11 @@ void ADialoguePrompt::GetNextPromptState_Pure(ASteikemannCharacter* player, int 
 	GetNextPromptState(player, m_PromptIndex_Internal);
 	PromptChange_Pure();
 	m_PromptIndex_Internal++;
+}
+
+FTransform ADialoguePrompt::GetPlayerPromptTransform() const
+{
+	return PlayerTransform->GetComponentTransform();
 }
 
 

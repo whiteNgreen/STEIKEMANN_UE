@@ -90,6 +90,10 @@ void ASmallEnemy::BeginPlay()
 
 		StickToWall();
 		Gravity_Tick();
+		SpecialStartWorldLocation = GetActorLocation();
+		TimerManager.SetTimer(TH_SpecialStartWorldLocation, [this]() {
+			SetActorLocation(SpecialStartWorldLocation, false, nullptr, ETeleportType::TeleportPhysics);
+			}, 0.2f, true);
 	}
 }
 
@@ -843,6 +847,11 @@ void ASmallEnemy::PullFree_Pure(const FVector InstigatorLocation)
 {
 	m_State = EEnemyState::STATE_InAir;
 	
+	if (bStartStuckToWall) {
+		TimerManager.ClearTimer(TH_SpecialStartWorldLocation);
+		bStartStuckToWall = false;
+	}
+
 	PullFree_Launch(InstigatorLocation);
 	LeaveWall();
 

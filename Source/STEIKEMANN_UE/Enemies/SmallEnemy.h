@@ -65,7 +65,9 @@ public:	// Components
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "SpecialStart")
 		bool bStartStuckToWall{};
-
+	FTimerHandle TH_SpecialStartWorldLocation;
+	UPROPERTY(BlueprintReadOnly)
+		FVector SpecialStartWorldLocation;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Debug")
 		bool bPrintDebugStatus{};
 #pragma endregion //Base
