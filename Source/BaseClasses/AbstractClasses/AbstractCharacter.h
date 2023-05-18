@@ -62,7 +62,6 @@ public:
 	virtual void EndTick(float DeltaTime);
 	void EnableCollisions();
 	void DisableCollisions();
-
 	FTimerManager TimerManager;
 	FNextFrameDelegate Delegate_NextFrameDelegate;
 	FParticleUpdate Delegate_ParticleUpdate;

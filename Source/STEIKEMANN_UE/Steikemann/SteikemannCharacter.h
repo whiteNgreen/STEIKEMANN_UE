@@ -190,6 +190,10 @@ public:
 		FVector m_GamepadCameraInput;
 
 	EMovementInput m_EMovementInputState = EMovementInput::Open;
+	UFUNCTION(BlueprintCallable)
+		void MovementInput_Lock()	{ m_EMovementInputState = EMovementInput::Locked; }
+	UFUNCTION(BlueprintCallable)
+		void MovementInput_Open()	{ m_EMovementInputState = EMovementInput::Open; }
 
 	TWeakObjectPtr<class USteikemannCharMovementComponent> MovementComponent;
 	TWeakObjectPtr<class USteikemannCharMovementComponent> GetMoveComponent() const { return MovementComponent; }
@@ -462,8 +466,8 @@ public:	// States
 	UFUNCTION(BlueprintCallable)
 		void ResetState();
 	void SetDefaultState();
-
-	virtual void AllowActionCancelationWithInput() override;
+	UFUNCTION(BlueprintCallable)
+		virtual void AllowActionCancelationWithInput() override;
 private:
 	EState m_EState = EState::STATE_OnGround;
 	EGroundState m_EGroundState = EGroundState::GROUND_Walk;
@@ -775,7 +779,7 @@ public:
 
 #pragma endregion	//Collectibles & Health
 #pragma region OnWall
-public:// Capsule
+public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		class UWallDetectionComponent* WallDetector{ nullptr };
@@ -818,7 +822,11 @@ public: // Walljump
 		float OnWallActivation_PostStuckEnemyGrappled{ 0.5f };
 
 public:	// Ledge grab
-
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|Ledge")
+		float LedgeLift_DotproductLimit{ 0.7f };
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|OnWall|Ledge")
+		float LedgeLift_Timer{ 0.7f };
+	FTimerHandle TH_Ledgelift;
 
 	
 public: // General
@@ -829,6 +837,7 @@ public: // General
 	void SetWallInputDirection();
 
 	void ExitOnWall(EState state);
+	void LeaveWall();
 public: // Is funcitons
 	bool IsOnWall() const;
 	bool IsLedgeGrabbing() const;
@@ -837,7 +846,10 @@ public: // Animation and Particle effects
 	bool Anim_IsOnWall() const;
 	UFUNCTION(BlueprintImplementableEvent)
 		void Anim_OnWallContact();
-
+	UFUNCTION(BlueprintImplementableEvent)
+		void LedgeLift();
+	UFUNCTION(BlueprintCallable)
+		void EndLedgeLift();
 private:
 	Wall::WallData m_Walldata;
 	Wall::WallData m_WallJumpData;
@@ -848,6 +860,8 @@ private:
 	bool Validate_Ledge(FHitResult& hit);
 	void Initial_LedgeGrab();
 	void LedgeGrab();
+	bool Determine_LedgeLift() const;
+
 
 	bool ValidateWall();
 

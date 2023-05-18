@@ -17,11 +17,8 @@ void UEnemyAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	Super::NativeUpdateAnimation(DeltaSeconds);
 	if (!Owner) return;
 
-	Velocity = Owner->GetVelocity();
-	Speed = Velocity.Length();
-	float dir = FVector::DotProduct(Velocity.GetSafeNormal(), Owner->GetActorForwardVector());
 	if (bIsLaunchedInAir) {
-		Launched_SpinAngle.Roll -= DeltaSeconds * (Launched_SpinSpeed * FMath::Sign(dir));
+		Launched_SpinAngle.Roll -= DeltaSeconds * (Launched_SpinSpeed * -1.f);
 	}
 }
 
@@ -29,8 +26,13 @@ void UEnemyAnimInstance::SetLaunchedInAir(FVector direction)
 {
 	bIsLaunchedInAir = true;
 	m_AnimState = EEnemyAnimState::Launched;
-	Launched_SpinAngle = direction.Rotation();
+	if (FVector::DotProduct(direction, FVector::UpVector) < 0.97f)
+		Launched_SpinAngle = FVector(FVector::UpVector + FVector::ForwardVector * 0.4f).Rotation();
+	else if (FVector::DotProduct(direction, FVector::DownVector) < 0.97f)
+		Launched_SpinAngle = FVector(FVector::DownVector + FVector::ForwardVector * 0.4f).Rotation();
+	else {
+		Launched_SpinAngle = direction.Rotation();
+	}
 	Launched_SpinAngle.Pitch = 0.f;
 	Launched_SpinAngle.Yaw = Owner->GetActorRotation().Yaw + 85.f;
-
 }

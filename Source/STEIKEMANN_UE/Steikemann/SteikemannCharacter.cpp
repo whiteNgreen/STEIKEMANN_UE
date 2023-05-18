@@ -241,7 +241,8 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 
 #ifdef UE_BUILD_DEBUG
 	/* PRINTING STATE MACHINE INFO */
-	//Print_State();
+	Print_State();
+	PRINTPAR("Movementstate: %i", m_EMovementInputState);
 #endif
 
 	/*		Resets Rotation Pitch and Roll		*/
@@ -286,6 +287,8 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		}
 
 		if (m_EAirState == EAirState::AIR_Pogo) break;
+		//if (TimerManager.IsTimerActive(TH_LedgeliftGravityDisabled))
+		//	break;
 		if (wall && m_WallState == EOnWallState::WALL_None && m_EAttackState != EAttackState::GroundPound)
 		{
 			// Detect ledge & Ledge Grab
@@ -310,6 +313,17 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 	}
 	case EState::STATE_OnWall:
 	{
+		if (m_WallState == EOnWallState::WALL_Ledgegrab) {
+			if (Determine_LedgeLift()) {
+				LeaveWall();
+				MovementInput_Lock();
+				LedgeLift();
+				TimerManager.SetTimer(TH_Ledgelift, this, &ASteikemannCharacter::EndLedgeLift, LedgeLift_Timer);
+				break;
+			}
+		}
+		//if (TimerManager.IsTimerActive(TH_LedgeliftGravityDisabled))
+		//	break;
 		if (wall || WallDetector->DetectLedge(m_Ledgedata, this, GetActorLocation(), GetActorUpVector(), m_Walldata, LedgeGrab_Height, LedgeGrab_Inwards))
 			OnWall_IMPL(DeltaTime);
 		else {
@@ -321,23 +335,6 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		break;
 	}
 	case EState::STATE_Attacking:
-		
-		switch (m_EAttackState)
-		{
-		case EAttackState::None:
-			break;
-		case EAttackState::Smack:
-			break;
-		case EAttackState::GroundPound:
-			//if (m_EPogoType == EPogoType::POGO_Groundpound) 
-			//{
-			//	PB_Groundpound_IMPL(m_PogoTarget);
-			//	break;
-			//}
-			break;
-		default:
-			break;
-		}
 		break;
 	case EState::STATE_Grappling:
 		break;
@@ -744,13 +741,11 @@ void ASteikemannCharacter::GH_Click()
 	if (JumpCurrentCount > 1)
 		JumpCurrentCount = 1;	// Reset DoubleJump
 	GC_StaticGrapple_Alpha = GC_StaticGrapple_StartSpeed;
-
 	GH_SetInitialGrappleSmackAimingVector(Active_GrappledActor->GetActorLocation());
 
 	// GRAPPLING STARTS HERE
 	GH_SetGrappleType(ITag, IGrapple);
 
-	// Player Animations
 	Anim_Grapple_Start();
 }
 
@@ -1640,7 +1635,10 @@ void ASteikemannCharacter::AllowActionCancelationWithInput()
 
 bool ASteikemannCharacter::BreakMovementInput(float value)
 {
-	if (m_EMovementInputState == EMovementInput::Locked || m_EMovementInputState == EMovementInput::PeriodLocked) return true;
+	if (m_EMovementInputState == EMovementInput::Locked || m_EMovementInputState == EMovementInput::PeriodLocked) {
+		PRINT("Break movement input");
+		return true;
+	}
 	switch (m_EState)
 	{
 	case EState::STATE_OnGround:
@@ -2260,9 +2258,9 @@ void ASteikemannCharacter::PB_Launch_Active()
 
 bool ASteikemannCharacter::PB_Groundpound_IMPL(AActor* OtherActor)
 {
-	if (m_EPogoType == EPogoType::POGO_Leave) return false;
+	//if (m_EPogoType == EPogoType::POGO_Leave) return false;
 	if (!OtherActor) return false;
-
+	TimerManager.ClearTimer(THandle_GPHangTime);
 	if (!TimerManager.IsTimerActive(TH_Pogo_NoCollision)) {
 		DisableCollisions();
 		TimerManager.SetTimer(TH_Pogo_NoCollision, this, &ABaseCharacter::EnableCollisions, 0.1f);
@@ -2688,6 +2686,11 @@ void ASteikemannCharacter::ExitOnWall(EState state)
 {
 	// TODO: Reevaluate m_State EState
 	m_EState = state;
+	LeaveWall();
+}
+
+void ASteikemannCharacter::LeaveWall()
+{
 	m_WallState = EOnWallState::WALL_Leave;
 	FTimerHandle h;
 	TimerManager.SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, 0.5f, false);
@@ -2706,6 +2709,14 @@ bool ASteikemannCharacter::IsLedgeGrabbing() const
 bool ASteikemannCharacter::Anim_IsOnWall() const
 {
 	return m_EState == EState::STATE_OnWall && (m_WallState == EOnWallState::WALL_Hang || m_WallState == EOnWallState::WALL_Drag);
+}
+
+void ASteikemannCharacter::EndLedgeLift()
+{
+	TimerManager.ClearTimer(TH_Ledgelift);
+	GetMoveComponent()->SetMovementMode(EMovementMode::MOVE_Walking);
+	MovementInput_Open();
+	ResetState();
 }
 
 bool ASteikemannCharacter::Validate_Ledge(FHitResult& hit)
@@ -2755,6 +2766,14 @@ void ASteikemannCharacter::Initial_LedgeGrab()
 
 void ASteikemannCharacter::LedgeGrab()
 {
+}
+
+bool ASteikemannCharacter::Determine_LedgeLift() const
+{
+	const float Dot = FVector::DotProduct(-m_Walldata.Normal, m_InputVector);
+	if (Dot > LedgeLift_DotproductLimit)
+		return true;
+	return false;
 }
 
 bool ASteikemannCharacter::ValidateWall()
@@ -2826,7 +2845,10 @@ void ASteikemannCharacter::OnCapsuleComponentBeginOverlap(UPrimitiveComponent* O
 	// Collision with Pogo Target
 	if (tags.HasTag(Tag::PogoTarget()) && OtherComp->IsA(USphereComponent::StaticClass()))
 	{
-		if (m_EState == EState::STATE_Attacking && m_EAttackState == EAttackState::GroundPound && m_EAttackType == EAttackType::GroundPound) {
+		if (m_EState == EState::STATE_Attacking && m_EAttackState == EAttackState::GroundPound && m_EAttackType == EAttackType::GroundPound) 
+		{
+			if (TimerManager.IsTimerActive(THandle_GPHangTime))
+				return;
 			if (PB_Groundpound_IMPL(OtherActor))
 				return;
 		}
@@ -3398,6 +3420,7 @@ void ASteikemannCharacter::Start_GroundPound()
 void ASteikemannCharacter::Launch_GroundPound()
 {
 	if (PB_Groundpound_Predeterminehit()) {
+		PRINTLONG(1.5f, "Predetermined GP pogo hit");
 		GetMoveComponent()->m_GravityMode = EGravityMode::Default;
 		PB_Groundpound_IMPL(PB_Groundpound_TargetActor);
 		return;

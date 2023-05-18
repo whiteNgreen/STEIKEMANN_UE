@@ -33,12 +33,7 @@ bool ABouncyShroom::GetBounceInfo(const FVector actorLocation, const FVector nor
 			return false;
 	}
 	
-	if (bReflectDirection){
-		OUT_direction = SMath::ReflectionVector(ShroomDirection, IncommingDirection, ReflectionStrength);
-	}
-	else {
-		OUT_direction = ShroomDirection;
-	}
+	OUT_direction = ShroomDirection;
 	OUT_strength = BounceStrength;
 	ShroomBounce_Impl();
 	return true;

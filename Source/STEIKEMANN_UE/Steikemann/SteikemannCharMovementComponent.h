@@ -57,6 +57,9 @@ public:
 public:	// Functions
 	void EnableGravity();
 	void DisableGravity();
+
+	void SetFlyingMode();
+	void DisableFlyingMode();
 private:	// Private Functions
 	void SetGravityScale(float deltatime);
 

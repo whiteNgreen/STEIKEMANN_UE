@@ -52,8 +52,23 @@ void UBouncyShroomActorComponent::OnOwnerCapsuleHitShroom(UPrimitiveComponent* H
 		FVector direction;
 		float strength = 0.f;
 		if (Shroom->GetBounceInfo(GetOwner()->GetActorLocation(), NormalImpulse, m_Owner->LandVelocity.GetSafeNormal(), direction, strength)) {
+			if (Shroom->bSnapBouncedActorLocationToArrow) {
+				const FVector Arrowloc = Shroom->DirectionArrowComp->GetComponentLocation();
+				SnapLocationToShroom(Arrowloc, direction);
+			}
 			m_Owner->ShroomBounce(direction, strength);
 		}
 	}
 }
 
+void UBouncyShroomActorComponent::SnapLocationToShroom(const FVector Arrowloc, const FVector Direction)
+{
+	const float capheight = m_Owner->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+	FHitResult Hit;
+	const FCollisionQueryParams Params("", false, m_Owner);
+	const FVector start = Arrowloc + (Direction * 100.f);
+	const FVector end = Arrowloc - (Direction * 200.f);
+	if (GetWorld()->LineTraceSingleByChannel(Hit, start, end, ECC_Visibility, Params)){
+		m_Owner->SetActorLocation(Hit.ImpactPoint + (Direction * (capheight + 3.f)), false, nullptr, ETeleportType::ResetPhysics);
+	}
+}

@@ -124,6 +124,7 @@ void ASmallEnemy::Tick(float DeltaTime)
 			StickToWall();
 		}
 
+		const FVector VelocityDir = GetVelocity().GetSafeNormal();
 		// State 
 		switch (m_State)
 		{
@@ -134,7 +135,13 @@ void ASmallEnemy::Tick(float DeltaTime)
 		case EEnemyState::STATE_InAir:
 			break;
 		case EEnemyState::STATE_Launched:
-			RotateActorYawToVector(GetVelocity() * -1.f);
+			if (VelocityDir.IsNearlyZero())
+				break;
+			if (FVector::DotProduct(VelocityDir, FVector::UpVector) < 0.97f && FVector::DotProduct(VelocityDir, FVector::DownVector) < 0.97f)
+			{
+				PRINT("Rotate actor yaw");
+				RotateActorYawToVector(GetVelocity() * -1.f);
+			}
 			break;
 		case EEnemyState::STATE_OnWall:
 			break;
@@ -578,6 +585,11 @@ void ASmallEnemy::LeaveWall()
 
 	m_Anim->m_AnimState = EEnemyAnimState::Idle_Run;
 	Effect_StuckToThornwall_End();
+
+	if (bStartStuckToWall) {
+		TimerManager.ClearTimer(TH_SpecialStartWorldLocation);
+		bStartStuckToWall = false;
+	}
 }
 
 void ASmallEnemy::Tl_LaunchedCollision_End()
@@ -847,10 +859,7 @@ void ASmallEnemy::PullFree_Pure(const FVector InstigatorLocation)
 {
 	m_State = EEnemyState::STATE_InAir;
 	
-	if (bStartStuckToWall) {
-		TimerManager.ClearTimer(TH_SpecialStartWorldLocation);
-		bStartStuckToWall = false;
-	}
+
 
 	PullFree_Launch(InstigatorLocation);
 	LeaveWall();
@@ -1016,6 +1025,12 @@ void ASmallEnemy::Tl_Smacked(float value)
 
 void ASmallEnemy::Receive_Pogo_GroundPound_Pure()
 {
+	Incapacitate(EAIIncapacitatedType::Stunned, PB_Pogo_Groundpound_Stunduration);
+	Execute_Receive_Pogo_GroundPound(this);
+	m_Anim->bPogoedOn = true;
+	FTimerHandle h;
+	TimerManager.SetTimer(h, [this]() { m_Anim->bPogoedOn = false; }, 0.5f, false);
+
 	// Don't detach from the wall if it detects a sticky wall below
 	if (WallDetector->DetectStickyWallOnNormalWithinAngle(GetActorLocation(), 0.9f, FVector::UpVector))
 		return;
@@ -1026,13 +1041,7 @@ void ASmallEnemy::Receive_Pogo_GroundPound_Pure()
 	LeaveWall();
 	m_GravityState = EGravityState::Default;
 	m_State = EEnemyState::STATE_None;
-
 	GetCharacterMovement()->AddImpulse(Direction * PB_Groundpound_LaunchStrength, true);
-	Incapacitate(EAIIncapacitatedType::Stunned, PB_Pogo_Groundpound_Stunduration);
-	Execute_Receive_Pogo_GroundPound(this);
-	m_Anim->bPogoedOn = true;
-	FTimerHandle h;
-	TimerManager.SetTimer(h, [this]() { m_Anim->bPogoedOn = false; }, 0.5f, false);
 }
 
 void ASmallEnemy::IA_Receive_Pogo_Pure()
@@ -1081,6 +1090,8 @@ void ASmallEnemy::Launched(FVector direction)
 	m_State = EEnemyState::STATE_Launched;
 	// Animation
 	Anim_Attacked_Pure(direction * -1.f);
+	if (FVector::DotProduct(direction, FVector::UpVector) >= 0.97f || FVector::DotProduct(direction, FVector::DownVector) >= 0.97f)
+		direction = FVector(FVector::UpVector + FVector::ForwardVector * 0.1).GetSafeNormal();
 	RotateActorYawToVector(direction * -1.f);
 	// Particles
 	NS_Start_Trail(direction);

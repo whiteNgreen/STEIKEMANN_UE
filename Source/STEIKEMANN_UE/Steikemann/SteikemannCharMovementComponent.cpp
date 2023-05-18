@@ -77,6 +77,16 @@ void USteikemannCharMovementComponent::DisableGravity()
 	m_GravityMode = EGravityMode::ForcedNone;
 }
 
+void USteikemannCharMovementComponent::SetFlyingMode()
+{
+	SetMovementMode(EMovementMode::MOVE_Flying);
+}
+
+void USteikemannCharMovementComponent::DisableFlyingMode()
+{
+	SetMovementMode(EMovementMode::MOVE_Walking);
+}
+
 void USteikemannCharMovementComponent::SetGravityScale(float deltatime)
 {
 

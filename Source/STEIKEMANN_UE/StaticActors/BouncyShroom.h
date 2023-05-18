@@ -26,9 +26,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float BounceStrength{ 2500.f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		bool bReflectDirection{ true };
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (EditCondition = "bReflectDirection", EditConditionHides))
-		float ReflectionStrength{ 1.f };
+		bool bSnapBouncedActorLocationToArrow{};
 public:
 	ABouncyShroom();
 
