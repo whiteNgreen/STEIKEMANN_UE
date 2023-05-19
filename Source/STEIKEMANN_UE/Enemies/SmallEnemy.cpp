@@ -716,7 +716,8 @@ bool ASmallEnemy::DogEnvironmentCollision(const FHitResult& SweepHit)
 					DogToDogCollision(SweepHit, Dog);
 			return true;
 		}
-		if (ITag->HasMatchingGameplayTag(Tag::CorruptionCore()) || ITag->HasMatchingGameplayTag(Tag::InkFlower()) || ITag->HasMatchingGameplayTag(Tag::EnemySpawner()))
+		if (ITag->HasMatchingGameplayTag(Tag::CorruptionCore()) || 
+			ITag->HasMatchingGameplayTag(Tag::InkFlower())/* || ITag->HasMatchingGameplayTag(Tag::EnemySpawner())*/)
 		{
 			if (CanReflectCollisionLaunch()) {
 				float Time{};
@@ -1030,17 +1031,17 @@ void ASmallEnemy::Receive_Pogo_GroundPound_Pure()
 	FTimerHandle h;
 	TimerManager.SetTimer(h, [this]() { m_Anim->bPogoedOn = false; }, 0.5f, false);
 
-	// Don't detach from the wall if it detects a sticky wall below
-	if (WallDetector->DetectStickyWallOnNormalWithinAngle(GetActorLocation(), 0.9f, FVector::UpVector))
-		return;
 
-	FVector Direction = FVector::DownVector;
-	if (IsStuck_Pure())
-		Direction = (FVector::DownVector * (1.f - PB_Groundpound_LaunchWallNormal)) + (m_WallData.Normal * PB_Groundpound_LaunchWallNormal);
-	LeaveWall();
-	m_GravityState = EGravityState::Default;
-	m_State = EEnemyState::STATE_None;
-	GetCharacterMovement()->AddImpulse(Direction * PB_Groundpound_LaunchStrength, true);
+	//// Don't detach from the wall if it detects a sticky wall below
+	//if (WallDetector->DetectStickyWallOnNormalWithinAngle(GetActorLocation(), 0.9f, FVector::UpVector))
+	//	return;
+	//FVector Direction = FVector::DownVector;
+	//if (IsStuck_Pure())
+	//	Direction = (FVector::DownVector * (1.f - PB_Groundpound_LaunchWallNormal)) + (m_WallData.Normal * PB_Groundpound_LaunchWallNormal);
+	//LeaveWall();
+	//GetCharacterMovement()->AddImpulse(Direction * PB_Groundpound_LaunchStrength, true);
+	//m_GravityState = EGravityState::Default;
+	//m_State = EEnemyState::STATE_None;
 }
 
 void ASmallEnemy::IA_Receive_Pogo_Pure()

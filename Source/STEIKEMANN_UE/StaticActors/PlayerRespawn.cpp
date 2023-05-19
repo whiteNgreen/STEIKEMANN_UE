@@ -22,7 +22,7 @@ void APlayerRespawn::BeginPlay()
 	/* Resets colliders, to make sure they capture actors that start within 
 	 *  their bounds at BeginPlay */
 	FTimerHandle handle;
-	GetWorldTimerManager().SetTimer(handle,
+	TimerManager.SetTimer(handle,
 		[this](){
 			FVector extent = BoxCollider->GetUnscaledBoxExtent();
 			BoxCollider->SetBoxExtent(FVector(0), true);
@@ -39,7 +39,7 @@ void APlayerRespawn::BeginPlay()
 void APlayerRespawn::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
+	TimerManager.Tick(DeltaTime);
 }
 
 FTransform APlayerRespawn::GetSpawnTransform()

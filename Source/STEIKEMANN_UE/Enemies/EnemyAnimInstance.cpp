@@ -16,7 +16,7 @@ void UEnemyAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeUpdateAnimation(DeltaSeconds);
 	if (!Owner) return;
-
+	Speed = Owner->GetVelocity().Length();
 	if (bIsLaunchedInAir) {
 		Launched_SpinAngle.Roll -= DeltaSeconds * (Launched_SpinSpeed * -1.f);
 	}

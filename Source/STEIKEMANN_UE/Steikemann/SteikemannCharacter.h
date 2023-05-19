@@ -601,9 +601,9 @@ public:
 
 	// Minimum time the pogo state lasts - Will disable some mechanics while in that state
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Passive", meta = (DisplayPriority = "1"))
-		float PB_StateTimer_Passive{ 0.1f };
+		float PB_StateTimer_Passive{ 0.2f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Active", meta = (DisplayPriority = "1"))
-		float PB_StateTimer_Active{ 0.3f };
+		float PB_StateTimer_Active{ 0.6f };
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|PogoBounce|Groundpound", meta = (DisplayPriority = "1"))
 		float PB_StateTimer_Groundpound{ 0.4f };
 
@@ -621,6 +621,7 @@ private: // Within Collision bools
 	FTimerHandle TH_PB_ExitHandle; // Timer handle holding exit time. For validating buffering of PB_Active inputs
 	FTimerHandle TH_Pogo;
 	FTimerHandle TH_Pogo_NoCollision;
+	bool bIsPogo_Active{};	// trash fix to active pogo issue
 
 public:	// Target detection
 	bool PB_TargetBeneath();

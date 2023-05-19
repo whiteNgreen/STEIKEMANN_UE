@@ -27,7 +27,7 @@ public:
 		UBoxComponent* SpawnPoint{ nullptr };
 		
 	FTransform GetSpawnTransform();
-
+	FTimerManager TimerManager;
 
 protected:
 	// Called when the game starts or when spawned

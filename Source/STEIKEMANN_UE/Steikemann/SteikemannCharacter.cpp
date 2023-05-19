@@ -287,8 +287,6 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		}
 
 		if (m_EAirState == EAirState::AIR_Pogo) break;
-		//if (TimerManager.IsTimerActive(TH_LedgeliftGravityDisabled))
-		//	break;
 		if (wall && m_WallState == EOnWallState::WALL_None && m_EAttackState != EAttackState::GroundPound)
 		{
 			// Detect ledge & Ledge Grab
@@ -322,8 +320,6 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 				break;
 			}
 		}
-		//if (TimerManager.IsTimerActive(TH_LedgeliftGravityDisabled))
-		//	break;
 		if (wall || WallDetector->DetectLedge(m_Ledgedata, this, GetActorLocation(), GetActorUpVector(), m_Walldata, LedgeGrab_Height, LedgeGrab_Inwards))
 			OnWall_IMPL(DeltaTime);
 		else {
@@ -1891,6 +1887,7 @@ void ASteikemannCharacter::Landed(const FHitResult& Hit)
 void ASteikemannCharacter::Jump()
 {
 	if (ActivatePrompt()) return;
+	if (TimerManager.IsTimerActive(TH_Ledgelift)) return;
 
 	// Cases where Jump is skipped
 	switch (m_EState)
@@ -2106,7 +2103,7 @@ bool ASteikemannCharacter::PB_ValidTargetDistance(const FVector OtherActorLocati
 
 bool ASteikemannCharacter::PB_Active_TargetDetection()
 {
-	if (m_EPogoType == EPogoType::POGO_Leave) true;
+	//if (m_EPogoType == EPogoType::POGO_Leave) true;
 
 	FCollisionShape capsule = FCollisionShape::MakeCapsule(PB_ActiveDetection_CapsuleRadius, PB_ActiveDetection_CapsuleHalfHeight);
 	FVector location = GetActorLocation() - FVector(0, 0, PB_ActiveDetection_CapsuleZLocation);
@@ -2142,6 +2139,7 @@ bool ASteikemannCharacter::Do_Pogo(const FHitResult& Hit)
 		case EPogoType::POGO_None:
 			break;
 		case EPogoType::POGO_Passive:
+
 			PB_Passive_IMPL(Hit);
 			b = true;
 			break;
@@ -2179,6 +2177,8 @@ void ASteikemannCharacter::PB_EnterPogoState(float time)
 
 bool ASteikemannCharacter::PB_Passive_IMPL(const FHitResult& Hit)
 {
+	if (m_EPogoType == EPogoType::POGO_Leave)
+		return false;
 	if (GetCharacterMovement()->Velocity.Z > 0.f)
 		return false;
 
@@ -2222,20 +2222,22 @@ void ASteikemannCharacter::PB_Launch_Passive(bool bOnStuckEnemy)
 
 void ASteikemannCharacter::PB_Active_IMPL(AActor* PogoedActor)
 {
-	if (m_EPogoType == EPogoType::POGO_Leave) {
-		// Delegate jump to after the pogo exit timer is done. To improve the responsiveness of the pogo active near passive bounces
-		FTimerHandle h;
-		TimerManager.SetTimer(h, this, &ASteikemannCharacter::Jump, TimerManager.GetTimerRemaining(TH_PB_ExitHandle) + 0.02f);	
-		return;
-	}
+	//if (m_EPogoType == EPogoType::POGO_Leave) {
+	//	// Delegate jump to after the pogo exit timer is done. To improve the responsiveness of the pogo active near passive bounces
+	//	FTimerHandle h;
+	//	TimerManager.SetTimer(h, this, &ASteikemannCharacter::Jump, TimerManager.GetTimerRemaining(TH_PB_ExitHandle) + 0.02f);	
+	//	return;
+	//}
 	if (!PogoedActor) return;
+	if (bIsPogo_Active) return;
+	bIsPogo_Active = true;
 	m_EAirState = EAirState::AIR_Pogo;
 	m_EPogoType = EPogoType::POGO_Leave;
 
 	PB_Launch_Active();
 	PB_EnterPogoState(PB_StateTimer_Active);
 
-	TimerManager.SetTimer(TH_PB_ExitHandle, [this](){ m_EPogoType = EPogoType::POGO_None; }, PB_StateTimer_Active, false);
+	TimerManager.SetTimer(TH_PB_ExitHandle, [this]() { m_EPogoType = EPogoType::POGO_None; bIsPogo_Active = false; }, PB_StateTimer_Active, false);
 
 	Anim_Pogo_Active();
 
@@ -2248,6 +2250,7 @@ void ASteikemannCharacter::PB_Active_IMPL(AActor* PogoedActor)
 void ASteikemannCharacter::PB_Launch_Active()
 {
 	FVector direction = FVector((FVector::UpVector * (1.f - (m_InputVector.Size() * PB_InputMulti_Active))) + (m_InputVector * PB_InputMulti_Active)).GetSafeNormal();
+	GetMoveComponent()->Velocity.Z = 0.f;
 	GetMoveComponent()->PB_Launch_Active(direction, PB_LaunchStrength_Active);
 	if (!TimerManager.IsTimerActive(TH_Pogo_NoCollision)) {
 		DisableCollisions();

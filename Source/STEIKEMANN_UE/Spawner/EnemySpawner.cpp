@@ -53,6 +53,12 @@ void AEnemySpawner::BeginPlay()
 		BeginActorSpawn(&AEnemySpawner::SpawnActor);
 		});
 }
+void AEnemySpawner::BeginDestroy()
+{
+	Super::BeginDestroy();
+	for (auto& dog : SpawnedActors)
+		dog->Destroy();
+}
 
 // Called every frame
 void AEnemySpawner::Tick(float DeltaTime)
@@ -108,6 +114,8 @@ void AEnemySpawner::DetermineActorsToRespawn(TArray<ASmallEnemy*>& actorsToRespa
 {
 	for (auto& it : SpawnedActors)
 	{
+		if (!it) 
+			continue;
 		float radius = FVector(it->GetActorLocation() - GetActorLocation()).Length();
 		if (radius < SpawnerActiveRadius) continue;
 		actorsToRespawn.Add(it);
