@@ -241,8 +241,8 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 
 #ifdef UE_BUILD_DEBUG
 	/* PRINTING STATE MACHINE INFO */
-	Print_State();
-	PRINTPAR("Movementstate: %i", m_EMovementInputState);
+	//Print_State();
+	//PRINTPAR("Movementstate: %i", m_EMovementInputState);
 #endif
 
 	/*		Resets Rotation Pitch and Roll		*/
@@ -1636,7 +1636,6 @@ void ASteikemannCharacter::AllowActionCancelationWithInput()
 bool ASteikemannCharacter::BreakMovementInput(float value)
 {
 	if (m_EMovementInputState == EMovementInput::Locked || m_EMovementInputState == EMovementInput::PeriodLocked) {
-		PRINT("Break movement input");
 		return true;
 	}
 	switch (m_EState)
@@ -2666,6 +2665,8 @@ void ASteikemannCharacter::Respawn()
 	CancelAnimation();
 	DeathDelegate_Land.Unbind();
 	Camera->AttachToComponent(CameraBoom, FAttachmentTransformRules::SnapToTargetNotIncludingScale, USpringArmComponent::SocketName);
+	const FRotator rot = FRotator(Checkpoint->SpawnPoint->GetComponentRotation().Pitch, Checkpoint->SpawnPoint->GetComponentRotation().Yaw, 0);
+	GetPlayerController()->SetControlRotation(rot);
 
 	if (Checkpoint) {
 		FTransform T = Checkpoint->GetSpawnTransform();
@@ -3420,7 +3421,6 @@ void ASteikemannCharacter::Start_GroundPound()
 void ASteikemannCharacter::Launch_GroundPound()
 {
 	if (PB_Groundpound_Predeterminehit()) {
-		PRINTLONG(1.5f, "Predetermined GP pogo hit");
 		GetMoveComponent()->m_GravityMode = EGravityMode::Default;
 		PB_Groundpound_IMPL(PB_Groundpound_TargetActor);
 		return;

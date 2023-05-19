@@ -139,7 +139,6 @@ void ASmallEnemy::Tick(float DeltaTime)
 				break;
 			if (FVector::DotProduct(VelocityDir, FVector::UpVector) < 0.97f && FVector::DotProduct(VelocityDir, FVector::DownVector) < 0.97f)
 			{
-				PRINT("Rotate actor yaw");
 				RotateActorYawToVector(GetVelocity() * -1.f);
 			}
 			break;
