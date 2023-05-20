@@ -10,6 +10,7 @@ namespace Wall {
 		bool valid;
 		FVector Location;
 		FVector Normal;
+		bool bInvalidWallDetected_DoLedgeDetection{};
 	};
 
 	struct LedgeData

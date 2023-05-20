@@ -241,7 +241,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 
 #ifdef UE_BUILD_DEBUG
 	/* PRINTING STATE MACHINE INFO */
-	//Print_State();
+	Print_State();
 	//PRINTPAR("Movementstate: %i", m_EMovementInputState);
 #endif
 
@@ -261,6 +261,8 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 
 	/*------------ STATES ---------------*/
 	const bool wall = WallDetector->DetectWall(this, GetActorLocation(), GetActorForwardVector(), m_Walldata, m_WallJumpData);
+	//const bool ledge = WallDetector->DetectLedge_Sweep(m_Ledgedata, this, GetActorLocation(), GetActorUpVector(), LedgeGrab_Height, LedgeGrab_Inwards);
+	//const bool ledge = WallDetector->DetectLedge_New(m_Ledgedata);
 	switch (m_EState)
 	{
 	case EState::STATE_OnGround:
@@ -278,8 +280,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		case EAirState::AIR_Freefall:
 			GetMoveComponent()->AirFriction2D(m_InputVector);
 			break;
-		case EAirState::AIR_Jump:
-			break;
+		//case EAirState::AIR_Jump:	break;
 		case EAirState::AIR_Pogo:
 			break;
 		default:
@@ -287,12 +288,19 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 		}
 
 		if (m_EAirState == EAirState::AIR_Pogo) break;
+		//if ((ledge) && m_WallState == EOnWallState::WALL_None && m_EAttackState != EAttackState::GroundPound)
+		//{
+		//	StopAnimMontage();
+		//	GetMoveComponent()->m_WallJumpData = m_WallJumpData;
+		//	Initial_LedgeGrab();
+		//	break;
+		//}
 		if (wall && m_WallState == EOnWallState::WALL_None && m_EAttackState != EAttackState::GroundPound)
 		{
 			// Detect ledge & Ledge Grab
 			if (WallDetector->DetectLedge(m_Ledgedata, this, GetActorLocation(), GetActorUpVector(), m_Walldata, LedgeGrab_Height, LedgeGrab_Inwards))
 			{
-				//if (Validate_Ledge()) break;
+				StopAnimMontage();
 				GetMoveComponent()->m_WallJumpData = m_WallJumpData;
 				Initial_LedgeGrab();
 				break;	
@@ -1946,7 +1954,7 @@ void ASteikemannCharacter::Jump()
 				TLComp_AirFriction->PlayFromStart();
 				GetMoveComponent()->LedgeJump(m_InputVector, JumpStrength);
 				GetMoveComponent()->m_GravityMode = EGravityMode::LerpToDefault;
-				TimerManager.SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, 0.5f, false);
+				TimerManager.SetTimer(h, [this]() { m_WallState = EOnWallState::WALL_None; }, 1.5f, false);
 				Anim_Activate_Jump();
 				break;
 			}
@@ -2802,6 +2810,14 @@ void ASteikemannCharacter::OnWall_IMPL(float deltatime)
 		GetMoveComponent()->m_WallJumpData = m_WallJumpData;	// TODO: Change when this happens
 		SetWallInputDirection();
 		OnWall_Drag_IMPL(deltatime, (GetMoveComponent()->Velocity.Z/GetMoveComponent()->WJ_DragSpeed) * -1.f);	// VelocityZ scale from 0->1
+		
+		if (WallDetector->DetectLedge(m_Ledgedata, this, GetActorLocation(), GetActorUpVector(), m_Walldata, LedgeGrab_Height, LedgeGrab_Inwards))
+		{
+			StopAnimMontage();
+			GetMoveComponent()->m_WallJumpData = m_WallJumpData;
+			Initial_LedgeGrab();
+			break;
+		}
 		break;
 	case EOnWallState::WALL_Ledgegrab:
 		break;

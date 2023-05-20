@@ -41,6 +41,9 @@ private:
 
 public:	// Wall Detection
 
+	UPROPERTY(EditAnywhere)
+		float ActorMiddleOffset{ 10.f };
+
 	bool DetectWall(const AActor* actor, const FVector Location, const FVector ForwardVector, Wall::WallData& walldata, Wall::WallData& WallJumpData);
 	bool DetectStickyWall(const AActor* actor, const FVector Location, const FVector Forward, Wall::WallData& walldata, ECollisionChannel TraceChannel);
 
@@ -55,6 +58,7 @@ private:
 	bool DetermineValidPoints_IMPL(TArray<FHitResult>& hits, const FVector& Location);
 	bool Valid_WallJumpPoints(TArray<FHitResult>& hits, const FVector& Location);
 	void GetWallPoint_IMPL(Wall::WallData& data, const TArray<FHitResult>& hits);
+	void GetAverageWallLocationAndNormalFromSweep(const TArray<FHitResult>& hits, FVector& location, FVector& normal);
 
 	float GetMinHeight(float z);
 	bool ValidLengthToCapsule(FVector Hit, FVector capsuleLocation, float capsuleHeight);
@@ -63,7 +67,13 @@ public:	// Ledge detection
 	float Ledge_Anglelimit{ 0.8f };
 
 	bool DetectLedge(Wall::LedgeData& ledge, const AActor* actor, const FVector actorLocation, const FVector actorUp, const Wall::WallData& wall, const float height, const float inwardsLength);
-private:
+	bool DetectLedge_Sweep(Wall::LedgeData& ledge, const AActor* actor, const FVector actorLocation, const FVector actorUp, const float height, const float inwardsLength);
+
+	UPROPERTY(EditAnywhere, Category = "Ledge detection")
+		float LD_height{ 100.f };
+	UPROPERTY(EditAnywhere, Category = "Ledge detection")
+		float LD_inward{ 100.f };
+	bool DetectLedge_New(Wall::LedgeData& ledge);
 
 	
 };
