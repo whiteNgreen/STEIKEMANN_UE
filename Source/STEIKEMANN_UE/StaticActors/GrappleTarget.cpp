@@ -37,12 +37,14 @@ void AGrappleTarget::UnTargetedPure()
 
 void AGrappleTarget::InReach_Pure()
 {
+	if (bInReach) return;
 	bInReach = true;
 	Execute_InReach(this);
 }
 
 void AGrappleTarget::OutofReach_Pure()
 {
+	if (!bInReach) return;
 	bInReach = false;
 	Execute_OutofReach(this);
 }
