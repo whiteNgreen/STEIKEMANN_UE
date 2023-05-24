@@ -101,6 +101,8 @@ void ASmallEnemy::BeginDestroy()
 {
 	if (GetWorld())
 		GetWorldTimerManager().ClearTimer(TH_IAttack_LeewayPause);
+	if (SteikeWorldStatics::Player)
+		SteikeWorldStatics::ActiveActorDeleted.ExecuteIfBound(this);
 	Super::BeginDestroy();
 }
 

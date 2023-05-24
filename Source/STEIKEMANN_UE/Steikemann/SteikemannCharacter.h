@@ -1026,6 +1026,7 @@ public: /* ------- Native Variables and functions -------- */
 		float GrappleAimYChange_Base{ 4.f };
 	float GrappleAimYChange{};
 
+	void GH_RemoveFromAiming(AActor* target);
 	void GH_GrappleAiming();
 
 	FTimerHandle TH_Grapplehook_Start;

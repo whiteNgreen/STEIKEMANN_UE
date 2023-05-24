@@ -187,6 +187,8 @@ void ASteikemannCharacter::BeginPlay()
 		SteikeWorldStatics::PlayerLocation = GetActorLocation(); 
 		SteikeWorldStatics::CameraLocation = Camera->GetComponentLocation();
 		}, 0.05f, true);
+	SteikeWorldStatics::Player = this;
+	SteikeWorldStatics::ActiveActorDeleted.BindUObject(this, &ASteikemannCharacter::GH_RemoveFromAiming);
 }
 
 void ASteikemannCharacter::Material_UpdateParameterCollection_Player(float DeltaTime)
@@ -600,6 +602,15 @@ void ASteikemannCharacter::PlaceCameraBoom(float DeltaTime)
 	CameraBoom->SetWorldLocation(GetActorLocation() + (FVector::UpVector * Height));
 }
 
+void ASteikemannCharacter::GH_RemoveFromAiming(AActor* target)
+{
+	if (GrappledActor == target)
+		GrappledActor = nullptr;
+	if (Active_GrappledActor == target)
+		Active_GrappledActor = nullptr;
+	InReachGrappleTargets.Remove(target);
+}
+
 void ASteikemannCharacter::GH_GrappleAiming()
 {
 	FVector Forward = GetControlRotation().Vector();
@@ -672,9 +683,7 @@ void ASteikemannCharacter::GH_GrappleAiming()
 
 		GrappleInterface = Cast<IGrappleTargetInterface>(Target);
 		if (GrappleInterface && m_EState != EState::STATE_Grappling)
-		{
 			GrappleInterface->TargetedPure();
-		}
 
 		GrappledActor = Target;
 	}
@@ -682,9 +691,7 @@ void ASteikemannCharacter::GH_GrappleAiming()
 	{
 		IGrappleTargetInterface* GrappleInterface = Cast<IGrappleTargetInterface>(GrappledActor.Get());
 		if (GrappleInterface && m_EState != EState::STATE_Grappling)
-		{
 			GrappleInterface->TargetedPure();
-		}
 		return;
 	}
 }
