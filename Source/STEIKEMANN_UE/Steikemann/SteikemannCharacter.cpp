@@ -243,7 +243,7 @@ void ASteikemannCharacter::Tick(float DeltaTime)
 
 #ifdef UE_BUILD_DEBUG
 	/* PRINTING STATE MACHINE INFO */
-	Print_State();
+	//Print_State();
 	//PRINTPAR("Movementstate: %i", m_EMovementInputState);
 #endif
 
@@ -2683,10 +2683,10 @@ void ASteikemannCharacter::Respawn()
 	CancelAnimation();
 	DeathDelegate_Land.Unbind();
 	Camera->AttachToComponent(CameraBoom, FAttachmentTransformRules::SnapToTargetNotIncludingScale, USpringArmComponent::SocketName);
-	const FRotator rot = FRotator(Checkpoint->SpawnPoint->GetComponentRotation().Pitch, Checkpoint->SpawnPoint->GetComponentRotation().Yaw, 0);
-	GetPlayerController()->SetControlRotation(rot);
 
 	if (Checkpoint) {
+		const FRotator rot = FRotator(Checkpoint->SpawnPoint->GetComponentRotation().Pitch, Checkpoint->SpawnPoint->GetComponentRotation().Yaw, 0);
+		GetPlayerController()->SetControlRotation(rot);
 		FTransform T = Checkpoint->GetSpawnTransform();
 		SetActorTransform(T, false, nullptr, ETeleportType::TeleportPhysics);
 		return;

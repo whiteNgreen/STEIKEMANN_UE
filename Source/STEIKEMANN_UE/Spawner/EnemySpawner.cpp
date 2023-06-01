@@ -48,16 +48,15 @@ void AEnemySpawner::BeginPlay()
 		SpawnData->GuardRadius = SpawnerGuardRadius;
 	}
 
-	Async(EAsyncExecution::TaskGraphMainThread, [this]() {
-		if (GetWorld())
+	if (GetWorld())
 		BeginActorSpawn(&AEnemySpawner::SpawnActor);
-		});
 }
 void AEnemySpawner::BeginDestroy()
 {
-	Super::BeginDestroy();
+	TimerManager.ClearAllTimersForObject(this);
 	for (auto& dog : SpawnedActors)
 		dog->Destroy();
+	Super::BeginDestroy();
 }
 
 // Called every frame

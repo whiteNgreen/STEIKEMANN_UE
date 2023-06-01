@@ -713,10 +713,11 @@ bool ASmallEnemy::DogEnvironmentCollision(const FHitResult& SweepHit)
 		if (ITag->HasMatchingGameplayTag(Tag::EnvironmentHazard()))		return true;
 		if (ITag->HasMatchingGameplayTag(Tag::Enemy()))
 		{
-			if (CanReflectCollisionLaunch())
-				if (ASmallEnemy* Dog = Cast<ASmallEnemy>(OtherActor))
-					DogToDogCollision(SweepHit, Dog);
-			return true;
+		//	if (CanReflectCollisionLaunch())
+		//		if (ASmallEnemy* Dog = Cast<ASmallEnemy>(OtherActor))
+		//			DogToDogCollision(SweepHit, Dog);
+		//	return true;
+			return false;
 		}
 		if (ITag->HasMatchingGameplayTag(Tag::CorruptionCore()) || 
 			ITag->HasMatchingGameplayTag(Tag::InkFlower())/* || ITag->HasMatchingGameplayTag(Tag::EnemySpawner())*/)
